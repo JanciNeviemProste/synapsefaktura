@@ -570,6 +570,85 @@ export type Database = {
           },
         ]
       }
+      einvoices: {
+        Row: {
+          created_at: string
+          direction: Database["public"]["Enums"]["einvoice_direction"]
+          document_id: string | null
+          error: string | null
+          expense_id: string | null
+          id: string
+          organization_id: string
+          peppol_message_id: string | null
+          provider: string | null
+          receiver_peppol_id: string | null
+          sender_peppol_id: string | null
+          transport_status: Database["public"]["Enums"]["einvoice_transport_status"]
+          ubl_xml: string | null
+          updated_at: string
+          validation_errors: Json | null
+          validation_status: Database["public"]["Enums"]["einvoice_validation_status"]
+        }
+        Insert: {
+          created_at?: string
+          direction: Database["public"]["Enums"]["einvoice_direction"]
+          document_id?: string | null
+          error?: string | null
+          expense_id?: string | null
+          id?: string
+          organization_id: string
+          peppol_message_id?: string | null
+          provider?: string | null
+          receiver_peppol_id?: string | null
+          sender_peppol_id?: string | null
+          transport_status?: Database["public"]["Enums"]["einvoice_transport_status"]
+          ubl_xml?: string | null
+          updated_at?: string
+          validation_errors?: Json | null
+          validation_status?: Database["public"]["Enums"]["einvoice_validation_status"]
+        }
+        Update: {
+          created_at?: string
+          direction?: Database["public"]["Enums"]["einvoice_direction"]
+          document_id?: string | null
+          error?: string | null
+          expense_id?: string | null
+          id?: string
+          organization_id?: string
+          peppol_message_id?: string | null
+          provider?: string | null
+          receiver_peppol_id?: string | null
+          sender_peppol_id?: string | null
+          transport_status?: Database["public"]["Enums"]["einvoice_transport_status"]
+          ubl_xml?: string | null
+          updated_at?: string
+          validation_errors?: Json | null
+          validation_status?: Database["public"]["Enums"]["einvoice_validation_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "einvoices_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "einvoices_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "einvoices_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           attachment_url: string | null
@@ -1208,6 +1287,14 @@ export type Database = {
         | "order_received"
         | "delivery_note"
         | "draft"
+      einvoice_direction: "outbound" | "inbound"
+      einvoice_transport_status:
+        | "queued"
+        | "sent"
+        | "delivered"
+        | "failed"
+        | "received"
+      einvoice_validation_status: "pending" | "valid" | "invalid"
       expense_source:
         | "manual"
         | "ai_capture"
@@ -1380,6 +1467,15 @@ export const Constants = {
         "delivery_note",
         "draft",
       ],
+      einvoice_direction: ["outbound", "inbound"],
+      einvoice_transport_status: [
+        "queued",
+        "sent",
+        "delivered",
+        "failed",
+        "received",
+      ],
+      einvoice_validation_status: ["pending", "valid", "invalid"],
       expense_source: [
         "manual",
         "ai_capture",

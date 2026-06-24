@@ -5,6 +5,7 @@ import { DOCUMENT_TYPE_LABELS, type DocumentType } from "@/lib/documents/labels"
 import { StatusBadge } from "@/components/invoice/status-badge"
 import { DocumentActions } from "@/components/invoice/document-actions"
 import { CompliancePanel } from "@/components/invoice/compliance-panel"
+import { EInvoicePanel } from "@/components/invoice/einvoice-panel"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table,
@@ -31,7 +32,7 @@ export default async function InvoiceDetailPage({
   const { id } = await params
   const supabase = await createClient()
 
-  const [{ data: doc }, { data: items }] = await Promise.all([
+  const [{ data: doc }, { data: items }, { data: org }] = await Promise.all([
     supabase
       .from("documents")
       .select("*, contacts(name, ic_dph)")
@@ -42,6 +43,11 @@ export default async function InvoiceDetailPage({
       .select("*")
       .eq("document_id", id)
       .order("position"),
+    supabase
+      .from("organizations")
+      .select("einvoice_enabled")
+      .limit(1)
+      .maybeSingle(),
   ])
 
   if (!doc) notFound()
@@ -140,6 +146,12 @@ export default async function InvoiceDetailPage({
       </Card>
 
       <CompliancePanel documentId={doc.id} />
+
+      <EInvoicePanel
+        documentId={doc.id}
+        enabled={org?.einvoice_enabled ?? false}
+        status={doc.status}
+      />
     </div>
   )
 }

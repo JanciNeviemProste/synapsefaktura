@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { SequencesSettings } from "@/components/settings/sequences-settings"
+import { EInvoiceSettings } from "@/components/settings/einvoice-settings"
+import { getEInvoiceSettings } from "@/app/actions/einvoice-settings"
 
 export const metadata = { title: "Nastavenia — Synapse Faktúra" }
 
@@ -11,6 +13,8 @@ export default async function SettingsPage() {
     .order("year", { ascending: false })
     .order("doc_type")
 
+  const einvoice = await getEInvoiceSettings()
+
   return (
     <div className="mx-auto grid max-w-4xl gap-6">
       <div>
@@ -20,6 +24,7 @@ export default async function SettingsPage() {
         </p>
       </div>
       <SequencesSettings sequences={sequences ?? []} />
+      {einvoice ? <EInvoiceSettings initial={einvoice} /> : null}
     </div>
   )
 }

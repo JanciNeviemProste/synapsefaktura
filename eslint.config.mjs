@@ -15,6 +15,11 @@ const eslintConfig = [
       "react/no-unescaped-entities": "off",
       // react-hook-form's `watch()` trips the React-Compiler lint; rhf is used deliberately.
       "react-hooks/incompatible-library": "off",
+      // Allow intentionally-unused args (e.g. interface-required params) when _-prefixed.
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
     },
   },
   {
