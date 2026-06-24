@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Synapse Faktúra
 
-## Getting Started
+Moderná slovenská SaaS fakturácia s AI vrstvou, pripravená na povinnú e-faktúru
+2027 (Peppol / EN 16931). Postavené podľa `SYNAPSE_FAKTURA_MASTER_PROMPT.md`.
 
-First, run the development server:
+> **Stav:** Fáza 0 — základy a scaffolding. Ďalšie fázy (fakturácia, AI, Peppol,
+> billing) pribúdajú postupne podľa §8 master promptu.
+
+## Stack
+
+- **Next.js 15** (App Router, Server Actions), TypeScript (strict)
+- **Tailwind v4** + **shadcn/ui** + lucide-react
+- **react-hook-form** + **zod**
+- **Supabase** (Postgres, Auth, RLS) — lokálne cez Supabase CLI + Docker
+- **pnpm**
+
+## Lokálne spustenie
+
+Predpoklady: Node 20+, **pnpm**, **Docker Desktop** (pre lokálny Supabase),
+Supabase CLI.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+
+# 1) Spusti lokálny Supabase stack (vyžaduje bežiaci Docker)
+pnpm db:start          # vypíše API URL + anon/service kľúče
+pnpm db:reset          # aplikuje migrácie + seed (vat_rates)
+
+# 2) Priprav env premenné
+cp .env.example .env.local
+# do .env.local doplň NEXT_PUBLIC_SUPABASE_ANON_KEY a SUPABASE_SERVICE_ROLE_KEY
+# z výpisu `pnpm db:start`
+
+# 3) Spusti aplikáciu
+pnpm dev               # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Skripty
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Skript            | Popis                             |
+| ----------------- | --------------------------------- |
+| `pnpm dev`        | Vývojový server                   |
+| `pnpm build`      | Produkčný build                   |
+| `pnpm typecheck`  | `tsc --noEmit`                    |
+| `pnpm lint`       | ESLint                            |
+| `pnpm format`     | Prettier (zápis)                  |
+| `pnpm db:start`   | Štart lokálneho Supabase (Docker) |
+| `pnpm db:reset`   | Reaplikuje migrácie + seed        |
+| `pnpm db:migrate` | Aplikuje nové migrácie            |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Štruktúra
 
-## Learn More
+```
+src/
+  app/
+    page.tsx                 # marketing landing (/)
+    (auth)/login|register    # prihlásenie / registrácia
+    app/                     # chránená oblasť (/app/**)
+      onboarding/            # sprievodca nastavením firmy (IČO autofill z RPO)
+      (shell)/dashboard/     # dashboard so sidebar shellom
+    auth/callback/route.ts   # OAuth / email callback
+    actions/                 # Server Actions (auth, org, registry)
+  lib/
+    supabase/                # @supabase/ssr klienti + middleware
+    registry/                # RPO IČO lookup (swappable provider)
+    validation/              # zod schémy
+supabase/
+  migrations/                # SQL migrácie (foundation)
+  seed.sql                   # vat_rates
+  config.toml                # lokálna Supabase konfigurácia
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Slovak compliance
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Sadzby DPH, povinné náležitosti faktúry a Peppol 2027 sa riadia §5 master
+promptu. Miesta označené `// TODO: verify` treba pred produkciou overiť proti
+oficiálnym zdrojom Finančnej správy.

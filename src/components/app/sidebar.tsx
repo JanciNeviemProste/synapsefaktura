@@ -1,0 +1,97 @@
+"use client"
+
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import {
+  LayoutDashboard,
+  FileText,
+  Users,
+  Package,
+  Receipt,
+  Landmark,
+  Repeat,
+  BarChart3,
+  Bot,
+  Settings,
+  Sparkles,
+} from "lucide-react"
+import { cn } from "@/lib/utils"
+
+type NavItem = {
+  href: string
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+  ready: boolean
+}
+
+// Only Dashboard is live in Phase 0; the rest are placeholders for later phases.
+const NAV: NavItem[] = [
+  {
+    href: "/app/dashboard",
+    label: "Prehľad",
+    icon: LayoutDashboard,
+    ready: true,
+  },
+  { href: "/app/invoices", label: "Faktúry", icon: FileText, ready: true },
+  { href: "/app/assistant", label: "Asistent", icon: Bot, ready: true },
+  { href: "/app/contacts", label: "Kontakty", icon: Users, ready: true },
+  { href: "/app/products", label: "Cenník", icon: Package, ready: true },
+  { href: "/app/expenses", label: "Náklady", icon: Receipt, ready: true },
+  { href: "/app/bank", label: "Banka", icon: Landmark, ready: true },
+  { href: "/app/recurring", label: "Pravidelné", icon: Repeat, ready: true },
+  { href: "/app/reports", label: "Reporty", icon: BarChart3, ready: true },
+  { href: "/app/settings", label: "Nastavenia", icon: Settings, ready: true },
+]
+
+export function Sidebar() {
+  const pathname = usePathname()
+
+  return (
+    <aside className="bg-background hidden w-60 shrink-0 flex-col border-r md:flex">
+      <div className="flex h-14 items-center gap-2 border-b px-4 font-semibold">
+        <Sparkles className="text-primary size-5" />
+        Synapse Faktúra
+      </div>
+      <nav className="flex flex-1 flex-col gap-1 p-2">
+        {NAV.map((item) => {
+          const active = pathname === item.href
+          const Icon = item.icon
+
+          if (!item.ready) {
+            return (
+              <span
+                key={item.href}
+                className="text-muted-foreground/60 flex cursor-not-allowed items-center justify-between gap-2 rounded-md px-3 py-2 text-sm"
+                title="Čoskoro"
+              >
+                <span className="flex items-center gap-2">
+                  <Icon className="size-4" />
+                  {item.label}
+                </span>
+                <span className="bg-muted rounded px-1.5 py-0.5 text-[10px] font-medium uppercase">
+                  čoskoro
+                </span>
+              </span>
+            )
+          }
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                active
+                  ? "bg-primary text-primary-foreground"
+                  : "text-foreground hover:bg-muted",
+              )}
+            >
+              <Icon className="size-4" />
+              {item.label}
+            </Link>
+          )
+        })}
+      </nav>
+    </aside>
+  )
+}
