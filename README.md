@@ -75,12 +75,34 @@ graceful — bez kľúča appka beží, len daná funkcia je vypnutá.
 
 ## Nasadenie na Vercel
 
-1. Import repo do Vercelu (framework: Next.js). `vercel.json` definuje cron joby.
-2. Doplň env premenné z tabuľky vyššie (Supabase + voliteľne AI/Stripe/CRON).
-3. Stripe: vytvor produkty Pro/Business, vlož `STRIPE_PRICE_*`, a nastav webhook
-   na `https://<doména>/api/stripe/webhook` (event `checkout.session.completed`,
-   `customer.subscription.*`).
-4. V Supabase nastav produkčné `Site URL` + redirect na `/auth/callback`.
+> ⚠️ **Lokálny Supabase (Docker) nestačí** — Vercel sa naň nevie pripojiť.
+> Produkcia potrebuje **hosted Supabase projekt**. Bez nastavených
+> `NEXT_PUBLIC_SUPABASE_URL` / `…_ANON_KEY` sa appka nezrúti (middleware degraduje
+> graceful — verejné stránky fungujú), ale prihlásenie a `/app` budú nefunkčné,
+> kým env nedoplníš.
+
+1. **Vytvor hosted Supabase projekt** na [supabase.com](https://supabase.com)
+   (región EÚ kvôli GDPR/§9).
+2. **Aplikuj migrácie na hosted DB** (z koreňa repo):
+   ```bash
+   supabase link --project-ref <project-ref>
+   supabase db push          # aplikuje supabase/migrations/*
+   ```
+   Potom v Supabase **SQL editore** spusti obsah `supabase/seed.sql` (vat_rates).
+3. **Skopíruj kľúče** zo Supabase → Settings → API: `Project URL`,
+   `anon`/publishable a `service_role`/secret.
+4. **Import repo do Vercelu** (framework: Next.js; `vercel.json` definuje cron joby).
+5. **Nastav env premenné vo Verceli** (Settings → Environment Variables, pre
+   Production aj Preview) podľa tabuľky vyššie — minimálne:
+   `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+   `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_APP_URL` (nasadená doména),
+   `CRON_SECRET` (náhodný reťazec). Voliteľne `GOOGLE_GENERATIVE_AI_API_KEY`,
+   `STRIPE_*`. **Redeploy** (env sa do `NEXT_PUBLIC_*` zapečie pri builde).
+6. **Supabase → Auth → URL Configuration**: `Site URL` = nasadená doména,
+   pridaj redirect `https://<doména>/auth/callback`; zapni email (Google voliteľne).
+7. **Stripe (voliteľné)**: vytvor produkty Pro/Business, vlož `STRIPE_PRICE_*`,
+   nastav webhook na `https://<doména>/api/stripe/webhook`
+   (`checkout.session.completed`, `customer.subscription.*`).
 
 ## Štruktúra
 

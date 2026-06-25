@@ -2,6 +2,7 @@ import "server-only"
 
 import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 import type { Database } from "./database.types"
+import { requireServiceRoleEnv } from "./env"
 
 /**
  * Service-role Supabase client — bypasses RLS. Server-only, for system jobs
@@ -9,9 +10,8 @@ import type { Database } from "./database.types"
  * enforce org membership themselves before using it.
  */
 export function createAdminClient() {
-  return createSupabaseClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } },
-  )
+  const { url, serviceKey } = requireServiceRoleEnv()
+  return createSupabaseClient<Database>(url, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
 }
