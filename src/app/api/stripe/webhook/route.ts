@@ -50,7 +50,7 @@ async function applySubscription(
 ) {
   const priceId = sub.items?.data?.[0]?.price?.id
   const tier = tierForPrice(priceId)
-  await db
+  const { error } = await db
     .from("organizations")
     .update({
       ...(tier ? { plan: tier } : {}),
@@ -61,6 +61,9 @@ async function applySubscription(
       current_period_end: periodEndIso(sub),
     })
     .eq("id", orgId)
+  // Surface the failure so the caller can return non-2xx → Stripe retries.
+  // A swallowed error here would silently lose a paid plan upgrade.
+  if (error) throw new Error(`plan update failed for org ${orgId}: ${error.message}`)
 }
 
 export async function POST(req: Request) {
@@ -103,6 +106,13 @@ export async function POST(req: Request) {
         if (orgId && subId) {
           const sub = await stripe.subscriptions.retrieve(subId)
           await applySubscription(db, orgId, sub)
+        } else {
+          // A paid checkout we couldn't attribute to an org — log loudly so it
+          // can be reconciled (don't silently 200 away a real payment).
+          console.error(
+            "[stripe webhook] checkout.session.completed unresolved",
+            { orgId, subId, session: session.id },
+          )
         }
         break
       }
@@ -125,10 +135,15 @@ export async function POST(req: Request) {
             typeof sub.customer === "string" ? sub.customer : sub.customer.id,
         })
         if (orgId) {
-          await db
+          const { error } = await db
             .from("organizations")
             .update({ plan: "free", subscription_status: "canceled" })
             .eq("id", orgId)
+          if (error) {
+            throw new Error(
+              `downgrade failed for org ${orgId}: ${error.message}`,
+            )
+          }
         }
         break
       }
@@ -136,8 +151,11 @@ export async function POST(req: Request) {
         break
     }
   } catch (err) {
-    // Never throw out of the handler — returning 200 avoids Stripe retry storms.
+    // A real processing failure (DB write, Stripe API) — return 500 so Stripe
+    // retries with backoff. That redelivery is the intended recovery mechanism;
+    // returning 200 here would permanently lose the plan change.
     console.error("[stripe webhook] handler error", err)
+    return new Response("Webhook handler error", { status: 500 })
   }
 
   return Response.json({ received: true })

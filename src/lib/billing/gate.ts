@@ -23,11 +23,16 @@ export type GateResult =
   | { allowed: false; reason: string; requiredTier: PlanTier }
 
 export async function getOrgPlan(db: DB, orgId: string): Promise<PlanTier> {
-  const { data } = await db
+  const { data, error } = await db
     .from("organizations")
     .select("plan")
     .eq("id", orgId)
     .maybeSingle()
+  if (error) {
+    // Fail closed (treat as Free) but make the cause visible — otherwise a
+    // transient DB error looks like a silent downgrade to the user.
+    console.error("[billing] getOrgPlan failed", error)
+  }
   return data?.plan ?? "free"
 }
 
@@ -47,18 +52,31 @@ export async function gateFeature(
   }
 }
 
-/** Count issued documents in the current calendar month (Free monthly limit). */
-export async function issuedThisMonth(db: DB, orgId: string): Promise<number> {
+/**
+ * Count issued documents in the current calendar month (Free monthly limit).
+ * Returns null on query error so the caller can fail safely rather than treating
+ * an error as "0 used" (which would fail open on a billing limit).
+ */
+export async function issuedThisMonth(
+  db: DB,
+  orgId: string,
+): Promise<number | null> {
   const now = new Date()
-  const from = new Date(now.getFullYear(), now.getMonth(), 1)
+  // Build the month boundary in UTC — `new Date(y,m,1)` is local midnight, which
+  // .toISOString() would shift across the month edge on non-UTC servers.
+  const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
     .toISOString()
     .slice(0, 10)
-  const { count } = await db
+  const { count, error } = await db
     .from("documents")
     .select("id", { count: "exact", head: true })
     .eq("organization_id", orgId)
     .neq("status", "draft")
     .gte("issue_date", from)
+  if (error) {
+    console.error("[billing] issuedThisMonth failed", error)
+    return null
+  }
   return count ?? 0
 }
 
@@ -71,6 +89,14 @@ export async function gateDocumentIssue(
   const limit = PLANS[plan].docsPerMonth
   if (limit === null) return { allowed: true }
   const used = await issuedThisMonth(db, orgId)
+  if (used === null) {
+    // Couldn't verify the count — deny safely rather than fail open on the limit.
+    return {
+      allowed: false,
+      requiredTier: plan,
+      reason: "Nepodarilo sa overiť limit dokladov. Skúste to znova.",
+    }
+  }
   if (used < limit) return { allowed: true }
   return {
     allowed: false,

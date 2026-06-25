@@ -2,6 +2,9 @@
 
 import { useEffect } from "react"
 
+// global-error.tsx replaces the root layout when an error escapes it, so it must
+// render its own <html>/<body>. (A plain root error.tsx renders *inside* the
+// layout and must NOT emit <html>.)
 export default function GlobalError({
   error,
   reset,

@@ -48,7 +48,7 @@ export async function getBillingInfo(): Promise<BillingInfo | null> {
     .maybeSingle()
 
   const plan: PlanTier = org?.plan ?? "free"
-  const used = await issuedThisMonth(supabase, orgId)
+  const used = (await issuedThisMonth(supabase, orgId)) ?? 0
 
   return {
     plan,
@@ -108,10 +108,16 @@ export async function startCheckout(
         metadata: { organization_id: orgId },
       })
       customerId = customer.id
-      await supabase
+      const { error: linkErr } = await supabase
         .from("organizations")
         .update({ stripe_customer_id: customerId })
         .eq("id", orgId)
+      if (linkErr) {
+        // Don't proceed with an unlinked customer — a second checkout would
+        // create a duplicate the webhook can't reliably reverse-map.
+        console.error("[billing] failed to link stripe customer", linkErr)
+        return { ok: false, error: "Platbu sa nepodarilo spustiť. Skúste to znova." }
+      }
     }
 
     const session = await stripe.checkout.sessions.create({
@@ -128,7 +134,8 @@ export async function startCheckout(
       return { ok: false, error: "Platbu sa nepodarilo spustiť." }
     }
     return { ok: true, url: session.url }
-  } catch {
+  } catch (err) {
+    console.error("[billing] startCheckout failed", err)
     return { ok: false, error: "Platbu sa nepodarilo spustiť. Skúste to znova." }
   }
 }
@@ -171,7 +178,8 @@ export async function openPortal(): Promise<{
       return_url: `${appBaseUrl()}/app/settings`,
     })
     return { ok: true, url: session.url }
-  } catch {
+  } catch (err) {
+    console.error("[billing] openPortal failed", err)
     return { ok: false, error: "Portál sa nepodarilo otvoriť. Skúste to znova." }
   }
 }

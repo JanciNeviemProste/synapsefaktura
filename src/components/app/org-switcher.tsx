@@ -61,18 +61,18 @@ export function OrgSwitcher({
       <DropdownMenuContent align="start" className="w-56">
         <DropdownMenuGroup>
           <DropdownMenuLabel>Firmy</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {orgs.map((o) => (
+            <DropdownMenuItem
+              key={o.id}
+              disabled={pending}
+              onClick={() => select(o.id)}
+            >
+              <span className="flex-1 truncate">{o.name}</span>
+              {o.id === active?.id ? <Check className="size-4" /> : null}
+            </DropdownMenuItem>
+          ))}
         </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        {orgs.map((o) => (
-          <DropdownMenuItem
-            key={o.id}
-            disabled={pending}
-            onClick={() => select(o.id)}
-          >
-            <span className="flex-1 truncate">{o.name}</span>
-            {o.id === active?.id ? <Check className="size-4" /> : null}
-          </DropdownMenuItem>
-        ))}
       </DropdownMenuContent>
     </DropdownMenu>
   )

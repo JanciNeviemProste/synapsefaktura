@@ -43,6 +43,7 @@ export async function saveDocument(
   // Determine number / status. Assign a number atomically on first issue.
   let number: string | null = null
   let status: "draft" | "issued" = "draft"
+  let wasIssued = false
 
   if (opts.id) {
     const { data: existing } = await supabase
@@ -52,11 +53,17 @@ export async function saveDocument(
       .maybeSingle()
     number = existing?.number ?? null
     status = (existing?.status as "draft" | "issued") ?? "draft"
+    wasIssued = existing?.status === "issued"
+  }
+
+  // Plan limit applies to every first transition to "issued" (not re-saves of an
+  // already-issued doc), regardless of whether a number was pre-assigned.
+  if (opts.issue && !wasIssued) {
+    const g = await gateDocumentIssue(supabase, orgId)
+    if (!g.allowed) return { ok: false, error: g.reason }
   }
 
   if (opts.issue && !number) {
-    const g = await gateDocumentIssue(supabase, orgId)
-    if (!g.allowed) return { ok: false, error: g.reason }
     const year = Number(v.issueDate.slice(0, 4))
     const { data: assigned, error: numErr } = await supabase.rpc(
       "next_document_number",

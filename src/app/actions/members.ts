@@ -140,10 +140,16 @@ export async function inviteMember(
   } = await supabase.auth.getUser()
   if (!user) return { ok: false, error: "Najprv sa prihláste." }
 
+  // Email is optional (invite is a shareable link), but if provided it must be
+  // a valid address — we store and display it back to admins.
+  const trimmed = email.trim()
+  if (trimmed && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+    return { ok: false, error: "Neplatný e-mail." }
+  }
+
   const token =
     crypto.randomUUID().replace(/-/g, "") +
     crypto.randomUUID().replace(/-/g, "")
-  const trimmed = email.trim()
 
   const { error } = await supabase.from("org_invites").insert({
     organization_id: orgId,
@@ -153,6 +159,7 @@ export async function inviteMember(
     invited_by: user.id,
   })
   if (error) {
+    console.error("[members] inviteMember insert failed", error)
     return { ok: false, error: "Pozvánku sa nepodarilo vytvoriť." }
   }
   return { ok: true, token }
@@ -204,26 +211,43 @@ export async function acceptInvite(
   } = await supabase.auth.getUser()
   if (!user) return { ok: false, error: "Najprv sa prihláste." }
 
+  // Atomically claim the invite (single-use): the conditional update succeeds for
+  // exactly one of any concurrent accepts. Claim BEFORE adding membership so a
+  // race can't double-consume the token.
+  const { data: claimed, error: claimErr } = await admin
+    .from("org_invites")
+    .update({ accepted_at: new Date().toISOString() })
+    .eq("token", token)
+    .is("accepted_at", null)
+    .select("organization_id, role")
+    .maybeSingle()
+  if (claimErr) {
+    console.error("[members] acceptInvite claim failed", claimErr)
+    return { ok: false, error: "Členstvo sa nepodarilo vytvoriť." }
+  }
+  if (!claimed) return { ok: false, error: "Pozvánka už bola použitá." }
+
   const { error: upsertError } = await admin
     .from("organization_members")
     .upsert(
       {
-        organization_id: invite.organization_id,
+        organization_id: claimed.organization_id,
         user_id: user.id,
-        role: invite.role,
+        role: claimed.role,
       },
       { onConflict: "organization_id,user_id", ignoreDuplicates: true },
     )
   if (upsertError) {
+    // Release the claim so the invite can be retried.
+    console.error("[members] acceptInvite membership failed", upsertError)
+    await admin
+      .from("org_invites")
+      .update({ accepted_at: null })
+      .eq("token", token)
     return { ok: false, error: "Členstvo sa nepodarilo vytvoriť." }
   }
 
-  await admin
-    .from("org_invites")
-    .update({ accepted_at: new Date().toISOString() })
-    .eq("token", token)
-
-  return { ok: true, organizationId: invite.organization_id }
+  return { ok: true, organizationId: claimed.organization_id }
 }
 
 export async function updateMemberRole(
