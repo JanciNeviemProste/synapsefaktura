@@ -10,6 +10,7 @@ import {
 import type { Database } from "@/lib/supabase/database.types"
 import { formatMoney, round2 } from "@/lib/money"
 import { DOCUMENT_TYPE_LABELS, type DocumentType } from "@/lib/documents/labels"
+import { docLabels } from "@/lib/documents/doc-labels"
 
 type DocRow = Database["public"]["Tables"]["documents"]["Row"]
 type ItemRow = Database["public"]["Tables"]["document_items"]["Row"]
@@ -77,16 +78,19 @@ function fmtDate(iso: string | null): string {
   return `${d}.${m}.${y}`
 }
 
-function partyLines(p: {
-  name: string
-  street?: string | null
-  postal_code?: string | null
-  city?: string | null
-  country?: string | null
-  ico?: string | null
-  dic?: string | null
-  ic_dph?: string | null
-}) {
+function partyLines(
+  p: {
+    name: string
+    street?: string | null
+    postal_code?: string | null
+    city?: string | null
+    country?: string | null
+    ico?: string | null
+    dic?: string | null
+    ic_dph?: string | null
+  },
+  L: ReturnType<typeof docLabels>,
+) {
   return (
     <View>
       <Text style={styles.bold}>{p.name}</Text>
@@ -96,9 +100,21 @@ function partyLines(p: {
       ) : null}
       {p.country ? <Text>{p.country}</Text> : null}
       <View style={{ marginTop: 4 }}>
-        {p.ico ? <Text>IČO: {p.ico}</Text> : null}
-        {p.dic ? <Text>DIČ: {p.dic}</Text> : null}
-        {p.ic_dph ? <Text>IČ DPH: {p.ic_dph}</Text> : null}
+        {p.ico ? (
+          <Text>
+            {L.ico}: {p.ico}
+          </Text>
+        ) : null}
+        {p.dic ? (
+          <Text>
+            {L.dic}: {p.dic}
+          </Text>
+        ) : null}
+        {p.ic_dph ? (
+          <Text>
+            {L.icDph}: {p.ic_dph}
+          </Text>
+        ) : null}
       </View>
     </View>
   )
@@ -120,6 +136,7 @@ export function InvoiceDocument({
   qrDataUrl: string | null
 }) {
   const currency = doc.currency
+  const L = docLabels(doc.language)
 
   // VAT recapitulation grouped by rate.
   const recapMap = new Map<number, { base: number; vat: number }>()
@@ -131,7 +148,7 @@ export function InvoiceDocument({
   }
   const recap = [...recapMap.entries()].sort((a, b) => b[0] - a[0])
 
-  const title = DOCUMENT_TYPE_LABELS[doc.type as DocumentType] ?? "Doklad"
+  const title = DOCUMENT_TYPE_LABELS[doc.type as DocumentType] ?? L.document
   const isPaid = doc.status === "paid"
 
   return (
@@ -145,7 +162,7 @@ export function InvoiceDocument({
             </Text>
             {doc.number ? (
               <Text style={styles.muted}>
-                Variabilný symbol: {doc.number.replace(/\D/g, "")}
+                {L.variableSymbol}: {doc.number.replace(/\D/g, "")}
               </Text>
             ) : null}
           </View>
@@ -156,16 +173,16 @@ export function InvoiceDocument({
 
         <View style={[styles.between, styles.block]}>
           <View style={styles.party}>
-            <Text style={styles.sectionTitle}>Dodávateľ</Text>
-            {partyLines(org)}
+            <Text style={styles.sectionTitle}>{L.supplier}</Text>
+            {partyLines(org, L)}
             {!org.is_vat_payer ? (
-              <Text style={{ marginTop: 4 }}>Nie som platiteľ DPH.</Text>
+              <Text style={{ marginTop: 4 }}>{L.notVatPayer}</Text>
             ) : null}
           </View>
           <View style={styles.party}>
-            <Text style={styles.sectionTitle}>Odberateľ</Text>
+            <Text style={styles.sectionTitle}>{L.customer}</Text>
             {contact ? (
-              partyLines(contact)
+              partyLines(contact, L)
             ) : (
               <Text style={styles.muted}>—</Text>
             )}
@@ -173,19 +190,25 @@ export function InvoiceDocument({
         </View>
 
         <View style={[styles.row, styles.block, { gap: 24 }]}>
-          <Text>Dátum vystavenia: {fmtDate(doc.issue_date)}</Text>
-          <Text>Dátum dodania (DUZP): {fmtDate(doc.supply_date)}</Text>
-          <Text>Splatnosť: {fmtDate(doc.due_date)}</Text>
+          <Text>
+            {L.issueDate}: {fmtDate(doc.issue_date)}
+          </Text>
+          <Text>
+            {L.supplyDate}: {fmtDate(doc.supply_date)}
+          </Text>
+          <Text>
+            {L.dueDate}: {fmtDate(doc.due_date)}
+          </Text>
         </View>
 
         {/* Items */}
         <View style={styles.block}>
           <View style={styles.th}>
-            <Text style={styles.cDesc}>Popis</Text>
-            <Text style={styles.cQty}>Množstvo</Text>
-            <Text style={styles.cPrice}>Cena/j.</Text>
-            <Text style={styles.cVat}>DPH</Text>
-            <Text style={styles.cBase}>Základ</Text>
+            <Text style={styles.cDesc}>{L.description}</Text>
+            <Text style={styles.cQty}>{L.qty}</Text>
+            <Text style={styles.cPrice}>{L.unitPrice}</Text>
+            <Text style={styles.cVat}>{L.vatRate}</Text>
+            <Text style={styles.cBase}>{L.base}</Text>
           </View>
           {items.map((it) => (
             <View key={it.id} style={styles.td}>
@@ -209,7 +232,7 @@ export function InvoiceDocument({
           {recap.map(([rate, r]) => (
             <View key={rate} style={styles.totalRow}>
               <Text style={styles.muted}>
-                Základ {rate} % / DPH {rate} %
+                {L.base} {rate} % / {L.vatRate} {rate} %
               </Text>
               <Text>
                 {formatMoney(r.base, currency)} / {formatMoney(r.vat, currency)}
@@ -217,15 +240,15 @@ export function InvoiceDocument({
             </View>
           ))}
           <View style={styles.totalRow}>
-            <Text style={styles.muted}>Základ spolu</Text>
+            <Text style={styles.muted}>{L.subtotal}</Text>
             <Text>{formatMoney(doc.subtotal, currency)}</Text>
           </View>
           <View style={styles.totalRow}>
-            <Text style={styles.muted}>DPH spolu</Text>
+            <Text style={styles.muted}>{L.vatTotal}</Text>
             <Text>{formatMoney(doc.vat_total, currency)}</Text>
           </View>
           <View style={styles.grandTotal}>
-            <Text>Spolu na úhradu</Text>
+            <Text>{L.toPay}</Text>
             <Text>{formatMoney(doc.total, currency)}</Text>
           </View>
         </View>
@@ -233,19 +256,31 @@ export function InvoiceDocument({
         {/* Payment + QR */}
         <View style={[styles.between, styles.block]}>
           <View>
-            <Text style={styles.sectionTitle}>Platobné údaje</Text>
-            {bank?.iban ? <Text>IBAN: {bank.iban}</Text> : null}
-            {bank?.swift ? <Text>SWIFT: {bank.swift}</Text> : null}
-            {doc.number ? (
-              <Text>VS: {doc.number.replace(/\D/g, "")}</Text>
+            <Text style={styles.sectionTitle}>{L.paymentDetails}</Text>
+            {bank?.iban ? (
+              <Text>
+                {L.iban}: {bank.iban}
+              </Text>
             ) : null}
-            <Text>Suma: {formatMoney(doc.total, currency)}</Text>
+            {bank?.swift ? (
+              <Text>
+                {L.swift}: {bank.swift}
+              </Text>
+            ) : null}
+            {doc.number ? (
+              <Text>
+                {L.variableSymbolShort}: {doc.number.replace(/\D/g, "")}
+              </Text>
+            ) : null}
+            <Text>
+              {L.amount}: {formatMoney(doc.total, currency)}
+            </Text>
           </View>
           {qrDataUrl && !isPaid ? (
             <View style={{ alignItems: "center" }}>
               {/* eslint-disable-next-line jsx-a11y/alt-text */}
               <Image src={qrDataUrl} style={styles.qr} />
-              <Text style={styles.muted}>Zaplať QR kódom</Text>
+              <Text style={styles.muted}>{L.payByQr}</Text>
             </View>
           ) : null}
         </View>

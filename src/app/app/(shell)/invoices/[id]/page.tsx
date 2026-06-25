@@ -2,6 +2,7 @@ import { notFound } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { formatMoney } from "@/lib/money"
 import { DOCUMENT_TYPE_LABELS, type DocumentType } from "@/lib/documents/labels"
+import { docLabels } from "@/lib/documents/doc-labels"
 import { StatusBadge } from "@/components/invoice/status-badge"
 import { DocumentActions } from "@/components/invoice/document-actions"
 import { CompliancePanel } from "@/components/invoice/compliance-panel"
@@ -53,7 +54,8 @@ export default async function InvoiceDetailPage({
   if (!doc) notFound()
 
   const contact = doc.contacts as { name?: string; ic_dph?: string } | null
-  const title = DOCUMENT_TYPE_LABELS[doc.type as DocumentType] ?? "Doklad"
+  const L = docLabels(doc.language)
+  const title = DOCUMENT_TYPE_LABELS[doc.type as DocumentType] ?? L.document
 
   return (
     <div className="mx-auto grid max-w-4xl gap-6">
@@ -66,7 +68,7 @@ export default async function InvoiceDetailPage({
             <StatusBadge status={doc.status} />
           </div>
           <p className="text-muted-foreground text-sm">
-            {contact?.name ?? "Bez odberateľa"}
+            {contact?.name ?? L.noCustomer}
           </p>
         </div>
         <DocumentActions id={doc.id} status={doc.status} />
@@ -74,31 +76,28 @@ export default async function InvoiceDetailPage({
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Doklad</CardTitle>
+          <CardTitle className="text-base">{L.document}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-3">
-          <Field label="Dátum vystavenia" value={fmtDate(doc.issue_date)} />
-          <Field
-            label="Dátum dodania (DUZP)"
-            value={fmtDate(doc.supply_date)}
-          />
-          <Field label="Splatnosť" value={fmtDate(doc.due_date)} />
+          <Field label={L.issueDate} value={fmtDate(doc.issue_date)} />
+          <Field label={L.supplyDate} value={fmtDate(doc.supply_date)} />
+          <Field label={L.dueDate} value={fmtDate(doc.due_date)} />
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Položky</CardTitle>
+          <CardTitle className="text-base">{L.items}</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Popis</TableHead>
-                <TableHead className="text-right">Množstvo</TableHead>
-                <TableHead className="text-right">Cena/j.</TableHead>
-                <TableHead className="text-right">DPH</TableHead>
-                <TableHead className="text-right">Základ</TableHead>
+                <TableHead>{L.description}</TableHead>
+                <TableHead className="text-right">{L.qty}</TableHead>
+                <TableHead className="text-right">{L.unitPrice}</TableHead>
+                <TableHead className="text-right">{L.vatRate}</TableHead>
+                <TableHead className="text-right">{L.base}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -122,15 +121,15 @@ export default async function InvoiceDetailPage({
 
           <div className="mt-4 grid justify-items-end gap-1">
             <Row
-              label="Základ spolu"
+              label={L.subtotal}
               value={formatMoney(doc.subtotal, doc.currency)}
             />
             <Row
-              label="DPH spolu"
+              label={L.vatTotal}
               value={formatMoney(doc.vat_total, doc.currency)}
             />
             <div className="flex w-full max-w-xs justify-between border-t pt-1 text-base font-semibold">
-              <span>Spolu na úhradu</span>
+              <span>{L.toPay}</span>
               <span className="tabular-nums">
                 {formatMoney(doc.total, doc.currency)}
               </span>

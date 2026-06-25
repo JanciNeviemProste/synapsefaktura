@@ -39,6 +39,11 @@ function makeOrganization(
     street: "Hlavná 1",
     updated_at: "2026-01-01T00:00:00Z",
     vat_mode_default: "payer",
+    plan: "free",
+    stripe_customer_id: null,
+    stripe_subscription_id: null,
+    subscription_status: null,
+    current_period_end: null,
     ...overrides,
   }
 }

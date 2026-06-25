@@ -4,6 +4,7 @@ import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { Plus, Pencil, Trash2, Receipt, Sparkles } from "lucide-react"
 import { toast } from "sonner"
+import { useTranslations } from "next-intl"
 
 import type { Database } from "@/lib/supabase/database.types"
 import { formatMoney } from "@/lib/money"
@@ -57,6 +58,8 @@ export function ExpensesView({
   suppliers: Supplier[]
 }) {
   const router = useRouter()
+  const t = useTranslations("expenses")
+  const tc = useTranslations("common")
   const [open, setOpen] = useState(false)
   const [captureOpen, setCaptureOpen] = useState(false)
   const [editing, setEditing] = useState<Expense | null>(null)
@@ -74,7 +77,7 @@ export function ExpensesView({
       const res = await deleteExpense(deleting.id)
       if (!res.ok) toast.error(res.error)
       else {
-        toast.success("Náklad zmazaný.")
+        toast.success(t("deleted"))
         router.refresh()
       }
       setDeleting(null)
@@ -85,15 +88,13 @@ export function ExpensesView({
     <div className="mx-auto grid max-w-5xl gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Náklady</h1>
-          <p className="text-muted-foreground text-sm">
-            Prijaté doklady a výdavky.
-          </p>
+          <h1 className="text-2xl font-semibold">{t("title")}</h1>
+          <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => setCaptureOpen(true)}>
             <Sparkles className="size-4" />
-            Vyťažiť doklad (AI)
+            {t("captureAi")}
           </Button>
           <Button
             onClick={() => {
@@ -102,7 +103,7 @@ export function ExpensesView({
             }}
           >
             <Plus className="size-4" />
-            Nový náklad
+            {t("newExpense")}
           </Button>
         </div>
       </div>
@@ -115,10 +116,8 @@ export function ExpensesView({
             <Receipt className="text-muted-foreground size-6" />
           </div>
           <div>
-            <p className="font-medium">Zatiaľ žiadne náklady</p>
-            <p className="text-muted-foreground text-sm">
-              Pridaj prijatú faktúru alebo bloček.
-            </p>
+            <p className="font-medium">{t("emptyTitle")}</p>
+            <p className="text-muted-foreground text-sm">{t("emptyHint")}</p>
           </div>
         </div>
       ) : (
@@ -126,12 +125,14 @@ export function ExpensesView({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Dátum</TableHead>
-                <TableHead>Dodávateľ</TableHead>
-                <TableHead>Číslo</TableHead>
-                <TableHead>Kategória</TableHead>
-                <TableHead className="text-right">Spolu</TableHead>
-                <TableHead className="w-24 text-right">Akcie</TableHead>
+                <TableHead>{t("colDate")}</TableHead>
+                <TableHead>{t("colSupplier")}</TableHead>
+                <TableHead>{t("colNumber")}</TableHead>
+                <TableHead>{t("colCategory")}</TableHead>
+                <TableHead className="text-right">{t("colTotal")}</TableHead>
+                <TableHead className="w-24 text-right">
+                  {t("colActions")}
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -154,7 +155,7 @@ export function ExpensesView({
                         setEditing(e)
                         setOpen(true)
                       }}
-                      title="Upraviť"
+                      title={tc("edit")}
                     >
                       <Pencil className="size-4" />
                     </Button>
@@ -162,7 +163,7 @@ export function ExpensesView({
                       variant="ghost"
                       size="icon-sm"
                       onClick={() => setDeleting(e)}
-                      title="Zmazať"
+                      title={tc("delete")}
                     >
                       <Trash2 className="size-4" />
                     </Button>
@@ -178,9 +179,9 @@ export function ExpensesView({
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              {editing ? "Upraviť náklad" : "Nový náklad"}
+              {editing ? t("editExpense") : t("newExpense")}
             </DialogTitle>
-            <DialogDescription>Prijatý doklad / výdavok.</DialogDescription>
+            <DialogDescription>{t("formDescription")}</DialogDescription>
           </DialogHeader>
           <ExpenseForm
             expense={editing}
@@ -196,15 +197,15 @@ export function ExpensesView({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Zmazať náklad?</AlertDialogTitle>
+            <AlertDialogTitle>{t("deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Náklad bude natrvalo odstránený.
+              {t("deleteDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Zrušiť</AlertDialogCancel>
+            <AlertDialogCancel>{tc("cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete} disabled={pending}>
-              Zmazať
+              {tc("delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

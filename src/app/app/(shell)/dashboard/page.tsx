@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { FileText, Plus } from "lucide-react"
+import { getTranslations } from "next-intl/server"
 import { createClient } from "@/lib/supabase/server"
 import { round2, formatMoney } from "@/lib/money"
 import { Button } from "@/components/ui/button"
@@ -32,6 +33,7 @@ const SK_MONTHS_SHORT = [
 ]
 
 export default async function DashboardPage() {
+  const t = await getTranslations("dashboard")
   const supabase = await createClient()
   const today = new Date()
   const todayIso = today.toISOString().slice(0, 10)
@@ -82,25 +84,23 @@ export default async function DashboardPage() {
   const maxMonth = Math.max(1, ...months.map((m) => m.value))
 
   const stats = [
-    { label: "Tržby tento mesiac", value: formatMoney(revenueThisMonth) },
-    { label: "Pohľadávky", value: formatMoney(receivables) },
-    { label: "Po splatnosti", value: formatMoney(overdue) },
-    { label: "Uhradené tento mesiac", value: formatMoney(paidThisMonth) },
+    { label: t("revenueThisMonth"), value: formatMoney(revenueThisMonth) },
+    { label: t("receivables"), value: formatMoney(receivables) },
+    { label: t("overdue"), value: formatMoney(overdue) },
+    { label: t("paidThisMonth"), value: formatMoney(paidThisMonth) },
   ]
 
   return (
     <div className="mx-auto grid max-w-5xl gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Prehľad</h1>
-          <p className="text-muted-foreground text-sm">
-            Stav tvojich financií v reálnom čase.
-          </p>
+          <h1 className="text-2xl font-semibold">{t("title")}</h1>
+          <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
         </div>
         <Button asChild>
           <Link href="/app/invoices/new">
             <Plus className="size-4" />
-            Nová faktúra
+            {t("newInvoice")}
           </Link>
         </Button>
       </div>
@@ -118,9 +118,7 @@ export default async function DashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">
-            Tržby za posledných 6 mesiacov
-          </CardTitle>
+          <CardTitle className="text-base">{t("revenue6m")}</CardTitle>
         </CardHeader>
         <CardContent>
           {invoices.length === 0 ? (
@@ -129,7 +127,7 @@ export default async function DashboardPage() {
                 <FileText className="text-muted-foreground size-6" />
               </div>
               <p className="text-muted-foreground text-sm">
-                Zatiaľ žiadne faktúry. Vystav prvú faktúru.
+                {t("emptyTitle")} {t("emptyHint")}
               </p>
             </div>
           ) : (

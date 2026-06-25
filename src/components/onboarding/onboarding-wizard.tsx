@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import type { FieldPath } from "react-hook-form"
 import { Loader2, Search } from "lucide-react"
 import { toast } from "sonner"
+import { useTranslations } from "next-intl"
 
 import {
   createOrganizationSchema,
@@ -46,22 +47,23 @@ import {
 
 type FieldName = FieldPath<CreateOrganizationValues>
 
-const STEPS: { title: string; description: string; fields: FieldName[] }[] = [
+const STEPS: { titleKey: string; descKey: string; fields: FieldName[] }[] = [
   {
-    title: "Firma",
-    description: "Zadaj IČO a načítaj údaje z registra, alebo vyplň ručne.",
+    titleKey: "stepCompany",
+    descKey: "stepCompanyDesc",
     fields: ["name"],
   },
-  { title: "Adresa", description: "Sídlo firmy.", fields: [] },
-  { title: "DPH", description: "Nastavenie režimu DPH.", fields: [] },
+  { titleKey: "stepAddress", descKey: "stepAddressDesc", fields: [] },
+  { titleKey: "stepVat", descKey: "stepVatDesc", fields: [] },
   {
-    title: "Banka a predvoľby",
-    description: "Účet a predvolené hodnoty pre doklady.",
+    titleKey: "stepBank",
+    descKey: "stepBankDesc",
     fields: [],
   },
 ]
 
 export function OnboardingWizard() {
+  const t = useTranslations("onboarding")
   const [step, setStep] = useState(0)
   const [submitting, startSubmit] = useTransition()
   const [looking, startLookup] = useTransition()
@@ -137,10 +139,10 @@ export function OnboardingWizard() {
     <Card>
       <CardHeader>
         <CardDescription>
-          Krok {step + 1} z {STEPS.length}
+          {t("step", { current: step + 1, total: STEPS.length })}
         </CardDescription>
-        <CardTitle>{STEPS[step].title}</CardTitle>
-        <CardDescription>{STEPS[step].description}</CardDescription>
+        <CardTitle>{t(STEPS[step].titleKey)}</CardTitle>
+        <CardDescription>{t(STEPS[step].descKey)}</CardDescription>
       </CardHeader>
 
       <Form {...form}>
@@ -448,22 +450,22 @@ export function OnboardingWizard() {
               onClick={() => setStep((s) => Math.max(s - 1, 0))}
               disabled={step === 0 || submitting}
             >
-              Späť
+              {t("back")}
             </Button>
             {isLast ? (
               <Button type="submit" disabled={submitting}>
                 {submitting ? (
                   <>
                     <Loader2 className="size-4 animate-spin" />
-                    Vytváram…
+                    {t("creating")}
                   </>
                 ) : (
-                  "Dokončiť"
+                  t("finish")
                 )}
               </Button>
             ) : (
               <Button type="button" onClick={next}>
-                Ďalej
+                {t("next")}
               </Button>
             )}
           </CardFooter>

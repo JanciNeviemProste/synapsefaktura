@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useTranslations } from "next-intl"
 import {
   LayoutDashboard,
   FileText,
@@ -20,7 +21,7 @@ import { cn } from "@/lib/utils"
 
 type NavItem = {
   href: string
-  label: string
+  key: string
   icon: React.ComponentType<{ className?: string }>
   ready: boolean
 }
@@ -29,24 +30,25 @@ type NavItem = {
 const NAV: NavItem[] = [
   {
     href: "/app/dashboard",
-    label: "Prehľad",
+    key: "dashboard",
     icon: LayoutDashboard,
     ready: true,
   },
-  { href: "/app/invoices", label: "Faktúry", icon: FileText, ready: true },
-  { href: "/app/assistant", label: "Asistent", icon: Bot, ready: true },
-  { href: "/app/contacts", label: "Kontakty", icon: Users, ready: true },
-  { href: "/app/products", label: "Cenník", icon: Package, ready: true },
-  { href: "/app/expenses", label: "Náklady", icon: Receipt, ready: true },
-  { href: "/app/einvoices", label: "E-faktúry", icon: Inbox, ready: true },
-  { href: "/app/bank", label: "Banka", icon: Landmark, ready: true },
-  { href: "/app/recurring", label: "Pravidelné", icon: Repeat, ready: true },
-  { href: "/app/reports", label: "Reporty", icon: BarChart3, ready: true },
-  { href: "/app/settings", label: "Nastavenia", icon: Settings, ready: true },
+  { href: "/app/invoices", key: "invoices", icon: FileText, ready: true },
+  { href: "/app/assistant", key: "assistant", icon: Bot, ready: true },
+  { href: "/app/contacts", key: "contacts", icon: Users, ready: true },
+  { href: "/app/products", key: "products", icon: Package, ready: true },
+  { href: "/app/expenses", key: "expenses", icon: Receipt, ready: true },
+  { href: "/app/einvoices", key: "einvoices", icon: Inbox, ready: true },
+  { href: "/app/bank", key: "bank", icon: Landmark, ready: true },
+  { href: "/app/recurring", key: "recurring", icon: Repeat, ready: true },
+  { href: "/app/reports", key: "reports", icon: BarChart3, ready: true },
+  { href: "/app/settings", key: "settings", icon: Settings, ready: true },
 ]
 
 export function Sidebar() {
   const pathname = usePathname()
+  const t = useTranslations("nav")
 
   return (
     <aside className="bg-background hidden w-60 shrink-0 flex-col border-r md:flex">
@@ -68,7 +70,7 @@ export function Sidebar() {
               >
                 <span className="flex items-center gap-2">
                   <Icon className="size-4" />
-                  {item.label}
+                  {t(item.key)}
                 </span>
                 <span className="bg-muted rounded px-1.5 py-0.5 text-[10px] font-medium uppercase">
                   čoskoro
@@ -89,7 +91,7 @@ export function Sidebar() {
               )}
             >
               <Icon className="size-4" />
-              {item.label}
+              {t(item.key)}
             </Link>
           )
         })}

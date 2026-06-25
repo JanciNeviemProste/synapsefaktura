@@ -818,6 +818,50 @@ export type Database = {
           },
         ]
       }
+      org_invites: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email: string | null
+          expires_at: string
+          id: string
+          invited_by: string | null
+          organization_id: string
+          role: Database["public"]["Enums"]["org_role"]
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string | null
+          expires_at?: string
+          id?: string
+          invited_by?: string | null
+          organization_id: string
+          role?: Database["public"]["Enums"]["org_role"]
+          token: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string | null
+          expires_at?: string
+          id?: string
+          invited_by?: string | null
+          organization_id?: string
+          role?: Database["public"]["Enums"]["org_role"]
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_invites_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_members: {
         Row: {
           created_at: string
@@ -855,6 +899,7 @@ export type Database = {
           city: string | null
           country: string
           created_at: string
+          current_period_end: string | null
           default_currency: string
           default_due_days: number
           default_language: string
@@ -869,10 +914,14 @@ export type Database = {
           logo_url: string | null
           name: string
           peppol_id: string | null
+          plan: Database["public"]["Enums"]["plan_tier"]
           postal_code: string | null
           signature_url: string | null
           stamp_url: string | null
           street: string | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          subscription_status: string | null
           updated_at: string
           vat_mode_default: Database["public"]["Enums"]["vat_mode"]
         }
@@ -880,6 +929,7 @@ export type Database = {
           city?: string | null
           country?: string
           created_at?: string
+          current_period_end?: string | null
           default_currency?: string
           default_due_days?: number
           default_language?: string
@@ -894,10 +944,14 @@ export type Database = {
           logo_url?: string | null
           name: string
           peppol_id?: string | null
+          plan?: Database["public"]["Enums"]["plan_tier"]
           postal_code?: string | null
           signature_url?: string | null
           stamp_url?: string | null
           street?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string | null
           updated_at?: string
           vat_mode_default?: Database["public"]["Enums"]["vat_mode"]
         }
@@ -905,6 +959,7 @@ export type Database = {
           city?: string | null
           country?: string
           created_at?: string
+          current_period_end?: string | null
           default_currency?: string
           default_due_days?: number
           default_language?: string
@@ -919,10 +974,14 @@ export type Database = {
           logo_url?: string | null
           name?: string
           peppol_id?: string | null
+          plan?: Database["public"]["Enums"]["plan_tier"]
           postal_code?: string | null
           signature_url?: string | null
           stamp_url?: string | null
           street?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string | null
           updated_at?: string
           vat_mode_default?: Database["public"]["Enums"]["vat_mode"]
         }
@@ -1223,6 +1282,7 @@ export type Database = {
           city: string | null
           country: string
           created_at: string
+          current_period_end: string | null
           default_currency: string
           default_due_days: number
           default_language: string
@@ -1237,10 +1297,14 @@ export type Database = {
           logo_url: string | null
           name: string
           peppol_id: string | null
+          plan: Database["public"]["Enums"]["plan_tier"]
           postal_code: string | null
           signature_url: string | null
           stamp_url: string | null
           street: string | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          subscription_status: string | null
           updated_at: string
           vat_mode_default: Database["public"]["Enums"]["vat_mode"]
         }
@@ -1303,6 +1367,7 @@ export type Database = {
       org_role: "owner" | "admin" | "accountant" | "member"
       payment_method: "bank" | "card" | "cash" | "other"
       payment_status: "unpaid" | "partially_paid" | "paid"
+      plan_tier: "free" | "pro" | "business"
       recurring_cadence: "weekly" | "monthly" | "custom"
       recurring_send_method: "email" | "peppol" | "none"
       reminder_channel: "email" | "sms"
@@ -1485,6 +1550,7 @@ export const Constants = {
       org_role: ["owner", "admin", "accountant", "member"],
       payment_method: ["bank", "card", "cash", "other"],
       payment_status: ["unpaid", "partially_paid", "paid"],
+      plan_tier: ["free", "pro", "business"],
       recurring_cadence: ["weekly", "monthly", "custom"],
       recurring_send_method: ["email", "peppol", "none"],
       reminder_channel: ["email", "sms"],

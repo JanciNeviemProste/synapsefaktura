@@ -1,7 +1,11 @@
 import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
+import { NextIntlClientProvider } from "next-intl"
+import { getLocale } from "next-intl/server"
 import "./globals.css"
 import { Toaster } from "@/components/ui/sonner"
+import { ThemeProvider } from "@/components/theme-provider"
+import { PwaRegister } from "@/components/pwa-register"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,20 +23,26 @@ export const metadata: Metadata = {
     "Moderná slovenská fakturácia s AI a pripravená na povinnú e-faktúru 2027.",
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const locale = await getLocale()
   return (
     <html
-      lang="sk"
+      lang={locale}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col">
-        {children}
-        <Toaster richColors position="top-right" />
+        <NextIntlClientProvider>
+          <ThemeProvider>
+            {children}
+            <PwaRegister />
+            <Toaster richColors position="top-right" />
+          </ThemeProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   )

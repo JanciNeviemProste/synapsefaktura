@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { Plus, FileText } from "lucide-react"
+import { getTranslations } from "next-intl/server"
 import { createClient } from "@/lib/supabase/server"
 import { formatMoney } from "@/lib/money"
 import { DOCUMENT_TYPE_LABELS, type DocumentType } from "@/lib/documents/labels"
@@ -23,6 +24,7 @@ function fmtDate(iso: string | null): string {
 }
 
 export default async function InvoicesPage() {
+  const t = await getTranslations("invoices")
   const supabase = await createClient()
   const { data: documents } = await supabase
     .from("documents")
@@ -33,15 +35,13 @@ export default async function InvoicesPage() {
     <div className="mx-auto grid max-w-5xl gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Faktúry</h1>
-          <p className="text-muted-foreground text-sm">
-            Doklady a ich stav úhrady.
-          </p>
+          <h1 className="text-2xl font-semibold">{t("title")}</h1>
+          <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
         </div>
         <Button asChild>
           <Link href="/app/invoices/new">
             <Plus className="size-4" />
-            Nový doklad
+            {t("newDoc")}
           </Link>
         </Button>
       </div>
@@ -52,15 +52,13 @@ export default async function InvoicesPage() {
             <FileText className="text-muted-foreground size-6" />
           </div>
           <div>
-            <p className="font-medium">Zatiaľ žiadne doklady</p>
-            <p className="text-muted-foreground text-sm">
-              Vystav prvú faktúru.
-            </p>
+            <p className="font-medium">{t("emptyTitle")}</p>
+            <p className="text-muted-foreground text-sm">{t("emptyHint")}</p>
           </div>
           <Button asChild variant="outline">
             <Link href="/app/invoices/new">
               <Plus className="size-4" />
-              Nový doklad
+              {t("newDoc")}
             </Link>
           </Button>
         </div>
@@ -69,12 +67,12 @@ export default async function InvoicesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Číslo</TableHead>
-                <TableHead>Typ</TableHead>
-                <TableHead>Odberateľ</TableHead>
-                <TableHead>Vystavené</TableHead>
-                <TableHead className="text-right">Suma</TableHead>
-                <TableHead>Stav</TableHead>
+                <TableHead>{t("colNumber")}</TableHead>
+                <TableHead>{t("colType")}</TableHead>
+                <TableHead>{t("colCustomer")}</TableHead>
+                <TableHead>{t("colIssued")}</TableHead>
+                <TableHead className="text-right">{t("colAmount")}</TableHead>
+                <TableHead>{t("colStatus")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -88,7 +86,7 @@ export default async function InvoicesPage() {
                         href={`/app/invoices/${d.id}`}
                         className="hover:underline"
                       >
-                        {d.number ?? "(koncept)"}
+                        {d.number ?? t("draft")}
                       </Link>
                     </TableCell>
                     <TableCell>

@@ -79,6 +79,11 @@ function makeOrg(over: Partial<OrganizationRow> = {}): OrganizationRow {
     street: null,
     updated_at: "2025-01-01T00:00:00Z",
     vat_mode_default: "payer",
+    plan: "free",
+    stripe_customer_id: null,
+    stripe_subscription_id: null,
+    subscription_status: null,
+    current_period_end: null,
     ...over,
   }
 }

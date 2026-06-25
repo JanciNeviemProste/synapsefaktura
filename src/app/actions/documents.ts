@@ -6,6 +6,7 @@ import { getCurrentOrgId } from "@/lib/auth/current-org"
 import { documentSchema, type DocumentInput } from "@/lib/validation/document"
 import { computeInvoice } from "@/lib/vat/engine"
 import { legalNoteForVatMode } from "@/lib/vat/legal-notes"
+import { gateDocumentIssue } from "@/lib/billing/gate"
 
 export type SaveDocumentResult =
   | { ok: true; id: string }
@@ -54,6 +55,8 @@ export async function saveDocument(
   }
 
   if (opts.issue && !number) {
+    const g = await gateDocumentIssue(supabase, orgId)
+    if (!g.allowed) return { ok: false, error: g.reason }
     const year = Number(v.issueDate.slice(0, 4))
     const { data: assigned, error: numErr } = await supabase.rpc(
       "next_document_number",

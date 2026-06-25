@@ -4,6 +4,7 @@ import { useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { Inbox, RefreshCw, Receipt } from "lucide-react"
 import { toast } from "sonner"
+import { useTranslations } from "next-intl"
 
 import { formatMoney } from "@/lib/money"
 import {
@@ -41,6 +42,7 @@ function fmtDate(iso: string | null): string {
 
 export function InboxView({ initial }: { initial: InboundItem[] }) {
   const router = useRouter()
+  const t = useTranslations("einvoices")
   const [pollPending, startPoll] = useTransition()
   const [convertPending, startConvert] = useTransition()
 
@@ -48,13 +50,13 @@ export function InboxView({ initial }: { initial: InboundItem[] }) {
     startPoll(async () => {
       const res = await pollMyInbox()
       if (!res.ok) {
-        toast.error(res.error ?? "Nepodarilo sa skontrolovať schránku.")
+        toast.error(res.error ?? t("checkFailed"))
         return
       }
       if (res.received > 0) {
-        toast.success(`Prijaté nové e-faktúry: ${res.received}`)
+        toast.success(t("received", { count: res.received }))
       } else {
-        toast.info("Žiadne nové e-faktúry.")
+        toast.info(t("noNew"))
       }
       router.refresh()
     })
@@ -64,10 +66,10 @@ export function InboxView({ initial }: { initial: InboundItem[] }) {
     startConvert(async () => {
       const res = await inboundToExpense(id)
       if (!res.ok) {
-        toast.error(res.error ?? "Nepodarilo sa vytvoriť náklad.")
+        toast.error(res.error ?? t("convertFailed"))
         return
       }
-      toast.success("Náklad vytvorený.")
+      toast.success(t("expenseCreated"))
       router.refresh()
     })
   }
@@ -76,25 +78,21 @@ export function InboxView({ initial }: { initial: InboundItem[] }) {
     <div className="mx-auto grid max-w-5xl gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Prijaté e-faktúry</h1>
-          <p className="text-muted-foreground text-sm">
-            Elektronické faktúry doručené cez sieť Peppol.
-          </p>
+          <h1 className="text-2xl font-semibold">{t("title")}</h1>
+          <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
         </div>
         <Button onClick={handlePoll} disabled={pollPending}>
           <RefreshCw
             className={pollPending ? "size-4 animate-spin" : "size-4"}
           />
-          Skontrolovať schránku
+          {t("checkInbox")}
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Doručené dokumenty</CardTitle>
-          <CardDescription>
-            Z prijatej e-faktúry vytvoríte náklad jedným klikom.
-          </CardDescription>
+          <CardTitle>{t("receivedTitle")}</CardTitle>
+          <CardDescription>{t("receivedDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
           {initial.length === 0 ? (
@@ -102,19 +100,19 @@ export function InboxView({ initial }: { initial: InboundItem[] }) {
               <div className="bg-muted flex size-12 items-center justify-center rounded-full">
                 <Inbox className="text-muted-foreground size-6" />
               </div>
-              <p className="text-muted-foreground text-sm">
-                Zatiaľ žiadne prijaté e-faktúry.
-              </p>
+              <p className="text-muted-foreground text-sm">{t("empty")}</p>
             </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Číslo</TableHead>
-                  <TableHead>Dodávateľ</TableHead>
-                  <TableHead className="text-right">Suma</TableHead>
-                  <TableHead>Prijaté</TableHead>
-                  <TableHead className="w-40 text-right">Akcie</TableHead>
+                  <TableHead>{t("colNumber")}</TableHead>
+                  <TableHead>{t("colSupplier")}</TableHead>
+                  <TableHead className="text-right">{t("colAmount")}</TableHead>
+                  <TableHead>{t("colReceived")}</TableHead>
+                  <TableHead className="w-40 text-right">
+                    {t("colActions")}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -132,7 +130,7 @@ export function InboxView({ initial }: { initial: InboundItem[] }) {
                     <TableCell>{fmtDate(row.created_at)}</TableCell>
                     <TableCell className="text-right">
                       {row.hasExpense ? (
-                        <Badge variant="secondary">Náklad vytvorený</Badge>
+                        <Badge variant="secondary">{t("expenseCreated")}</Badge>
                       ) : (
                         <Button
                           variant="outline"
@@ -141,7 +139,7 @@ export function InboxView({ initial }: { initial: InboundItem[] }) {
                           disabled={convertPending}
                         >
                           <Receipt className="size-4" />
-                          Vytvoriť náklad
+                          {t("createExpense")}
                         </Button>
                       )}
                     </TableCell>

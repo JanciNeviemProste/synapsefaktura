@@ -13,6 +13,8 @@ import { aiModel, hasAiKey, AI_MODEL } from "./provider"
 import { estimateCost } from "./cost"
 import { createClient } from "@/lib/supabase/server"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
+import { gateFeature } from "@/lib/billing/gate"
+import type { Feature } from "@/lib/billing/plans"
 
 export type AiFeature =
   | "capture"
@@ -22,6 +24,42 @@ export type AiFeature =
   | "forecast"
   | "reminder"
   | "anomaly"
+
+/** Map an AI feature to the billing Feature it requires (null = not gated). */
+function featureGate(feature: AiFeature): Feature | null {
+  switch (feature) {
+    case "capture":
+      return "aiCapture"
+    case "nl_invoice":
+      return "nlInvoice"
+    case "assistant":
+      return "assistant"
+    case "forecast":
+      return "forecast"
+    case "anomaly":
+      return "anomaly"
+    case "reminder":
+      return "smartReminders"
+    case "compliance":
+      return null
+  }
+}
+
+/** Resolve the org and enforce the plan gate for an AI feature, if gated. */
+async function checkPlanGate(
+  feature: AiFeature,
+): Promise<{ ok: true } | { ok: false; degraded: true; error: string }> {
+  const mapped = featureGate(feature)
+  if (!mapped) return { ok: true }
+  const supabase = await createClient()
+  const orgId = await getCurrentOrgId(supabase)
+  if (!orgId) return { ok: true }
+  const gate = await gateFeature(supabase, orgId, mapped)
+  if (!gate.allowed) {
+    return { ok: false, degraded: true, error: gate.reason }
+  }
+  return { ok: true }
+}
 
 export type AiResult<T> =
   | { ok: true; data: T }
@@ -65,6 +103,8 @@ export async function generateStructured<SCHEMA extends z.ZodType>(opts: {
   if (!hasAiKey()) {
     return { ok: false, degraded: true, error: "AI nie je nakonfigurované." }
   }
+  const gate = await checkPlanGate(opts.feature)
+  if (!gate.ok) return gate
   try {
     const { object, usage } = await generateObject({
       model: aiModel(),
@@ -97,6 +137,8 @@ export async function generateChat(opts: {
   if (!hasAiKey()) {
     return { ok: false, degraded: true, error: "AI nie je nakonfigurované." }
   }
+  const gate = await checkPlanGate(opts.feature)
+  if (!gate.ok) return gate
   try {
     const result = await generateText({
       model: aiModel(),

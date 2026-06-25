@@ -1,0 +1,98 @@
+import type { Database } from "@/lib/supabase/database.types"
+
+/**
+ * Plan catalog + feature matrix (§8.1). CLIENT-SAFE: plain data only, no secrets,
+ * no server-only imports — both the billing UI and server gates read this.
+ *
+ * Pricing/limits are placeholders — final numbers are a business decision.
+ * // TODO: confirm final tiers, prices and the Free monthly document limit.
+ */
+
+export type PlanTier = Database["public"]["Enums"]["plan_tier"]
+
+/** Gated capabilities. A plan either grants a feature or it doesn't. */
+export type Feature =
+  | "aiCapture"
+  | "nlInvoice"
+  | "assistant"
+  | "smartReminders"
+  | "forecast"
+  | "anomaly"
+  | "multiUser"
+  | "peppolSend"
+  | "advancedReports"
+  | "api"
+
+export type PlanDef = {
+  tier: PlanTier
+  label: string
+  /** Indicative monthly price in EUR, or null for Free. */
+  priceEur: string | null
+  /** Issued documents per calendar month; null = unlimited. */
+  docsPerMonth: number | null
+  features: ReadonlySet<Feature>
+  /** Env var holding the Stripe price id for checkout (server reads it). */
+  stripePriceEnv?: string
+  /** Short marketing blurb (SK). */
+  blurb: string
+}
+
+const ALL: Feature[] = [
+  "aiCapture",
+  "nlInvoice",
+  "assistant",
+  "smartReminders",
+  "forecast",
+  "anomaly",
+  "multiUser",
+  "peppolSend",
+  "advancedReports",
+  "api",
+]
+
+export const PLANS: Record<PlanTier, PlanDef> = {
+  free: {
+    tier: "free",
+    label: "Free",
+    priceEur: null,
+    docsPerMonth: 5, // TODO: business decision
+    features: new Set<Feature>([]),
+    blurb: "Základná fakturácia a príjem e-faktúr (Peppol). Ideálne pred 2027.",
+  },
+  pro: {
+    tier: "pro",
+    label: "Pro",
+    priceEur: "12",
+    docsPerMonth: null,
+    features: new Set<Feature>([
+      "aiCapture",
+      "nlInvoice",
+      "assistant",
+      "smartReminders",
+      "anomaly",
+    ]),
+    stripePriceEnv: "STRIPE_PRICE_PRO",
+    blurb: "Neobmedzené doklady + AI: vyťaženie, fakturácia vetou, asistent.",
+  },
+  business: {
+    tier: "business",
+    label: "Business",
+    priceEur: "29",
+    docsPerMonth: null,
+    features: new Set<Feature>(ALL),
+    stripePriceEnv: "STRIPE_PRICE_BUSINESS",
+    blurb: "Všetko z Pro + prognózy, viac používateľov, odosielanie e-faktúr, API.",
+  },
+}
+
+export const PLAN_ORDER: PlanTier[] = ["free", "pro", "business"]
+
+/** Does a plan grant a feature? */
+export function planHasFeature(tier: PlanTier, feature: Feature): boolean {
+  return PLANS[tier].features.has(feature)
+}
+
+/** Lowest tier that grants a feature (for "Upgrade na …" copy). */
+export function minTierFor(feature: Feature): PlanTier {
+  return PLAN_ORDER.find((t) => PLANS[t].features.has(feature)) ?? "business"
+}

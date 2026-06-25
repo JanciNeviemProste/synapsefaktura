@@ -8,6 +8,7 @@ import { buildUblInvoice } from "@/lib/peppol/ubl"
 import { validateUbl } from "@/lib/peppol/validate"
 import { getPostmanProvider } from "@/lib/peppol/provider"
 import { slovakPeppolId } from "@/lib/peppol/id"
+import { gateFeature } from "@/lib/billing/gate"
 import type {
   ValidationResult,
   EinvoiceTransportStatus,
@@ -142,6 +143,10 @@ export async function sendEInvoice(documentId: string): Promise<
   if (document.status === "draft") {
     return { ok: false, error: "Najprv vystavte doklad." }
   }
+
+  const supabaseGate = await createClient()
+  const gate = await gateFeature(supabaseGate, organization.id, "peppolSend")
+  if (!gate.allowed) return { ok: false, error: gate.reason }
 
   const senderPeppolId =
     organization.peppol_id || slovakPeppolId(organization.dic)
