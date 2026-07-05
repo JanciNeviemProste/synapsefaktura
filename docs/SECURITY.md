@@ -33,7 +33,16 @@ Plný beh vyžaduje nasadené preview (hosted Supabase — akcia používateľa)
 | 3 | RLS cez anon key na cudzích dátach | prázdny výsledok | — | ⏳ |
 | 4 | `/.env`, `/.git/config` | 404 | — | ⏳ |
 
+## Automatizované RLS testy
+
+`supabase/tests/rls.sql` (pgTAP) — overuje izoláciu tenantov (člen firmy B nevidí
+doklad firmy A) a owner-guard (admin nemôže degradovať/zmazať/povýšiť na ownera).
+Spustenie: `pnpm db:start && pnpm db:test`.
+**Stav: NAPÍSANÉ, zatiaľ NESPUSTENÉ** (Docker nebežal) → PREDPOKLAD, nie dôkaz.
+
 ## História
 
+- 2026-07-05 (Fáza C): pridané action-logic testy (billing gate — vrátane
+  fail-closed vetiev; reminder level) a RLS pgTAP skript (čaká na spustenie).
 - 2026-07-05: Súbor vytvorený (Fáza A). Checklist naplnený zo statického auditu;
   §6B a runtime overenia naplánované do Fázy D.

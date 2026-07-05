@@ -83,7 +83,7 @@ Voliteľné (feature sa aktivuje kľúčom): `GOOGLE_GENERATIVE_AI_API_KEY`, `AI
 
 ## Stav (posledné 📊 — 2026-07-05)
 
-`typecheck` PASS · `lint` PASS · `test` 110/110 PASS · `build` PASS.
+`typecheck` PASS · `lint` PASS · `test` 125/125 PASS · `build` PASS.
 Deploy-ready: **NIE** — blokátory: hosted Supabase env (akcia používateľa) +
 neoverená SK legislatíva. Detailný report v session logu.
 
@@ -96,4 +96,8 @@ B email doručovanie, C testy actions+RLS, D security+pentest, E SK legislatíva
 - **Fáza B hotová:** reálne e-mail doručovanie (Resend REST za `hasEmail()`),
   i18n templates (SK/CZ/EN), zdieľaný `pdf/render.tsx`, wire `markAsSent`
   (PDF príloha, `delivered` flag) + reminders (poctivý `sent_at`). +12 testov (110/110).
-- **Next:** Fáza C (testy actions + RLS).
+- **Fáza C hotová:** action-logic testy — `billing/gate.test.ts` (vrátane
+  fail-closed vetiev: DB error → deny), `reminders/level.test.ts` (extrahovaný
+  čistý `nextReminderLevel`). RLS pgTAP `supabase/tests/rls.sql` + `pnpm db:test`
+  — NAPÍSANÉ, nespustené (Docker down) = PREDPOKLAD. +15 testov (125/125).
+- **Next:** Fáza D (security hardening + §6B pentest).

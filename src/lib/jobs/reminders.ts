@@ -5,6 +5,7 @@ import type { Database } from "@/lib/supabase/database.types"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { formatMoney } from "@/lib/money"
 import { smartReminderBody } from "@/lib/reminders/smart"
+import { nextReminderLevel } from "@/lib/reminders/level"
 import { hasAiKey } from "@/lib/ai/provider"
 import { hasEmail, sendEmail } from "@/lib/email/provider"
 import { reminderEmail } from "@/lib/email/templates"
@@ -59,8 +60,10 @@ export async function createReminderForDocument(
       : Promise.resolve({ data: null }),
   ])
 
-  const nextLevel = level ?? (count ?? 0) + 1
-  if (nextLevel > 3) return { ok: false, error: "Dosiahnutá maximálna úroveň." }
+  const nextLevel = nextReminderLevel(count ?? 0, level)
+  if (nextLevel === null) {
+    return { ok: false, error: "Dosiahnutá maximálna úroveň." }
+  }
 
   const today = new Date().toISOString().slice(0, 10)
   const msg = await smartReminderBody(nextLevel, {
