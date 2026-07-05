@@ -3,6 +3,25 @@
 Architektúrne rozhodnutia, ADR štýl: čo · prečo · zamietnuté alternatívy.
 Novšie hore.
 
+## 2026-07-05 · SK compliance overenie (§5)
+**Čo:** Overenie `TODO: verify` miest proti oficiálnym/autoritatívnym zdrojom.
+Výsledok:
+
+| Oblasť | Súbor | Zdroj | Výsledok |
+| --- | --- | --- | --- |
+| Peppol EAS `0245` = DIČ SK, `0245:<10 číslic>` | `peppol/id.ts` | docs.peppol.eu EAS code list | **FAKT** |
+| DPH sadzby 23/19/5 % od 1.1.2025 | `vat/rates.ts` | novela z. 222/2004 Z. z. | **FAKT** |
+| UBL kategórie S/AE/K/G/E/O (UNCL5305) | `peppol/ubl.ts` | docs.peppol.eu UNCL5305 | **FAKT** |
+| Jednotky UN/ECE Rec 20 (C62/HUR/KGM…) | `peppol/ubl.ts` | UN/ECE Rec 20 / EN 16931 BT-130 | **FAKT** |
+| Reverse charge §69, intra-EU čl. 138 | `vat/legal-notes.ts` | z. 222/2004 §69; smernica 2006/112/ES | **FAKT** |
+| 2027 model: 5-corner, UBL 2.1, IS EFA | (architektúra) | Finančná správa / odborné zdroje | **FAKT** |
+| neplatiteľ → kategória `O` | `peppol/ubl.ts` | modelové rozhodnutie | **OTVORENÉ** (potvrdiť voči IS EFA) |
+| KV/SV XSD root/namespace/sekcie | `export/fs-sr.ts` | FS SR XSD (nie verejné) | **OTVORENÉ** |
+| RPO/VIES endpoint tvar | `registry/{rpo,vies}.ts` | — | **OTVORENÉ** (over pri integrácii) |
+
+**Prečo:** §5 je non-negotiable; produkčné tvrdenie o zhode musí byť podložené.
+**Zamietnuté:** označiť všetko za hotové bez dôkazu (porušuje §4 anti-halucinácia).
+
 ## 2026-07-05 · Email doručovanie cez Resend REST + graceful stub
 **Čo:** Odosielanie faktúr/upomienok cez Resend HTTP API (`fetch`), za `hasEmail()`
 guardom; PDF príloha z existujúceho `@react-pdf/renderer`.

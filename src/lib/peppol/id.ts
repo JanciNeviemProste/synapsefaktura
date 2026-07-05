@@ -4,10 +4,11 @@
  * SK participants use the EAS/ICD scheme **0245** with the 10-digit DIČ as the
  * value, e.g. `0245:2020317068` (§5.5).
  *
- * // TODO: verify against official Finančná správa source — confirm the exact
- * // EAS scheme id (0245) and DIČ normalization (length / check rules) against
- * // the SK Solution Architecture (v1.2+) and Peppol BIS SK transposition before
- * // production. Build to the documented 0245:[10-digit DIČ] for now.
+ * FAKT (overené 2026-07-05): Peppol EAS code `0245` = "Tax identification number
+ * (DIČ), Slovakia"; participant id má tvar `0245:<10-miestne DIČ>`. Zdroj:
+ * Peppol EAS code list (docs.peppol.eu/poacc/billing/3.0/codelist/eas). DIČ je
+ * 10-miestne, odlišné od IČ DPH. Kontrolná číslica DIČ tu zámerne neoverujeme
+ * (FS SR nepublikuje verejný checksum algoritmus) — validujeme len 10 číslic.
  */
 
 export const SK_PEPPOL_SCHEME = "0245"

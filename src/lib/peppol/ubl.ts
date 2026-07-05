@@ -31,16 +31,19 @@ const INVOICE_TYPE_CODE = "380"
 const PAYMENT_MEANS_CODE_CREDIT_TRANSFER = "30"
 
 /**
- * VAT mode → UBL tax category code (SK).
- * // TODO: verify against official Finančná správa source — confirm category
- * // codes (najmä `O`/`K`/`G` voľba) proti SK BIS transpozícii pred produkciou.
+ * VAT mode → UBL tax category code (UNCL5305, subset used by EN 16931 BT-118/151).
+ * FAKT (overené 2026-07-05, zdroj docs.peppol.eu/poacc/billing/3.0/codelist/UNCL5305):
+ * S=Standard, AE=Reverse charge, K=Intra-Community supply, G=Free export item,
+ * E=Exempt, O=Services outside scope of tax.
+ * PREDPOKLAD (modelové rozhodnutie): neplatiteľ → `O` (mimo rozsahu DPH) — dáva
+ * zmysel, no pri produkčnej SK BIS validácii treba potvrdiť voči IS EFA.
  */
 const VAT_MODE_CATEGORY: Record<VatMode, string> = {
   payer: "S", // standard rated
   non_payer: "O", // services outside scope of VAT (neplatiteľ)
-  reverse_charge_domestic: "AE", // VAT reverse charge
-  intra_eu_b2b: "K", // intra-Community supply
-  export: "G", // export outside the EU
+  reverse_charge_domestic: "AE", // VAT reverse charge (§69 z. 222/2004)
+  intra_eu_b2b: "K", // intra-Community supply (čl. 138 smernice 2006/112/ES)
+  export: "G", // free export item (vývoz mimo EÚ)
   exempt: "E", // exempt from VAT
   oss: "S",
 }
@@ -49,8 +52,10 @@ const VAT_MODE_CATEGORY: Record<VatMode, string> = {
 const ZERO_RATE_CATEGORIES = new Set(["AE", "K", "G", "E", "O"])
 
 /**
- * SK unit → UN/ECE Rec 20 kód. Default `C62`.
- * // TODO: verify against UN/ECE Rec 20 + SK BIS unit code list.
+ * SK unit → UN/ECE Rec 20 kód. Default `C62` (one/kus).
+ * FAKT (UN/ECE Rec 20, EN 16931 BT-130 unit code): C62=one, HUR=hour, DAY=day,
+ * KGM=kg, MTR=metre, MTK=m², MTQ=m³, LTR=litre, KMT=km. Rozšíriteľné o ďalšie
+ * SK jednotky podľa potreby (fallback C62 je bezpečný).
  */
 const UNIT_CODE_MAP: Record<string, string> = {
   ks: "C62",

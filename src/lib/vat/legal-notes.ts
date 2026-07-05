@@ -5,8 +5,11 @@ import type { VatMode } from "@/lib/validation/org"
  * document. `payer` has no mandatory note. Slovak by default; `en` for foreign
  * customers (multi-language documents).
  *
- * TODO: verify exact wording / legal references against Finančná správa before
- * production (esp. intra-EU and OSS phrasing).
+ * FAKT (overené 2026-07-05): reverse charge = §69 z. č. 222/2004 Z. z.;
+ * intrakomunitárne dodanie = čl. 138 smernice 2006/112/ES. Tieto právne odkazy
+ * sú správne. PREDPOKLAD: presné znenie OSS a formulácia pre neplatiteľa nemá
+ * jednu záväznú predpísanú vetu — uvedené znenie je vecne správne, no účtovník
+ * si ho môže prispôsobiť.
  */
 const NOTES: Record<VatMode, { sk: string | null; en: string | null }> = {
   payer: { sk: null, en: null },

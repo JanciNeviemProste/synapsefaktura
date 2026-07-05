@@ -71,9 +71,11 @@ Voliteľné (feature sa aktivuje kľúčom): `GOOGLE_GENERATIVE_AI_API_KEY`, `AI
 
 ## Známe problémy / TODO (živý zoznam)
 
-- **SK legislatíva neoverená** — `TODO: verify` v `vat/legal-notes.ts`,
-  `peppol/{id,ubl,validate}.ts`, `export/fs-sr.ts`, `registry/{rpo,vies}.ts`,
-  `ai/cost.ts`. Fáza E. Do produkcie overiť proti Finančnej správe.
+- **SK legislatíva — čiastočne overená (Fáza E, 2026-07-05).** FAKT: Peppol
+  `0245`=DIČ, DPH 23/19/5 % od 1.1.2025, UNCL5305 kategórie, UN/ECE Rec 20
+  jednotky, §69/čl. 138 poznámky (viď `docs/DECISIONS.md`). **OTVORENÉ:** FS SR
+  KV/SV XSD (`export/fs-sr.ts` — schéma nie je verejná), neplatiteľ→`O` (potvrdiť
+  voči IS EFA), RPO/VIES endpoint tvar (`registry/*`).
 - **Peppol provider = mock** — `peppol/provider/mock.ts` (loopback). Reálny
   certifikovaný Digitálny poštár za `DigitalPostmanProvider` interface — čaká na
   externú akreditáciu.
@@ -106,4 +108,9 @@ B email doručovanie, C testy actions+RLS, D security+pentest, E SK legislatíva
   high/critical — 1 moderate postcss<8.5.10 cez next). §6B skript
   `scripts/pentest.sh` (beh čaká na nasadené preview). +5 testov (130/130).
   Výsledky v `docs/SECURITY.md`.
-- **Next:** Fáza E (SK legislatíva — overenie TODO: verify).
+- **Fáza E hotová:** SK legislatíva overená proti oficiálnym zdrojom — FAKT:
+  Peppol 0245=DIČ, DPH 23/19/5 % od 2025, UNCL5305 kategórie, UN/ECE Rec 20,
+  §69/čl. 138. OTVORENÉ (čestne označené): FS SR KV/SV XSD, neplatiteľ→O, RPO/VIES.
+  Anotácie v kóde (FAKT + zdroj), tabuľka v `docs/DECISIONS.md`. Testy 130/130.
+- **VŠETKÝCH 5 FÁZ HOTOVÝCH.** Zostáva: push na GitHub (po `[A/N]`), a akcie
+  používateľa (hosted Supabase, Vercel env, reálne kľúče).

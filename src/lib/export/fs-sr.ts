@@ -3,10 +3,11 @@ import type { ExportInvoice } from "./accounting"
 /**
  * Finančná správa SR XML exports — Kontrolný výkaz DPH and Súhrnný výkaz.
  *
- * ⚠️ TODO: verify against the official FS SR XSD schemas before production. The
- * element names and structure below follow the documented layout but the
- * authoritative schema (eDane / FS SR) must be matched exactly. Treat these as
- * a structural starting point, not a certified export.
+ * ⚠️ OTVORENÉ (stav 2026-07-05): NEOVERENÉ proti oficiálnym FS SR XSD. Root
+ * element, namespace a sekcie (KV: A1/A2/B/C/D; SV) treba presne zladiť s
+ * autoritatívnou schémou (eDane / FS SR), ktorá nie je verejne dostupná na
+ * bezplatné stiahnutie — vyžaduje prístup cez portál FS SR. Do overenia je toto
+ * štrukturálny základ, NIE certifikovaný export. Sledované v docs/DECISIONS.md.
  */
 
 export interface ExportOrg {
