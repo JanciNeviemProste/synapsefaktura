@@ -137,6 +137,11 @@ Nový plán (schválený): L1 právne minimum · L2 live deploy+Stripe · L3 kon
     SEO magnet `/e-faktura-2027`, Plausible analytics (graceful, `analytics.tsx` +
     `analytics/track.ts`). Sentry ODLOŽENÉ (dokumentované v README).
   - 130/130, build green (nové routy /e-faktura-2027, /sitemap.xml, /robots.txt).
+- **Landing copy + marketing (copywriting/launch/pricing/social/cold-email skills):**
+  landing prepísaný na konverzný (`bd7818b`); `marketing/{launch-plan,pricing,
+  social-posts,cold-email}.md` + `.agents/product-marketing-context.md` (`3433fbd`).
+  Pricing odporúčanie: nechať 0/12/29 €, pridať ročné (−17 %), overiť WTP na beta.
 - **Next (akcie používateľa):** env/kľúče (Stripe live+produkty+Tax, PLAUSIBLE,
   RESEND/UPSTASH), hosted Supabase+deploy+doména, firemné údaje v `src/lib/site.ts`,
-  právna kontrola, reálne screenshoty, `scripts/pentest.sh` po deployi.
+  právna kontrola, reálne screenshoty, `scripts/pentest.sh` po deployi. Potom „GO L2"
+  = sprievodca nasadením (Supabase → Vercel → Stripe).
