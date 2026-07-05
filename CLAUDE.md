@@ -112,5 +112,17 @@ B email doručovanie, C testy actions+RLS, D security+pentest, E SK legislatíva
   Peppol 0245=DIČ, DPH 23/19/5 % od 2025, UNCL5305 kategórie, UN/ECE Rec 20,
   §69/čl. 138. OTVORENÉ (čestne označené): FS SR KV/SV XSD, neplatiteľ→O, RPO/VIES.
   Anotácie v kóde (FAKT + zdroj), tabuľka v `docs/DECISIONS.md`. Testy 130/130.
-- **VŠETKÝCH 5 FÁZ HOTOVÝCH.** Zostáva: push na GitHub (po `[A/N]`), a akcie
-  používateľa (hosted Supabase, Vercel env, reálne kľúče).
+- **VŠETKÝCH 5 FÁZ HOTOVÝCH** (pushnuté 05b6150).
+
+### 2026-07-05: Launch v1 — od kódu k prvému zákazníkovi
+Nový plán (schválený): L1 právne minimum · L2 live deploy+Stripe · L3 konverzia
+(landing/paywall/trial) · L4 SEO+meranie · L5 GTM. Segment: primárne živnostníci
+(AI+2027), sekundárne účtovníci. Rýchly platený MVP, default ceny.
+- **L1 hotová:** právne stránky `/podmienky` `/ochrana-osobnych-udajov` `/cookies`
+  `/kontakt` (SK šablóny — treba právnu kontrolu; údaje v `src/lib/site.ts`),
+  zdieľaný `SiteFooter` + `LegalShell`, cookie banner (`useSyncExternalStore`),
+  register súhlas checkbox + serverová poistka, **e-mail verifikácia ON**
+  (`config.toml` `enable_confirmations=true`) → signUp bez session presmeruje na
+  `/registracia-hotova`. 130/130, build green. NEDOTÝKAŤ pozn.: `SITE.company`
+  má placeholdery `[DOPLŇ …]` — používateľ doplní reálne firemné údaje.
+- **Next:** L2 (deploy — akcie používateľa) alebo L3 (konverzia — kód).

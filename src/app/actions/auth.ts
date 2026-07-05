@@ -37,6 +37,10 @@ export async function signIn(formData: FormData): Promise<AuthActionResult> {
 }
 
 export async function signUp(formData: FormData): Promise<AuthActionResult> {
+  if (formData.get("consent") !== "on") {
+    return { error: "Pre registráciu musíš súhlasiť s podmienkami a spracovaním údajov." }
+  }
+
   const parsed = registerSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
@@ -47,7 +51,7 @@ export async function signUp(formData: FormData): Promise<AuthActionResult> {
   }
 
   const supabase = await createClient()
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
@@ -61,6 +65,12 @@ export async function signUp(formData: FormData): Promise<AuthActionResult> {
   }
 
   revalidatePath("/", "layout")
+  // When email confirmation is required, signUp returns no session — send the
+  // user to confirm their inbox instead of into the app (middleware would
+  // otherwise bounce them to /login).
+  if (!data.session) {
+    redirect("/registracia-hotova")
+  }
   redirect("/app/onboarding")
 }
 

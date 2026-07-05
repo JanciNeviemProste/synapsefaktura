@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { Sparkles, Check, Bot, ShieldCheck, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { SiteFooter } from "@/components/site-footer"
 import {
   Card,
   CardContent,
@@ -175,9 +176,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <footer className="text-muted-foreground border-t px-6 py-8 text-center text-sm">
-        © 2026 Synapse Faktúra — moderná slovenská fakturácia.
-      </footer>
+      <SiteFooter />
     </div>
   )
 }

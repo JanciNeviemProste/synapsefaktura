@@ -75,6 +75,32 @@ export function RegisterForm() {
               required
             />
           </div>
+          <label
+            htmlFor="consent"
+            className="text-muted-foreground flex items-start gap-2 text-xs"
+          >
+            <input
+              id="consent"
+              name="consent"
+              type="checkbox"
+              required
+              className="mt-0.5 size-4 shrink-0"
+            />
+            <span>
+              Súhlasím s{" "}
+              <Link href="/podmienky" className="text-primary underline">
+                obchodnými podmienkami
+              </Link>{" "}
+              a{" "}
+              <Link
+                href="/ochrana-osobnych-udajov"
+                className="text-primary underline"
+              >
+                spracovaním osobných údajov
+              </Link>
+              .
+            </span>
+          </label>
           <Button type="submit" className="w-full" disabled={pending}>
             {pending ? t("creatingAccount") : t("signUp")}
           </Button>

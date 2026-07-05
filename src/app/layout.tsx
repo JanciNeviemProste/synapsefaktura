@@ -6,6 +6,7 @@ import "./globals.css"
 import { Toaster } from "@/components/ui/sonner"
 import { ThemeProvider } from "@/components/theme-provider"
 import { PwaRegister } from "@/components/pwa-register"
+import { CookieNotice } from "@/components/cookie-notice"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -40,6 +41,7 @@ export default async function RootLayout({
           <ThemeProvider>
             {children}
             <PwaRegister />
+            <CookieNotice />
             <Toaster richColors position="top-right" />
           </ThemeProvider>
         </NextIntlClientProvider>
