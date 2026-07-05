@@ -1,1 +1,96 @@
 @AGENTS.md
+
+# Synapse Faktúra — CLAUDE.md
+
+> Zdroj pravdy pre prácu na projekte (šablóna podľa Master Prompt v2 §10).
+> Master prompt = PROCES, tento súbor = KONTEXT. Aktualizuj PO KAŽDEJ fáze.
+
+## Stack & príkazy
+
+- **Next.js 15** (App Router, Server Components, Server Actions) · **React 19** ·
+  **TypeScript** strict · **Tailwind v4** + **shadcn/ui** (Base UI variant) +
+  lucide-react · **Supabase** (Postgres, Auth, RLS) · **pnpm**.
+- AI: `@ai-sdk/google` (Gemini). Billing: `stripe`. E-faktúra: vlastný UBL 2.1.
+  i18n: `next-intl` (cookie, bez routingu). PDF: `@react-pdf/renderer`. QR:
+  `bysquare` + `qrcode`.
+
+| Príkaz | Popis |
+| --- | --- |
+| `pnpm dev` | Dev server (`next dev`) |
+| `pnpm build` | Produkčný build |
+| `pnpm typecheck` | `tsc --noEmit` |
+| `pnpm lint` | ESLint (`next lint`) |
+| `pnpm test` | `vitest run` |
+| `pnpm format` | Prettier (zápis) |
+| `pnpm db:start` / `db:stop` | Lokálny Supabase (Docker) |
+| `pnpm db:reset` | Reaplikuje migrácie + seed |
+| `pnpm db:migrate` | Aplikuje nové migrácie |
+
+**Brána pred commitom na main:** `typecheck` + `lint` + `test` + `build` = všetko PASS.
+
+## Architektúra
+
+Multi-tenant SaaS: každá tabuľka je org-scoped cez `organization_members` + RLS.
+UI je Server Components + Server Actions (`src/app/actions/*`); mutácie validuje
+zod, autorizuje `getCurrentOrgId`/RLS. Externé služby (AI, Stripe, Peppol, Email,
+Redis) bežia v **graceful-degradation** vzore — bez kľúča appka beží, daná funkcia
+je vypnutá (`hasAiKey`, `hasStripe`, `hasEmail`, `supabaseEnv().configured`).
+
+Kľúčové adresáre:
+- `src/app/app/(shell)/**` — chránená oblasť (dashboard, invoices, contacts,
+  products, expenses, bank, recurring, reports, einvoices, assistant, settings).
+- `src/app/actions/**` — Server Actions (documents, contacts, products, expenses,
+  payments, recurring, reminders, billing, members, org, einvoice*, ai-*).
+- `src/app/api/**` — route handlers: `cron/{overdue,recurring,reminders,peppol}`,
+  `stripe/webhook`.
+- `src/lib/**` — doménová logika: `vat/`, `money.ts`, `documents/`, `pdf/`, `qr/`,
+  `peppol/`, `ai/`, `billing/`, `email/`, `security/`, `supabase/`, `registry/`,
+  `jobs/`, `reports/`, `matching/`, `forecast/`, `anomaly/`, `reminders/`, `bank/`.
+- `supabase/migrations/**` — SQL migrácie (RLS na každej dátovej tabuľke).
+- `messages/{sk,cz,en}.json` — i18n; `src/i18n/request.ts` (SK fallback).
+
+## Env vars (názvy — NIKDY hodnoty; žijú v `.env.local` / Vercel env)
+
+Povinné: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+`SUPABASE_SERVICE_ROLE_KEY`. Odporúčané: `NEXT_PUBLIC_APP_URL`, `CRON_SECRET`.
+Voliteľné (feature sa aktivuje kľúčom): `GOOGLE_GENERATIVE_AI_API_KEY`, `AI_MODEL`,
+`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO`,
+`STRIPE_PRICE_BUSINESS`, `RESEND_API_KEY`, `EMAIL_FROM`, `UPSTASH_REDIS_REST_URL`,
+`UPSTASH_REDIS_REST_TOKEN`.
+
+## NEDOTÝKAŤ SA (funkčné + testované — meniť len s testom a dôvodom)
+
+- `src/lib/vat/engine.ts` — DPH výpočty (testované `vat/engine.test.ts`).
+- `src/lib/money.ts` — peňažná matematika/zaokrúhľovanie (testované).
+- `supabase/migrations/**` RLS policies + `20260625140000_member_role_guard.sql`
+  (chráni owner-a pred povýšením/degradáciou).
+- `src/lib/peppol/{ubl,validate,inbound}.ts` — UBL 2.1 generovanie/validácia
+  (testované); štruktúru nemeniť, len anotovať kódy pri legislatívnom overení.
+- `src/lib/supabase/{middleware,env}.ts` — fail-open Edge guard (rieši Vercel
+  `MIDDLEWARE_INVOCATION_FAILED`).
+
+## Známe problémy / TODO (živý zoznam)
+
+- **SK legislatíva neoverená** — `TODO: verify` v `vat/legal-notes.ts`,
+  `peppol/{id,ubl,validate}.ts`, `export/fs-sr.ts`, `registry/{rpo,vies}.ts`,
+  `ai/cost.ts`. Fáza E. Do produkcie overiť proti Finančnej správe.
+- **Peppol provider = mock** — `peppol/provider/mock.ts` (loopback). Reálny
+  certifikovaný Digitálny poštár za `DigitalPostmanProvider` interface — čaká na
+  externú akreditáciu.
+- **Billing tiery** — `billing/plans.ts` ceny/limity `TODO: confirm` (biznis rozhodnutie).
+- **Externé kľúče chýbajú** — AI/Stripe/Email/Upstash bežia graceful bez kľúča;
+  produkcia potrebuje hosted Supabase + Vercel env.
+
+## Stav (posledné 📊 — 2026-07-05)
+
+`typecheck` PASS · `lint` PASS · `test` 98/98 PASS · `build` PASS.
+Deploy-ready: **NIE** — blokátory: hosted Supabase env (akcia používateľa) +
+neoverená SK legislatíva. Detailný report v session logu.
+
+## Session log
+
+### 2026-07-05: Master Prompt v2 režim — TOP 5 hardening
+Prijatý MP v2 rámec. Audit: fázy 0–5 zelené (dôkaz vyššie). Schválený plán na 5
+fáz: A proces&docs, B email doručovanie, C testy actions+RLS, D security+pentest,
+E SK legislatíva. **Fáza A: in progress** (tento súbor + docs/DECISIONS.md +
+docs/SECURITY.md). Next: Fáza B (email).
