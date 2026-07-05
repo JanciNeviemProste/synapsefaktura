@@ -46,9 +46,9 @@ export function DocumentActions({
 
   const isPaid = status === "paid"
 
-  function run(
-    fn: () => Promise<{ ok: boolean; error?: string }>,
-    msg: string,
+  function run<T extends { ok: boolean; error?: string }>(
+    fn: () => Promise<T>,
+    msg: string | ((res: T) => string),
   ) {
     startTransition(async () => {
       const res = await fn()
@@ -56,7 +56,7 @@ export function DocumentActions({
         toast.error(res.error ?? "Akcia zlyhala.")
         return
       }
-      toast.success(msg)
+      toast.success(typeof msg === "function" ? msg(res) : msg)
       router.refresh()
     })
   }
@@ -88,7 +88,13 @@ export function DocumentActions({
       <Button
         variant="outline"
         disabled={pending}
-        onClick={() => run(() => markAsSent(id), "Označené ako odoslané.")}
+        onClick={() =>
+          run(() => markAsSent(id), (res) =>
+            res.delivered
+              ? "Faktúra odoslaná e-mailom."
+              : "Označené ako odoslané (e-mail nie je nakonfigurovaný).",
+          )
+        }
       >
         <Send className="size-4" />
         Odoslať e-mailom

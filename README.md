@@ -69,6 +69,8 @@ graceful — bez kľúča appka beží, len daná funkcia je vypnutá.
 | `STRIPE_WEBHOOK_SECRET` | pre billing | Overenie podpisu webhooku `/api/stripe/webhook` |
 | `STRIPE_PRICE_PRO` | pre billing | Stripe Price ID pre plán Pro |
 | `STRIPE_PRICE_BUSINESS` | pre billing | Stripe Price ID pre plán Business |
+| `RESEND_API_KEY` | pre e-mail | Resend API kľúč (odosielanie faktúr a upomienok; bez neho sa len prepne status) |
+| `EMAIL_FROM` | pre e-mail | Overený odosielateľ, napr. `Faktúry <faktury@tvoja-domena.sk>` |
 
 > Jazyk UI (SK/CZ/EN) sa drží v cookie `locale` (default `sk`); netreba env.
 > Doklady/PDF sa renderujú podľa `documents.language`.

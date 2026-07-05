@@ -6,6 +6,8 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { formatMoney } from "@/lib/money"
 import { smartReminderBody } from "@/lib/reminders/smart"
 import { hasAiKey } from "@/lib/ai/provider"
+import { hasEmail, sendEmail } from "@/lib/email/provider"
+import { reminderEmail } from "@/lib/email/templates"
 
 type Db = SupabaseClient<Database>
 
@@ -23,11 +25,16 @@ export async function createReminderForDocument(
   db: Db,
   documentId: string,
   level?: number,
-): Promise<{ ok: boolean; error?: string; level?: number }> {
+): Promise<{
+  ok: boolean
+  error?: string
+  level?: number
+  delivered?: boolean
+}> {
   const { data: doc } = await db
     .from("documents")
     .select(
-      "id, organization_id, number, total, paid_amount, due_date, contact_id",
+      "id, organization_id, number, total, paid_amount, due_date, contact_id, language",
     )
     .eq("id", documentId)
     .maybeSingle()
@@ -46,7 +53,7 @@ export async function createReminderForDocument(
     doc.contact_id
       ? db
           .from("contacts")
-          .select("name")
+          .select("name, email")
           .eq("id", doc.contact_id)
           .maybeSingle()
       : Promise.resolve({ data: null }),
@@ -65,6 +72,20 @@ export async function createReminderForDocument(
     supplierName: org?.name ?? "",
   })
 
+  // Attempt real delivery; only stamp sent_at when the email actually went out.
+  const nowIso = new Date().toISOString()
+  let sentAt: string | null = null
+  if (hasEmail() && contact?.email) {
+    const { subject, html } = reminderEmail({
+      lang: doc.language,
+      docNumber: doc.number ?? "—",
+      supplierName: org?.name ?? "",
+      body: msg.body,
+    })
+    const res = await sendEmail({ to: contact.email, subject, html })
+    if (res.ok) sentAt = nowIso
+  }
+
   const { error } = await db.from("reminders").insert({
     organization_id: doc.organization_id,
     document_id: documentId,
@@ -72,14 +93,13 @@ export async function createReminderForDocument(
     channel: "email",
     tone: msg.tone,
     body: msg.body,
-    scheduled_at: new Date().toISOString(),
-    sent_at: new Date().toISOString(), // stub: treated as delivered
+    scheduled_at: nowIso,
+    sent_at: sentAt,
     ai_generated: hasAiKey(),
   })
   if (error) return { ok: false, error: "Upomienku sa nepodarilo uložiť." }
 
-  // TODO: real email/SMS delivery (SMTP/Resend / SMS provider).
-  return { ok: true, level: msg.level }
+  return { ok: true, level: msg.level, delivered: Boolean(sentAt) }
 }
 
 /**

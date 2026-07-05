@@ -7,6 +7,10 @@ import { documentSchema, type DocumentInput } from "@/lib/validation/document"
 import { computeInvoice } from "@/lib/vat/engine"
 import { legalNoteForVatMode } from "@/lib/vat/legal-notes"
 import { gateDocumentIssue } from "@/lib/billing/gate"
+import { renderInvoicePdf } from "@/lib/pdf/render"
+import { hasEmail, sendEmail } from "@/lib/email/provider"
+import { invoiceEmail } from "@/lib/email/templates"
+import { formatMoney } from "@/lib/money"
 
 export type SaveDocumentResult =
   | { ok: true; id: string }
@@ -176,19 +180,56 @@ export async function markAsPaid(
   return { ok: true }
 }
 
-/** Marks the document as sent (email delivery is a Phase-1 stub). */
+/**
+ * Emails the invoice (PDF attached) to the contact and marks it sent.
+ *
+ * `delivered` reflects whether an email actually went out: false when no email
+ * key is configured or the contact has no address (the doc is still marked sent
+ * so the workflow proceeds). A genuine send failure does NOT flip the status —
+ * we surface the error so the user can retry (no silent failure).
+ */
 export async function markAsSent(
   id: string,
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<{ ok: boolean; error?: string; delivered?: boolean }> {
   const supabase = await createClient()
-  // TODO: wire real email delivery (SMTP/Resend) — for now just flips status.
+
+  const rendered = await renderInvoicePdf(supabase, id)
+  if (!rendered) return { ok: false, error: "Doklad sa nenašiel." }
+  const { buffer, doc, contact, org } = rendered
+
+  let delivered = false
+  if (hasEmail() && contact?.email) {
+    const { subject, html } = invoiceEmail({
+      lang: doc.language,
+      docNumber: doc.number ?? "—",
+      supplierName: org.name,
+      customerName: contact.name,
+      total: formatMoney(doc.total, doc.currency),
+      dueDate: doc.due_date
+        ? doc.due_date.split("-").reverse().join(".")
+        : "—",
+    })
+    const res = await sendEmail({
+      to: contact.email,
+      subject,
+      html,
+      attachments: [
+        { filename: `${doc.number ?? "faktura"}.pdf`, content: buffer },
+      ],
+    })
+    if (!res.ok && !res.skipped) {
+      return { ok: false, error: "E-mail sa nepodarilo odoslať. Skús znova." }
+    }
+    delivered = res.ok
+  }
+
   const { error } = await supabase
     .from("documents")
     .update({ status: "sent" })
     .eq("id", id)
-  if (error) return { ok: false, error: "Nepodarilo sa odoslať." }
+  if (error) return { ok: false, error: "Nepodarilo sa označiť ako odoslané." }
   revalidatePath(`/app/invoices/${id}`)
-  return { ok: true }
+  return { ok: true, delivered }
 }
 
 /** Duplicates a document (and its items) as a fresh draft without a number. */

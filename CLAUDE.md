@@ -83,14 +83,17 @@ Voliteľné (feature sa aktivuje kľúčom): `GOOGLE_GENERATIVE_AI_API_KEY`, `AI
 
 ## Stav (posledné 📊 — 2026-07-05)
 
-`typecheck` PASS · `lint` PASS · `test` 98/98 PASS · `build` PASS.
+`typecheck` PASS · `lint` PASS · `test` 110/110 PASS · `build` PASS.
 Deploy-ready: **NIE** — blokátory: hosted Supabase env (akcia používateľa) +
 neoverená SK legislatíva. Detailný report v session logu.
 
 ## Session log
 
 ### 2026-07-05: Master Prompt v2 režim — TOP 5 hardening
-Prijatý MP v2 rámec. Audit: fázy 0–5 zelené (dôkaz vyššie). Schválený plán na 5
-fáz: A proces&docs, B email doručovanie, C testy actions+RLS, D security+pentest,
-E SK legislatíva. **Fáza A: in progress** (tento súbor + docs/DECISIONS.md +
-docs/SECURITY.md). Next: Fáza B (email).
+Prijatý MP v2 rámec. Audit: fázy 0–5 zelené. Schválený plán na 5 fáz: A proces&docs,
+B email doručovanie, C testy actions+RLS, D security+pentest, E SK legislatíva.
+- **Fáza A hotová:** projektový CLAUDE.md (§10) + docs/DECISIONS.md + docs/SECURITY.md.
+- **Fáza B hotová:** reálne e-mail doručovanie (Resend REST za `hasEmail()`),
+  i18n templates (SK/CZ/EN), zdieľaný `pdf/render.tsx`, wire `markAsSent`
+  (PDF príloha, `delivered` flag) + reminders (poctivý `sent_at`). +12 testov (110/110).
+- **Next:** Fáza C (testy actions + RLS).
