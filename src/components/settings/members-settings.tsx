@@ -13,6 +13,7 @@ import {
   type Member,
   type PendingInvite,
 } from "@/app/actions/members"
+import { useUpgrade } from "@/components/billing/upgrade-dialog"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -94,11 +95,14 @@ export function MembersSettings({
     }
   }
 
+  const { prompt } = useUpgrade()
+
   function submitInvite() {
     startTransition(async () => {
       const res = await inviteMember(email, inviteRole)
       if (!res.ok || !res.token) {
-        toast.error(res.error ?? "Pozvánku sa nepodarilo vytvoriť.")
+        if (res.upgrade) prompt(res.upgrade, res.error)
+        else toast.error(res.error ?? "Pozvánku sa nepodarilo vytvoriť.")
         return
       }
       await copyLink(res.token)

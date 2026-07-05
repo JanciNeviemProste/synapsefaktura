@@ -73,6 +73,14 @@ graceful — bez kľúča appka beží, len daná funkcia je vypnutá.
 | `EMAIL_FROM` | pre e-mail | Overený odosielateľ, napr. `Faktúry <faktury@tvoja-domena.sk>` |
 | `UPSTASH_REDIS_REST_URL` | pre rate-limit | Upstash Redis REST URL (zdieľaný rate-limit naprieč inštanciami; bez neho in-memory fallback) |
 | `UPSTASH_REDIS_REST_TOKEN` | pre rate-limit | Upstash Redis REST token |
+| `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` | pre analytiku | Doména v Plausible (napr. `synapsefaktura.sk`); bez nej sa analytika nenačíta |
+
+> **Stripe DPH:** checkout má zapnuté `automatic_tax` + zber adresy/IČ DPH a
+> 14-dňový trial. Aby DPH reálne počítalo, zapni **Stripe Tax** v Stripe dashboarde.
+>
+> **Sentry (voliteľné):** error monitoring nie je predinštalovaný (vyžaduje
+> `@sentry/nextjs` + wizard). Vercel má vstavané runtime logy; Sentry doplň podľa
+> potreby cez `npx @sentry/wizard`.
 
 > Jazyk UI (SK/CZ/EN) sa drží v cookie `locale` (default `sk`); netreba env.
 > Doklady/PDF sa renderujú podľa `documents.language`.

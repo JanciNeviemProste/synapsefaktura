@@ -28,6 +28,7 @@ import {
   getEInvoice,
   type EInvoiceRow,
 } from "@/app/actions/einvoice"
+import { useUpgrade } from "@/components/billing/upgrade-dialog"
 import type {
   ValidationResult,
   ValidationError,
@@ -114,6 +115,7 @@ export function EInvoicePanel({
   const [validating, startValidate] = useTransition()
   const [sending, startSend] = useTransition()
   const [downloading, startDownload] = useTransition()
+  const { prompt } = useUpgrade()
 
   useEffect(() => {
     if (!enabled) return
@@ -163,7 +165,8 @@ export function EInvoicePanel({
       const res = await sendEInvoice(documentId)
       if (!res.ok) {
         if (res.validation) setValidation(res.validation)
-        toast.error(res.error)
+        if (res.upgrade) prompt(res.upgrade, res.error)
+        else toast.error(res.error)
         return
       }
       toast.success("E-faktúra odoslaná")

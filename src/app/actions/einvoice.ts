@@ -9,6 +9,7 @@ import { validateUbl } from "@/lib/peppol/validate"
 import { getPostmanProvider } from "@/lib/peppol/provider"
 import { slovakPeppolId } from "@/lib/peppol/id"
 import { gateFeature } from "@/lib/billing/gate"
+import type { PlanTier } from "@/lib/billing/plans"
 import type {
   ValidationResult,
   EinvoiceTransportStatus,
@@ -133,7 +134,7 @@ export async function previewEInvoice(documentId: string): Promise<
  */
 export async function sendEInvoice(documentId: string): Promise<
   | { ok: true; einvoiceId: string; transportStatus: EinvoiceTransportStatus }
-  | { ok: false; error: string; validation?: ValidationResult }
+  | { ok: false; error: string; validation?: ValidationResult; upgrade?: PlanTier }
 > {
   const loaded = await loadContext(documentId)
   if (!loaded.ok) return { ok: false, error: loaded.error }
@@ -146,7 +147,9 @@ export async function sendEInvoice(documentId: string): Promise<
 
   const supabaseGate = await createClient()
   const gate = await gateFeature(supabaseGate, organization.id, "peppolSend")
-  if (!gate.allowed) return { ok: false, error: gate.reason }
+  if (!gate.allowed) {
+    return { ok: false, error: gate.reason, upgrade: gate.requiredTier }
+  }
 
   const senderPeppolId =
     organization.peppol_id || slovakPeppolId(organization.dic)

@@ -10,6 +10,7 @@ import {
   type BillingInfo,
 } from "@/app/actions/billing"
 import { PLANS, type PlanTier } from "@/lib/billing/plans"
+import { featureLabel } from "@/lib/billing/feature-labels"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -19,19 +20,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-
-const FEATURE_LABELS: Record<string, string> = {
-  aiCapture: "AI vyťaženie dokladov",
-  nlInvoice: "Fakturácia vetou",
-  assistant: "AI asistent",
-  smartReminders: "Inteligentné upomienky",
-  forecast: "Prognózy cash-flow",
-  anomaly: "Detekcia anomálií",
-  multiUser: "Viac používateľov",
-  peppolSend: "Odosielanie e-faktúr (Peppol)",
-  advancedReports: "Pokročilé reporty",
-  api: "Prístup k API",
-}
 
 function formatDate(iso: string): string {
   const d = new Date(iso)
@@ -166,7 +154,7 @@ export function BillingSettings({ initial }: { initial: BillingInfo }) {
                     {[...plan.features].map((f) => (
                       <li key={f} className="flex items-center gap-2">
                         <Check className="size-4 text-green-600" />
-                        {FEATURE_LABELS[f] ?? f}
+                        {featureLabel(f)}
                       </li>
                     ))}
                   </ul>

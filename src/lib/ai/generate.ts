@@ -14,7 +14,7 @@ import { estimateCost } from "./cost"
 import { createClient } from "@/lib/supabase/server"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
 import { gateFeature } from "@/lib/billing/gate"
-import type { Feature } from "@/lib/billing/plans"
+import type { Feature, PlanTier } from "@/lib/billing/plans"
 
 export type AiFeature =
   | "capture"
@@ -48,7 +48,10 @@ function featureGate(feature: AiFeature): Feature | null {
 /** Resolve the org and enforce the plan gate for an AI feature, if gated. */
 async function checkPlanGate(
   feature: AiFeature,
-): Promise<{ ok: true } | { ok: false; degraded: true; error: string }> {
+): Promise<
+  | { ok: true }
+  | { ok: false; degraded: true; error: string; upgrade: PlanTier }
+> {
   const mapped = featureGate(feature)
   if (!mapped) return { ok: true }
   const supabase = await createClient()
@@ -56,14 +59,19 @@ async function checkPlanGate(
   if (!orgId) return { ok: true }
   const gate = await gateFeature(supabase, orgId, mapped)
   if (!gate.allowed) {
-    return { ok: false, degraded: true, error: gate.reason }
+    return {
+      ok: false,
+      degraded: true,
+      error: gate.reason,
+      upgrade: gate.requiredTier,
+    }
   }
   return { ok: true }
 }
 
 export type AiResult<T> =
   | { ok: true; data: T }
-  | { ok: false; degraded: boolean; error: string }
+  | { ok: false; degraded: boolean; error: string; upgrade?: PlanTier }
 
 type Usage = { inputTokens?: number; outputTokens?: number } | undefined
 

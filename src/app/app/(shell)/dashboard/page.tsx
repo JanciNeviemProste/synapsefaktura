@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { FileText, Plus } from "lucide-react"
+import { FileText, Plus, Sparkles, Settings, Bot, ArrowRight } from "lucide-react"
 import { getTranslations } from "next-intl/server"
 import { createClient } from "@/lib/supabase/server"
 import { round2, formatMoney } from "@/lib/money"
@@ -104,6 +104,57 @@ export default async function DashboardPage() {
           </Link>
         </Button>
       </div>
+
+      {invoices.length === 0 ? (
+        <Card className="border-primary/40">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Sparkles className="text-primary size-5" />
+              Začíname
+            </CardTitle>
+            <CardDescription>
+              Tri kroky k rozbehnutej fakturácii.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-2">
+            {[
+              {
+                href: "/app/invoices/new",
+                icon: Plus,
+                title: "Vystav prvú faktúru",
+                text: "Vytvor doklad — alebo ho nadiktuj vetou cez AI.",
+              },
+              {
+                href: "/app/settings",
+                icon: Settings,
+                title: "Doplň firemné údaje a logo",
+                text: "IČO, DIČ, banka a logo pre profesionálne doklady.",
+              },
+              {
+                href: "/app/assistant",
+                icon: Bot,
+                title: "Vyskúšaj AI asistenta",
+                text: "Opýtaj sa na svoje financie prirodzeným jazykom.",
+              },
+            ].map((step) => (
+              <Link
+                key={step.href}
+                href={step.href}
+                className="hover:bg-muted/50 flex items-center gap-3 rounded-lg border p-3 transition-colors"
+              >
+                <div className="bg-primary/10 flex size-9 shrink-0 items-center justify-center rounded-full">
+                  <step.icon className="text-primary size-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">{step.title}</p>
+                  <p className="text-muted-foreground text-xs">{step.text}</p>
+                </div>
+                <ArrowRight className="text-muted-foreground size-4 shrink-0" />
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (

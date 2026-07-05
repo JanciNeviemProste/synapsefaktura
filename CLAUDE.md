@@ -125,4 +125,18 @@ Nový plán (schválený): L1 právne minimum · L2 live deploy+Stripe · L3 kon
   (`config.toml` `enable_confirmations=true`) → signUp bez session presmeruje na
   `/registracia-hotova`. 130/130, build green. NEDOTÝKAŤ pozn.: `SITE.company`
   má placeholdery `[DOPLŇ …]` — používateľ doplní reálne firemné údaje.
-- **Next:** L2 (deploy — akcie používateľa) alebo L3 (konverzia — kód).
+- **L3 + L4 + L2-kód hotové (dorob to celé):** 
+  - **L3:** landing napojený na `PLANS` (reálne ceny + porovnávacia tabuľka + FAQ +
+    sekcia 2027); in-context paywall `UpgradeDialog` + `UpgradeProvider`
+    (shell layout) — gated actions vracajú `upgrade?: PlanTier` (documents/ai/
+    einvoice/members), 4 call-sites otvárajú dialóg; 14-dňový Pro trial v checkoute;
+    dashboard „Začíname" karta (first-run). Zdieľaný `feature-labels.ts`.
+  - **L2-kód:** Stripe `automatic_tax` + `billing_address_collection` +
+    `tax_id_collection` na checkout (aktivuje sa so Stripe Tax).
+  - **L4:** `sitemap.ts`, `robots.ts`, OG/Twitter metadata + `metadataBase`,
+    SEO magnet `/e-faktura-2027`, Plausible analytics (graceful, `analytics.tsx` +
+    `analytics/track.ts`). Sentry ODLOŽENÉ (dokumentované v README).
+  - 130/130, build green (nové routy /e-faktura-2027, /sitemap.xml, /robots.txt).
+- **Next (akcie používateľa):** env/kľúče (Stripe live+produkty+Tax, PLAUSIBLE,
+  RESEND/UPSTASH), hosted Supabase+deploy+doména, firemné údaje v `src/lib/site.ts`,
+  právna kontrola, reálne screenshoty, `scripts/pentest.sh` po deployi.

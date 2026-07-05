@@ -7,6 +7,7 @@ import { documentSchema, type DocumentInput } from "@/lib/validation/document"
 import { computeInvoice } from "@/lib/vat/engine"
 import { legalNoteForVatMode } from "@/lib/vat/legal-notes"
 import { gateDocumentIssue } from "@/lib/billing/gate"
+import type { PlanTier } from "@/lib/billing/plans"
 import { renderInvoicePdf } from "@/lib/pdf/render"
 import { hasEmail, sendEmail } from "@/lib/email/provider"
 import { invoiceEmail } from "@/lib/email/templates"
@@ -14,7 +15,7 @@ import { formatMoney } from "@/lib/money"
 
 export type SaveDocumentResult =
   | { ok: true; id: string }
-  | { ok: false; error: string }
+  | { ok: false; error: string; upgrade?: PlanTier }
 
 export async function saveDocument(
   input: DocumentInput,
@@ -64,7 +65,9 @@ export async function saveDocument(
   // already-issued doc), regardless of whether a number was pre-assigned.
   if (opts.issue && !wasIssued) {
     const g = await gateDocumentIssue(supabase, orgId)
-    if (!g.allowed) return { ok: false, error: g.reason }
+    if (!g.allowed) {
+      return { ok: false, error: g.reason, upgrade: g.requiredTier }
+    }
   }
 
   if (opts.issue && !number) {

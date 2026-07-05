@@ -126,6 +126,14 @@ export async function startCheckout(
       line_items: [{ price: priceId, quantity: 1 }],
       client_reference_id: orgId,
       metadata: { organization_id: orgId },
+      // 14-day trial so users experience Pro/AI before paying (boosts conversion).
+      subscription_data: { trial_period_days: 14 },
+      // EU VAT: collect a billing address + optional VAT id and let Stripe Tax
+      // compute DPH. Activates once Stripe Tax is enabled in the dashboard.
+      automatic_tax: { enabled: true },
+      billing_address_collection: "required",
+      customer_update: { address: "auto", name: "auto" },
+      tax_id_collection: { enabled: true },
       success_url: `${appBaseUrl()}/app/settings?billing=success`,
       cancel_url: `${appBaseUrl()}/app/settings?billing=cancel`,
     })

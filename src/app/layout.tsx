@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/sonner"
 import { ThemeProvider } from "@/components/theme-provider"
 import { PwaRegister } from "@/components/pwa-register"
 import { CookieNotice } from "@/components/cookie-notice"
+import { Analytics } from "@/components/analytics"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,10 +19,39 @@ const geistMono = Geist_Mono({
   subsets: ["latin", "latin-ext"],
 })
 
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://synapsefaktura.sk"
+
 export const metadata: Metadata = {
-  title: "Synapse Faktúra — fakturácia novej generácie",
+  metadataBase: new URL(appUrl),
+  title: {
+    default: "Synapse Faktúra — fakturácia novej generácie",
+    template: "%s — Synapse Faktúra",
+  },
   description:
-    "Moderná slovenská fakturácia s AI a pripravená na povinnú e-faktúru 2027.",
+    "Moderná slovenská fakturácia s AI a pripravená na povinnú e-faktúru 2027 (Peppol).",
+  keywords: [
+    "fakturácia",
+    "e-faktúra 2027",
+    "Peppol",
+    "faktúra online",
+    "AI fakturácia",
+    "elektronická faktúra",
+  ],
+  openGraph: {
+    type: "website",
+    locale: "sk_SK",
+    siteName: "Synapse Faktúra",
+    title: "Synapse Faktúra — fakturácia novej generácie",
+    description:
+      "Moderná slovenská fakturácia s AI a pripravená na povinnú e-faktúru 2027.",
+    url: appUrl,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Synapse Faktúra — fakturácia novej generácie",
+    description:
+      "Moderná slovenská fakturácia s AI a pripravená na povinnú e-faktúru 2027.",
+  },
 }
 
 export default async function RootLayout({
@@ -37,6 +67,7 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col">
+        <Analytics />
         <NextIntlClientProvider>
           <ThemeProvider>
             {children}

@@ -16,6 +16,7 @@ import { computeInvoice } from "@/lib/vat/engine"
 import { legalNoteForVatMode } from "@/lib/vat/legal-notes"
 import { formatMoney } from "@/lib/money"
 import { saveDocument } from "@/app/actions/documents"
+import { useUpgrade } from "@/components/billing/upgrade-dialog"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -150,12 +151,15 @@ export function InvoiceEditor({
     })
   }
 
+  const { prompt } = useUpgrade()
+
   function submit(issue: boolean) {
     form.handleSubmit((values) => {
       startTransition(async () => {
         const res = await saveDocument(values, { id: doc?.id, issue })
         if (!res.ok) {
-          toast.error(res.error)
+          if (res.upgrade) prompt(res.upgrade, res.error)
+          else toast.error(res.error)
           return
         }
         toast.success(issue ? "Doklad vystavený." : "Koncept uložený.")

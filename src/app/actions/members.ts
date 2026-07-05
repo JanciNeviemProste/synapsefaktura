@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
 import { gateFeature } from "@/lib/billing/gate"
+import type { PlanTier } from "@/lib/billing/plans"
 import { checkRateLimit } from "@/lib/security/rate-limit"
 
 export type Member = {
@@ -116,7 +117,12 @@ export async function listPendingInvites(): Promise<PendingInvite[]> {
 export async function inviteMember(
   email: string,
   role: "admin" | "accountant" | "member",
-): Promise<{ ok: boolean; token?: string; error?: string }> {
+): Promise<{
+  ok: boolean
+  token?: string
+  error?: string
+  upgrade?: PlanTier
+}> {
   const supabase = await createClient()
   const orgId = await getCurrentOrgId(supabase)
   if (!orgId) return { ok: false, error: "Žiadna aktívna firma." }
@@ -133,7 +139,9 @@ export async function inviteMember(
   }
 
   const feature = await gateFeature(supabase, orgId, "multiUser")
-  if (!feature.allowed) return { ok: false, error: feature.reason }
+  if (!feature.allowed) {
+    return { ok: false, error: feature.reason, upgrade: feature.requiredTier }
+  }
 
   const {
     data: { user },
