@@ -15,18 +15,18 @@ import { featureLabel } from "@/lib/billing/feature-labels"
 const FEATURES = [
   {
     icon: Bot,
-    title: "AI, ktorá za teba píše",
-    text: "Vystav faktúru jednou vetou, doklady ti vyťaží AI a asistent odpovie na otázky o financiách.",
+    title: "AI píše faktúry za teba",
+    text: "Povedz jednou vetou, čo fakturuješ — doklad je hotový. Bločky a prijaté faktúry vyťaží AI z fotky. Asistent odpovie na otázky o tvojich financiách.",
   },
   {
     icon: ShieldCheck,
-    title: "Správnosť ako funkcia",
-    text: "Kontrola DPH (23/19/5 %) a povinných náležitostí ešte pred vystavením dokladu.",
+    title: "Nikdy nepošleš zlú faktúru",
+    text: "Kontrola DPH (23/19/5 %) a povinných náležitostí ešte pred odoslaním. Žiadne dodatočné opravy ani starosti s daňovým úradom.",
   },
   {
     icon: Zap,
-    title: "Pripravené na e-faktúru 2027",
-    text: "Postavené na Peppol / EN 16931 od základu. Migruj skôr, než príde povinnosť.",
+    title: "Na 2027 pripravený skôr než ostatní",
+    text: "Postavené na Peppol / EN 16931 od základu. Keď príde povinná e-faktúra, ty už budeš mať hotovo.",
   },
 ]
 
@@ -110,25 +110,35 @@ export default function LandingPage() {
           href="/e-faktura-2027"
           className="bg-muted/50 hover:bg-muted rounded-full border px-3 py-1 text-xs font-medium"
         >
-          Pripravené na povinnú e-faktúru 2027 →
+          Povinná e-faktúra 2027 už klope. Buď pripravený →
         </Link>
         <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-          Fakturácia novej generácie
+          Fakturuj vetou. O zvyšok sa postará AI.
         </h1>
         <p className="text-muted-foreground max-w-2xl text-lg">
-          Vystavíš faktúru jednou vetou, doklady ti vyťaží AI a si pripravený na
-          povinnú e-faktúru 2027. Moderná slovenská fakturácia s AI.
+          Vystav faktúru jednou vetou, doklady ti vyťaží AI z fotky a upomienky
+          pošle za teba. Slovenská fakturácia pripravená na povinnú e-faktúru 2027.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3">
           <Button asChild size="lg">
-            <Link href="/register">Začať zadarmo</Link>
+            <Link href="/register">Vytvoriť faktúru zadarmo</Link>
           </Button>
           <Button asChild size="lg" variant="outline">
             <Link href="/e-faktura-2027">Čo je e-faktúra 2027?</Link>
           </Button>
         </div>
         <p className="text-muted-foreground text-xs">
-          Bez platobnej karty · Pro na 14 dní zdarma
+          Bez platobnej karty · Pro na 14 dní zdarma · Zruš kedykoľvek
+        </p>
+      </section>
+
+      {/* Problem */}
+      <section className="mx-auto max-w-2xl px-6 pb-16 text-center">
+        <p className="text-xl font-medium sm:text-2xl">
+          Naháňaš faktúry, prepisuješ bločky a bojíš sa chýb v DPH?
+        </p>
+        <p className="text-muted-foreground mt-2">
+          Nechaj administratívu na Synapse Faktúru a venuj sa tomu, čo ťa živí.
         </p>
       </section>
 
@@ -154,8 +164,8 @@ export default function LandingPage() {
           Jednoduché ceny
         </h2>
         <p className="text-muted-foreground mb-10 text-center text-sm">
-          Free navždy zadarmo. Pro na 14 dní zdarma, potom {planPrice("pro")} /
-          mesiac. Zruš kedykoľvek.
+          Začni zadarmo. Keď firma porastie, prejdi na Pro — prvých 14 dní zdarma,
+          potom {planPrice("pro")} / mesiac. Bez viazanosti, zruš kedykoľvek.
         </p>
         <div className="grid gap-6 sm:grid-cols-3">
           {PLAN_ORDER.map((tier) => {
@@ -256,13 +266,14 @@ export default function LandingPage() {
       {/* 2027 section */}
       <section className="bg-muted/30 border-y">
         <div className="mx-auto flex max-w-3xl flex-col items-center gap-4 px-6 py-16 text-center">
-          <h2 className="text-2xl font-semibold">Povinná e-faktúra prichádza 2027</h2>
+          <h2 className="text-2xl font-semibold">Povinná e-faktúra 2027 nepočká</h2>
           <p className="text-muted-foreground">
-            Od 1. 1. 2027 budú platitelia DPH musieť vystavovať e-faktúry cez
-            Peppol / IS EFA. Priprav sa s predstihom — bez stresu na poslednú chvíľu.
+            Si platiteľ DPH? Od 1. 1. 2027 budeš musieť posielať faktúry
+            elektronicky cez Peppol. So Synapse Faktúrou to máš vyriešené už dnes —
+            žiadny zmätok na poslednú chvíľu.
           </p>
           <Button asChild variant="outline">
-            <Link href="/e-faktura-2027">Zisti viac o e-faktúre 2027</Link>
+            <Link href="/e-faktura-2027">Zisti, čo ťa čaká</Link>
           </Button>
         </div>
       </section>
@@ -283,10 +294,13 @@ export default function LandingPage() {
             </details>
           ))}
         </div>
-        <div className="mt-10 text-center">
+        <div className="mt-10 flex flex-col items-center gap-2 text-center">
           <Button asChild size="lg">
-            <Link href="/register">Začať zadarmo</Link>
+            <Link href="/register">Vytvoriť účet zadarmo</Link>
           </Button>
+          <p className="text-muted-foreground text-xs">
+            Hotové za 2 minúty. Bez platobnej karty.
+          </p>
         </div>
       </section>
 
