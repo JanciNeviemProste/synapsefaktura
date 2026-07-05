@@ -83,7 +83,7 @@ Voliteľné (feature sa aktivuje kľúčom): `GOOGLE_GENERATIVE_AI_API_KEY`, `AI
 
 ## Stav (posledné 📊 — 2026-07-05)
 
-`typecheck` PASS · `lint` PASS · `test` 125/125 PASS · `build` PASS.
+`typecheck` PASS · `lint` PASS · `test` 130/130 PASS · `build` PASS.
 Deploy-ready: **NIE** — blokátory: hosted Supabase env (akcia používateľa) +
 neoverená SK legislatíva. Detailný report v session logu.
 
@@ -100,4 +100,10 @@ B email doručovanie, C testy actions+RLS, D security+pentest, E SK legislatíva
   fail-closed vetiev: DB error → deny), `reminders/level.test.ts` (extrahovaný
   čistý `nextReminderLevel`). RLS pgTAP `supabase/tests/rls.sql` + `pnpm db:test`
   — NAPÍSANÉ, nespustené (Docker down) = PREDPOKLAD. +15 testov (125/125).
-- **Next:** Fáza D (security hardening + §6B pentest).
+- **Fáza D hotová:** durable rate-limit (Upstash REST + in-memory fallback,
+  `checkRateLimit`; migrovaní invite/checkout). §6A audit čistý (0 secrets v
+  bundle, `.env*` ignorované, 0 `dangerouslySetInnerHTML`, `pnpm audit` 0
+  high/critical — 1 moderate postcss<8.5.10 cez next). §6B skript
+  `scripts/pentest.sh` (beh čaká na nasadené preview). +5 testov (130/130).
+  Výsledky v `docs/SECURITY.md`.
+- **Next:** Fáza E (SK legislatíva — overenie TODO: verify).

@@ -71,6 +71,8 @@ graceful — bez kľúča appka beží, len daná funkcia je vypnutá.
 | `STRIPE_PRICE_BUSINESS` | pre billing | Stripe Price ID pre plán Business |
 | `RESEND_API_KEY` | pre e-mail | Resend API kľúč (odosielanie faktúr a upomienok; bez neho sa len prepne status) |
 | `EMAIL_FROM` | pre e-mail | Overený odosielateľ, napr. `Faktúry <faktury@tvoja-domena.sk>` |
+| `UPSTASH_REDIS_REST_URL` | pre rate-limit | Upstash Redis REST URL (zdieľaný rate-limit naprieč inštanciami; bez neho in-memory fallback) |
+| `UPSTASH_REDIS_REST_TOKEN` | pre rate-limit | Upstash Redis REST token |
 
 > Jazyk UI (SK/CZ/EN) sa drží v cookie `locale` (default `sk`); netreba env.
 > Doklady/PDF sa renderujú podľa `documents.language`.

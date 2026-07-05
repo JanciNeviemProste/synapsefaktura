@@ -11,20 +11,21 @@ Stav bezpečnostného checklistu (Master Prompt v2 §6A) + výsledky mini-pentes
 | Owner-escalation guard | ✅ | `20260625140000_member_role_guard.sql` (USING+WITH CHECK `role <> 'owner'`). |
 | Server-side auth check | ✅ | Server Actions overujú org cez `getCurrentOrgId`/RLS; `(shell)` layout guard. |
 | Input validácia (zod) | ✅ | zod schémy na vstupoch actions/formulárov. |
-| Rate limiting | ⚠️ | in-memory (`security/rate-limit.ts`) → Fáza D: Upstash + fallback. |
-| Secrets mimo klienta | ⏳ | Overiť po builde (Fáza D `grep .next/static`). |
-| `.env*` v `.gitignore` | ⏳ | Overiť (Fáza D). |
-| Secrets v git histórii | ⏳ | `git log -S "sk_live"` (Fáza D). |
-| XSS / `dangerouslySetInnerHTML` | ⏳ | Audit (Fáza D). |
-| IDOR | ✅* | RLS org-scoping; potvrdiť §6B na deployi. |
-| `pnpm audit` high/critical | ⏳ | Fáza D. |
+| Rate limiting | ✅ | Upstash Redis (shared) + in-memory fallback (`security/rate-limit.ts`); testované. |
+| Secrets mimo klienta | ✅ | `grep .next/static` na `sk_live`/`SUPABASE_SERVICE_ROLE`/`RESEND_API_KEY`/`UPSTASH_*` → prázdne (2026-07-05). |
+| `.env*` v `.gitignore` | ✅ | `.gitignore:34` `.env*`; tracked je len `.env.example` (template). |
+| Secrets v git histórii | ✅ | `git log -S "sk_live"` → jediná zhoda je text v `SYNAPSE-MASTER-PROMPT-v2.md` (príklad grep patternu), nie živý kľúč. |
+| XSS / `dangerouslySetInnerHTML` | ✅ | `grep -rn dangerouslySetInnerHTML src` → 0 výskytov. |
+| IDOR | ✅* | RLS org-scoping; potvrdiť §6B na deployi (`scripts/pentest.sh`). |
+| `pnpm audit` high/critical | ✅ | 0 high/critical. 1 moderate: `postcss <8.5.10` (tranzitívne cez `next`, build-time) — sledovať, rieši sa updatom Next. |
 
 Legenda: ✅ splnené · ⚠️ čiastočné · ⏳ čaká na Fázu D · ✅\* pravdepodobne OK, treba live dôkaz.
 
 ## §6B Mini-pentest — čaká na nasadené preview
 
-Plný beh vyžaduje nasadené preview (hosted Supabase — akcia používateľa). Skript:
-`scripts/pentest.sh` (Fáza D). Do produkcie: **akýkoľvek FAIL = deploy blokovaný.**
+Plný beh vyžaduje nasadené preview (hosted Supabase — akcia používateľa). Skript
+je hotový: `scripts/pentest.sh` (spusti `BASE_URL=… bash scripts/pentest.sh`).
+Do produkcie: **akýkoľvek FAIL = deploy blokovaný.**
 
 | # | Test | Očakávanie | Výsledok | PASS/FAIL |
 | --- | --- | --- | --- | --- |

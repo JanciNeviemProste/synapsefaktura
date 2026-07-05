@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
-import { rateLimit } from "@/lib/security/rate-limit"
+import { checkRateLimit } from "@/lib/security/rate-limit"
 import { getStripe, hasStripe, appBaseUrl } from "@/lib/billing/stripe"
 import { issuedThisMonth } from "@/lib/billing/gate"
 import { PLANS, type PlanTier } from "@/lib/billing/plans"
@@ -74,7 +74,7 @@ export async function startCheckout(
     }
   }
 
-  const limited = rateLimit(`checkout:${orgId}`, 5, 60_000)
+  const limited = await checkRateLimit(`checkout:${orgId}`, 5, 60_000)
   if (!limited.ok) {
     return { ok: false, error: "Príliš veľa pokusov. Skúste to o chvíľu." }
   }

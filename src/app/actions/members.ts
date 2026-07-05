@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
 import { gateFeature } from "@/lib/billing/gate"
-import { rateLimit } from "@/lib/security/rate-limit"
+import { checkRateLimit } from "@/lib/security/rate-limit"
 
 export type Member = {
   userId: string
@@ -124,7 +124,7 @@ export async function inviteMember(
   const gate = await requireAdmin(supabase, orgId)
   if ("error" in gate) return { ok: false, error: gate.error }
 
-  const limited = rateLimit(`invite:${orgId}`, 10, 60_000)
+  const limited = await checkRateLimit(`invite:${orgId}`, 10, 60_000)
   if (!limited.ok) {
     return {
       ok: false,
