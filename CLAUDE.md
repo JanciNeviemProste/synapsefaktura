@@ -53,7 +53,8 @@ Kľúčové adresáre:
 
 Povinné: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
 `SUPABASE_SERVICE_ROLE_KEY`. Odporúčané: `NEXT_PUBLIC_APP_URL`, `CRON_SECRET`.
-Voliteľné (feature sa aktivuje kľúčom): `GOOGLE_GENERATIVE_AI_API_KEY`, `AI_MODEL`,
+Voliteľné (feature sa aktivuje kľúčom): `OPENROUTER_API_KEY` (má prednosť; modely
+`vendor/model`, default `google/gemini-2.5-flash`), `GOOGLE_GENERATIVE_AI_API_KEY`, `AI_MODEL`,
 `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO`,
 `STRIPE_PRICE_BUSINESS`, `RESEND_API_KEY`, `EMAIL_FROM`, `UPSTASH_REDIS_REST_URL`,
 `UPSTASH_REDIS_REST_TOKEN`.
