@@ -8,6 +8,7 @@ import { toast } from "sonner"
 import type { ExtractedDocument } from "@/lib/ai/extractor"
 import { formatMoney } from "@/lib/money"
 import { uploadAttachment } from "@/app/actions/expenses"
+import { useUpgrade } from "@/components/billing/upgrade-dialog"
 import {
   extractFromUpload,
   confirmExpenseFromCapture,
@@ -64,6 +65,7 @@ export function AiCaptureDialog({
   const router = useRouter()
   const [extracting, startExtract] = useTransition()
   const [confirming, startConfirm] = useTransition()
+  const { prompt } = useUpgrade()
   const [degraded, setDegraded] = useState<string | null>(null)
   const [result, setResult] = useState<Parsed | null>(null)
 
@@ -93,7 +95,10 @@ export function AiCaptureDialog({
       ])
 
       if (!extraction.ok) {
-        if (extraction.degraded) {
+        // Paywall má ponúknuť upgrade, nie tvrdiť, že chýba kľúč.
+        if (extraction.upgrade) {
+          prompt(extraction.upgrade, extraction.error)
+        } else if (extraction.reason === "no_key") {
           setDegraded(
             "AI vyťaženie nie je nakonfigurované (chýba kľúč). Zadaj náklad ručne.",
           )

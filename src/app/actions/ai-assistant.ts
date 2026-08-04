@@ -8,7 +8,9 @@ import { tool, type ModelMessage, type ToolSet } from "ai"
 import { createClient } from "@/lib/supabase/server"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
 import { formatMoney, round2 } from "@/lib/money"
-import { generateChat } from "@/lib/ai/generate"
+import { generateChat, type AiFailureReason } from "@/lib/ai/generate"
+import { checkAiRateLimit } from "@/lib/ai/rate-limit"
+import type { PlanTier } from "@/lib/billing/plans"
 
 /** Invoice statuses that represent money still owed (not draft, not paid/cancelled). */
 const OPEN_STATUSES = ["issued", "sent", "partially_paid", "overdue"] as const
@@ -29,7 +31,14 @@ export interface AssistantMessage {
 
 export type SendAssistantResult =
   | { ok: true; threadId: string; reply: string }
-  | { ok: false; degraded: boolean; error: string }
+  | {
+      ok: false
+      degraded: boolean
+      error: string
+      /** Prítomné, keď zlyhanie rieši upgrade tarifu — UI otvorí UpgradeDialog. */
+      upgrade?: PlanTier
+      reason?: AiFailureReason
+    }
 
 /** Slovak assistant persona. Grounding is enforced: numbers MUST come from tools. */
 const SYSTEM_PROMPT = [
@@ -298,6 +307,13 @@ export async function sendAssistantMessage(input: {
     return { ok: false, degraded: false, error: "Nie si prihlásený." }
   }
 
+  // Kontrolujeme skôr, než sa správa uloží — inak by odmietnuté pokusy
+  // zaplnili vlákno a rástol by kontext ďalších volaní.
+  const limited = await checkAiRateLimit(supabase, orgId, "assistant")
+  if (!limited.ok) {
+    return { ok: false, degraded: false, error: limited.error }
+  }
+
   const threadId = input.threadId ?? randomUUID()
 
   // Persist the user's message first so it survives even if AI fails.
@@ -348,7 +364,13 @@ export async function sendAssistantMessage(input: {
   })
 
   if (!ai.ok) {
-    return { ok: false, degraded: ai.degraded, error: ai.error }
+    return {
+      ok: false,
+      degraded: ai.degraded,
+      error: ai.error,
+      reason: ai.reason,
+      ...(ai.upgrade ? { upgrade: ai.upgrade } : {}),
+    }
   }
 
   const reply =

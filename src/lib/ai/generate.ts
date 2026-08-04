@@ -61,9 +61,35 @@ function errMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err)
 }
 
+/**
+ * Preco AI nedobehla. Bez tohto rozlisenia sa v UI zlievalo "chyba API kluc"
+ * s "tvoj plan na to nema narok" — pouzivatel na paywalle potom dostal hlasku,
+ * ze appka je zle nakonfigurovana, namiesto ponuky upgradu.
+ *
+ *   no_key      — nie je nastaveny API kluc (chyba prevadzkovatela, nie zakaznika)
+ *   plan        — funkcia nie je v aktualnom tarife
+ *   budget      — vycerpany mesacny strop nakladov organizacie
+ *   rate_limit  — prilis vela volani za kratky cas
+ *   org_unknown — organizaciu sa nepodarilo urcit (fail-closed)
+ *   error       — zlyhanie volania alebo overenia
+ */
+export type AiFailureReason =
+  | "no_key"
+  | "plan"
+  | "budget"
+  | "rate_limit"
+  | "org_unknown"
+  | "error"
+
 type GateResult =
   | { ok: true }
-  | { ok: false; degraded: true; error: string; upgrade?: PlanTier }
+  | {
+      ok: false
+      degraded: true
+      reason: AiFailureReason
+      error: string
+      upgrade?: PlanTier
+    }
 
 /**
  * Resolve the client + org used for gating and usage accounting.
@@ -110,6 +136,7 @@ async function checkCostCap(
     return {
       ok: false,
       degraded: true,
+      reason: "error",
       error: "Nepodarilo sa overiť mesačný limit nákladov na AI.",
     }
   }
@@ -126,6 +153,7 @@ async function checkCostCap(
   return {
     ok: false,
     degraded: true,
+    reason: "budget",
     error: verdict.reason,
     ...(upgrade ? { upgrade } : {}),
   }
@@ -147,6 +175,7 @@ async function checkPlanGate(
     return {
       ok: false,
       degraded: true,
+      reason: "org_unknown",
       error: "Organizáciu sa nepodarilo určiť, AI je nedostupné.",
     }
   }
@@ -157,6 +186,7 @@ async function checkPlanGate(
       return {
         ok: false,
         degraded: true,
+        reason: "plan",
         error: gate.reason,
         upgrade: gate.requiredTier,
       }
@@ -167,7 +197,13 @@ async function checkPlanGate(
 
 export type AiResult<T> =
   | { ok: true; data: T }
-  | { ok: false; degraded: boolean; error: string; upgrade?: PlanTier }
+  | {
+      ok: false
+      degraded: boolean
+      reason: AiFailureReason
+      error: string
+      upgrade?: PlanTier
+    }
 
 type Usage = { inputTokens?: number; outputTokens?: number } | undefined
 
@@ -221,7 +257,12 @@ export async function generateStructured<SCHEMA extends z.ZodType>(opts: {
   orgId?: string
 }): Promise<AiResult<z.infer<SCHEMA>>> {
   if (!hasAiKey()) {
-    return { ok: false, degraded: true, error: "AI nie je nakonfigurované." }
+    return {
+      ok: false,
+      degraded: true,
+      reason: "no_key",
+      error: "AI nie je nakonfigurované.",
+    }
   }
   const gate = await checkPlanGate(opts.feature, opts.orgId)
   if (!gate.ok) return gate
@@ -252,7 +293,12 @@ export async function generateStructured<SCHEMA extends z.ZodType>(opts: {
       AI_MODEL,
       errMessage(err),
     )
-    return { ok: false, degraded: false, error: "AI volanie zlyhalo." }
+    return {
+      ok: false,
+      degraded: false,
+      reason: "error",
+      error: "AI volanie zlyhalo.",
+    }
   }
 }
 
@@ -270,7 +316,12 @@ export async function generateChat(opts: {
   orgId?: string
 }): Promise<AiResult<{ text: string }>> {
   if (!hasAiKey()) {
-    return { ok: false, degraded: true, error: "AI nie je nakonfigurované." }
+    return {
+      ok: false,
+      degraded: true,
+      reason: "no_key",
+      error: "AI nie je nakonfigurované.",
+    }
   }
   const gate = await checkPlanGate(opts.feature, opts.orgId)
   if (!gate.ok) return gate
@@ -293,6 +344,11 @@ export async function generateChat(opts: {
       AI_MODEL,
       errMessage(err),
     )
-    return { ok: false, degraded: false, error: "AI volanie zlyhalo." }
+    return {
+      ok: false,
+      degraded: false,
+      reason: "error",
+      error: "AI volanie zlyhalo.",
+    }
   }
 }

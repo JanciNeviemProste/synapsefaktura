@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { draftInvoiceFromText } from "@/app/actions/ai-invoice"
+import { useUpgrade } from "@/components/billing/upgrade-dialog"
 
 export function NlInvoiceBar() {
   const router = useRouter()
+  const { prompt } = useUpgrade()
   const [text, setText] = useState("")
   const [pending, startTransition] = useTransition()
 
@@ -27,7 +29,12 @@ export function NlInvoiceBar() {
         router.push(`/app/invoices/${result.id}/edit`)
         return
       }
-      if (result.degraded) {
+      // Paywall má ponúknuť upgrade, nie tvrdiť, že appka je zle nastavená.
+      if (result.upgrade) {
+        prompt(result.upgrade, result.error)
+        return
+      }
+      if (result.reason === "no_key") {
         toast.error(
           "AI nie je nakonfigurované. Vytvor faktúru ručne v editore nižšie.",
         )

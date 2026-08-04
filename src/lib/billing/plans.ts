@@ -36,6 +36,17 @@ export type PlanDef = {
    * Bráni úteku nákladov, keď sa AI volania nekontrolovane opakujú.
    */
   aiMonthlyCostLimit: number | null
+  /**
+   * Maximum interaktívnych AI volaní na organizáciu za minútu.
+   *
+   * Mesačný strop chráni peňaženku, tento chráni pred nárazom — bez neho môže
+   * jeden používateľ spustiť asistenta alebo nahrávanie dokladov v cykle
+   * a minúť mesačný rozpočet za pár minút.
+   *
+   * Týka sa len interaktívnych akcií. Cron (upomienky) zámerne nelimitujeme —
+   * legitímne generuje desiatky správ v jednom behu.
+   */
+  aiCallsPerMinute: number
   features: ReadonlySet<Feature>
   /** Env var holding the Stripe price id for checkout (server reads it). */
   stripePriceEnv?: string
@@ -63,6 +74,7 @@ export const PLANS: Record<PlanTier, PlanDef> = {
     priceEur: null,
     docsPerMonth: 5, // TODO: business decision
     aiMonthlyCostLimit: 0.25, // TODO: business decision
+    aiCallsPerMinute: 5, // TODO: business decision
     features: new Set<Feature>([]),
     blurb: "Základná fakturácia a príjem e-faktúr (Peppol). Ideálne pred 2027.",
   },
@@ -72,6 +84,7 @@ export const PLANS: Record<PlanTier, PlanDef> = {
     priceEur: "12",
     docsPerMonth: null,
     aiMonthlyCostLimit: 3, // TODO: business decision
+    aiCallsPerMinute: 20, // TODO: business decision
     features: new Set<Feature>([
       "aiCapture",
       "nlInvoice",
@@ -88,6 +101,7 @@ export const PLANS: Record<PlanTier, PlanDef> = {
     priceEur: "29",
     docsPerMonth: null,
     aiMonthlyCostLimit: 10, // TODO: business decision
+    aiCallsPerMinute: 40, // TODO: business decision
     features: new Set<Feature>(ALL),
     stripePriceEnv: "STRIPE_PRICE_BUSINESS",
     blurb: "Všetko z Pro + prognózy, viac používateľov, odosielanie e-faktúr, API.",
