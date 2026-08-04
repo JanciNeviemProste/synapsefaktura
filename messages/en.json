@@ -2,6 +2,8 @@
   "nav": {
     "dashboard": "Overview",
     "invoices": "Invoices",
+    "quotes": "Quotes",
+    "deliveryNotes": "Delivery notes",
     "assistant": "Assistant",
     "contacts": "Contacts",
     "products": "Catalog",

@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
 import { documentSchema, type DocumentInput } from "@/lib/validation/document"
+import { checkConversion } from "@/lib/documents/convert"
+import type { DocumentType } from "@/lib/documents/labels"
 import { computeInvoice } from "@/lib/vat/engine"
 import { legalNoteForVatMode } from "@/lib/vat/legal-notes"
 import { gateDocumentIssue } from "@/lib/billing/gate"
@@ -102,6 +104,11 @@ export async function saveDocument(
     notes: v.notes || null,
     footer_notes: v.footerNotes || null,
     legal_notes: legalNote,
+    // Vazbu zapisujeme len ked ju volajuci posle — inak by kazde ulozenie
+    // z editora prepisalo existujuci related_document_id na null.
+    ...(v.relatedDocumentId !== undefined
+      ? { related_document_id: v.relatedDocumentId }
+      : {}),
   }
 
   let documentId = opts.id
@@ -304,4 +311,68 @@ export async function duplicateDocument(
 
   revalidatePath("/app/invoices")
   return { ok: true, id: created.id }
+}
+
+/**
+ * Converts a document to another type (quote -> invoice, invoice -> credit
+ * note, ...). The new document is always a DRAFT without a number: the user
+ * checks it and issues it himself. The source is left untouched — the only
+ * trace is `related_document_id` on the new document.
+ *
+ * Writing goes through `saveDocument`, so totals are recomputed and the legal
+ * note is derived exactly like on any other save.
+ */
+export async function convertDocument(
+  sourceId: string,
+  targetType: DocumentType,
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const supabase = await createClient()
+  const orgId = await getCurrentOrgId(supabase)
+  if (!orgId) return { ok: false, error: "Chýba firma." }
+
+  const { data: src } = await supabase
+    .from("documents")
+    .select("*")
+    .eq("id", sourceId)
+    .eq("organization_id", orgId)
+    .maybeSingle()
+  if (!src) return { ok: false, error: "Doklad sa nenašiel." }
+
+  const allowed = checkConversion(src.type, targetType)
+  if (!allowed.ok) return allowed
+
+  const { data: srcItems } = await supabase
+    .from("document_items")
+    .select("*")
+    .eq("document_id", sourceId)
+    .order("position")
+  if (!srcItems?.length) {
+    return { ok: false, error: "Doklad nemá žiadne položky na prevedenie." }
+  }
+
+  // Novy doklad vznika dnes; datum dodania a splatnost si doplni pouzivatel
+  // v editore — prenasat ich zo zdroja by dalo faktúre splatnost ponuky.
+  const today = new Date().toISOString().slice(0, 10)
+
+  return saveDocument({
+    type: targetType,
+    contactId: src.contact_id,
+    issueDate: today,
+    currency: src.currency,
+    exchangeRate: src.exchange_rate,
+    language: src.language,
+    vatMode: src.vat_mode,
+    notes: src.notes ?? "",
+    footerNotes: src.footer_notes ?? "",
+    relatedDocumentId: sourceId,
+    items: srcItems.map((it) => ({
+      description: it.description,
+      quantity: it.quantity,
+      unit: it.unit,
+      unitPrice: it.unit_price,
+      vatRate: it.vat_rate,
+      discountPct: it.discount_pct,
+      productId: it.product_id,
+    })),
+  })
 }

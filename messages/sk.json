@@ -2,6 +2,8 @@
   "nav": {
     "dashboard": "Prehľad",
     "invoices": "Faktúry",
+    "quotes": "Cenové ponuky",
+    "deliveryNotes": "Dodacie listy",
     "assistant": "Asistent",
     "contacts": "Kontakty",
     "products": "Cenník",

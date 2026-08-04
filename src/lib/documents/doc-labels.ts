@@ -6,6 +6,8 @@
  * logged-in user's interface locale. Defaults to Slovak for unknown languages.
  */
 
+import type { DocumentType } from "./labels"
+
 export type DocLabels = {
   document: string
   invoice: string
@@ -36,6 +38,12 @@ export type DocLabels = {
   ico: string
   dic: string
   icDph: string
+  total: string
+  receivedBy: string
+  signature: string
+  date: string
+  /** Nazvy dokladov podla typu - hlavicka dokumentu. Oddelene od popisiek poli. */
+  documentTypes: Record<DocumentType, string>
 }
 
 const sk: DocLabels = {
@@ -68,6 +76,22 @@ const sk: DocLabels = {
   ico: "IČO",
   dic: "DIČ",
   icDph: "IČ DPH",
+  total: "Spolu",
+  receivedBy: "Prevzal",
+  signature: "Podpis",
+  date: "Dátum",
+  documentTypes: {
+    invoice: "Faktúra",
+    proforma: "Proforma / zálohová faktúra",
+    advance: "Preddavková faktúra",
+    tax_doc_payment: "Daňový doklad k platbe",
+    credit_note: "Dobropis",
+    quote: "Cenová ponuka",
+    order_issued: "Vystavená objednávka",
+    order_received: "Prijatá objednávka",
+    delivery_note: "Dodací list",
+    draft: "Koncept",
+  },
 }
 
 const cz: DocLabels = {
@@ -100,6 +124,22 @@ const cz: DocLabels = {
   ico: "IČO",
   dic: "DIČ",
   icDph: "DIČ (DPH)",
+  total: "Celkem",
+  receivedBy: "Převzal",
+  signature: "Podpis",
+  date: "Datum",
+  documentTypes: {
+    invoice: "Faktura",
+    proforma: "Zálohová faktura",
+    advance: "Zálohový list",
+    tax_doc_payment: "Daňový doklad k platbě",
+    credit_note: "Dobropis",
+    quote: "Cenová nabídka",
+    order_issued: "Vystavená objednávka",
+    order_received: "Přijatá objednávka",
+    delivery_note: "Dodací list",
+    draft: "Koncept",
+  },
 }
 
 const en: DocLabels = {
@@ -132,6 +172,22 @@ const en: DocLabels = {
   ico: "Company ID",
   dic: "Tax ID",
   icDph: "VAT ID",
+  total: "Total",
+  receivedBy: "Received by",
+  signature: "Signature",
+  date: "Date",
+  documentTypes: {
+    invoice: "Invoice",
+    proforma: "Proforma invoice",
+    advance: "Advance invoice",
+    tax_doc_payment: "Tax document for payment",
+    credit_note: "Credit note",
+    quote: "Quotation",
+    order_issued: "Purchase order",
+    order_received: "Sales order",
+    delivery_note: "Delivery note",
+    draft: "Draft",
+  },
 }
 
 const DICTS: Record<string, DocLabels> = { sk, cz, en }

@@ -5,6 +5,8 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Database } from "@/lib/supabase/database.types"
 import { InvoiceDocument } from "@/lib/pdf/invoice-document"
 import { paymentQrDataUrl } from "@/lib/qr/payment-qr"
+import { documentPresentation } from "@/lib/documents/presentation"
+import type { DocumentType } from "@/lib/documents/labels"
 
 type Db = SupabaseClient<Database>
 type DocRow = Database["public"]["Tables"]["documents"]["Row"]
@@ -51,8 +53,13 @@ export async function renderInvoicePdf(
     ? await db.from("contacts").select("*").eq("id", doc.contact_id).maybeSingle()
     : { data: null }
 
+  // QR generujeme len pre doklady, ktore su vyzvou na uhradu. Bez tejto
+  // podmienky by sa PAY by square pocital aj pre dodaci list a cenovu ponuku —
+  // PDF ho tam uz nevykresli, ale praca aj tak prebehne.
   const qrDataUrl =
-    bank?.iban && doc.status !== "paid"
+    documentPresentation(doc.type as DocumentType).showQr &&
+    bank?.iban &&
+    doc.status !== "paid"
       ? await paymentQrDataUrl({
           iban: bank.iban,
           amount: doc.total,

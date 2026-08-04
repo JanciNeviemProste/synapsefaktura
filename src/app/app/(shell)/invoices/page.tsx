@@ -18,23 +18,50 @@ import {
 
 export const metadata = { title: "Faktúry — Synapse Faktúra" }
 
+// Prepinac nad tabulkou - najbeznejsie typy dokladov. Filter zvlada kazdu
+// hodnotu enumu, ostatne typy sa daju otvorit priamym odkazom ?type=<hodnota>.
+const FILTER_TYPES: DocumentType[] = [
+  "invoice",
+  "quote",
+  "delivery_note",
+  "credit_note",
+]
+
 function fmtDate(iso: string | null): string {
   if (!iso) return "—"
   const [y, m, d] = iso.split("-")
   return `${d}.${m}.${y}`
 }
 
-export default async function InvoicesPage() {
+// Neznamy alebo chybajuci parameter znamena "vsetky doklady"
+function parseType(value: string | string[] | undefined): DocumentType | null {
+  if (typeof value !== "string") return null
+  return value in DOCUMENT_TYPE_LABELS ? (value as DocumentType) : null
+}
+
+export default async function InvoicesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ type?: string | string[] }>
+}) {
+  const sp = await searchParams
+  const activeType = parseType(sp.type)
   const t = await getTranslations("invoices")
   const supabase = await createClient()
   const orgId = await getCurrentOrgId(supabase)
   // Bez aktivnej organizacie nezobrazujeme nic - vykresli sa prazdny stav
-  const { data: documents } = orgId
-    ? await supabase
+  const query = orgId
+    ? supabase
         .from("documents")
         .select("*, contacts(name)")
         .eq("organization_id", orgId)
-        .order("created_at", { ascending: false })
+    : null
+  // Bez parametra ostava zoznam nezmeneny - vypisu sa vsetky typy
+  const { data: documents } = query
+    ? await (activeType ? query.eq("type", activeType) : query).order(
+        "created_at",
+        { ascending: false },
+      )
     : { data: null }
 
   return (
@@ -52,14 +79,49 @@ export default async function InvoicesPage() {
         </Button>
       </div>
 
+      <nav
+        aria-label="Filter podľa typu dokladu"
+        className="flex flex-wrap gap-1"
+      >
+        <Button
+          asChild
+          size="sm"
+          variant={activeType ? "ghost" : "secondary"}
+          aria-current={activeType ? undefined : "page"}
+        >
+          <Link href="/app/invoices">Všetky</Link>
+        </Button>
+        {FILTER_TYPES.map((type) => (
+          <Button
+            key={type}
+            asChild
+            size="sm"
+            variant={activeType === type ? "secondary" : "ghost"}
+            aria-current={activeType === type ? "page" : undefined}
+          >
+            <Link href={`/app/invoices?type=${type}`}>
+              {DOCUMENT_TYPE_LABELS[type]}
+            </Link>
+          </Button>
+        ))}
+      </nav>
+
       {!documents || documents.length === 0 ? (
         <div className="bg-card flex flex-col items-center justify-center gap-3 rounded-lg border py-16 text-center">
           <div className="bg-muted flex size-12 items-center justify-center rounded-full">
             <FileText className="text-muted-foreground size-6" />
           </div>
           <div>
-            <p className="font-medium">{t("emptyTitle")}</p>
-            <p className="text-muted-foreground text-sm">{t("emptyHint")}</p>
+            <p className="font-medium">
+              {activeType
+                ? `Žiadne doklady typu „${DOCUMENT_TYPE_LABELS[activeType]}“`
+                : t("emptyTitle")}
+            </p>
+            <p className="text-muted-foreground text-sm">
+              {activeType
+                ? `Vytvor nový doklad a zvoľ typ „${DOCUMENT_TYPE_LABELS[activeType]}“.`
+                : t("emptyHint")}
+            </p>
           </div>
           <Button asChild variant="outline">
             <Link href="/app/invoices/new">
