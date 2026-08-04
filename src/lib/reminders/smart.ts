@@ -27,6 +27,18 @@ const TONES = ["gentle", "firm", "final"] as const
 type Tone = (typeof TONES)[number]
 
 /**
+ * `ReminderMessage` doplnena o priznak, ci telo naozaj napisalo AI.
+ * `aiGenerated: false` znamena sablonovy fallback (degraded alebo zlyhanie AI).
+ */
+export interface SmartReminderMessage extends ReminderMessage {
+  aiGenerated: boolean
+}
+
+/**
+ * POZN.: zatial nie je zapojene do UI ani do jobov. Urcene pre stlpec
+ * `contacts.payment_behavior_score` — prepocitat pri parovani platieb
+ * (`src/lib/matching/*`) alebo v crone a ulozit ku kontaktu.
+ *
  * Score a customer's payment behaviour on a 0..100 scale where higher means
  * "pays on time". Input is the list of how many days late each historic
  * invoice was paid (0 = on time, negative values are clamped to 0 / early).
@@ -50,6 +62,10 @@ export function paymentBehaviourScore(paidLateDays: number[]): number {
 }
 
 /**
+ * POZN.: zatial nie je zapojene. Urcene pre predikciu uhrady na detaile
+ * kontaktu / faktury a pre planovanie upomienok (`src/lib/jobs/reminders.ts`)
+ * — napr. neposielat upomienku skor, ako je ocakavane omeskanie.
+ *
  * Predict how many days late the next invoice will likely be paid, using the
  * median of historic lateness (robust to outliers). Early/on-time payments
  * count as 0. Pure. Empty history → 0.
@@ -89,12 +105,14 @@ const TONE_GUIDANCE: Record<Tone, string> = {
  * Draft an escalating Slovak reminder body in the tone appropriate for `level`
  * (1 = gentle, 2 = firm, 3 = final). Uses AI when available; on degraded/failed
  * AI it falls back to the existing template. The returned `level` and `tone`
- * always match the requested level, regardless of path.
+ * always match the requested level, regardless of path; `aiGenerated` says
+ * which path actually produced the body.
  */
 export async function smartReminderBody(
   level: number,
   ctx: ReminderContext,
-): Promise<ReminderMessage> {
+  orgId?: string,
+): Promise<SmartReminderMessage> {
   const lvl = Math.min(Math.max(level, 1), 3)
   const tone = toneForLevel(lvl)
 
@@ -105,6 +123,10 @@ export async function smartReminderBody(
   const result = await generateStructured({
     feature: "reminder",
     schema: aiSchema,
+    // Cron bezi bez session, takze `getCurrentOrgId()` by vratil null a gate by
+    // (fail-closed) zamietol kazdu upomienku — aj platiacim. Organizaciu preto
+    // dodava volajuci; pochadza z uz nacitaneho dokladu, nie z requestu.
+    orgId,
     system:
       "Si asistent slovenskej fakturačnej aplikácie. Píšeš upomienky (výzvy na úhradu) " +
       "v spisovnej slovenčine, vecne a profesionálne. Vráť IBA štruktúrovaný výstup. " +
@@ -123,7 +145,7 @@ export async function smartReminderBody(
 
   if (!result.ok) {
     // degraded (no key) or hard AI failure → existing template.
-    return reminderTemplate(lvl, ctx)
+    return { ...reminderTemplate(lvl, ctx), aiGenerated: false }
   }
 
   return {
@@ -131,5 +153,6 @@ export async function smartReminderBody(
     tone,
     subject: result.data.subject,
     body: result.data.body,
+    aiGenerated: true,
   }
 }

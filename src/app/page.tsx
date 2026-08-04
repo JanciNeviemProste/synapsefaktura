@@ -16,7 +16,7 @@ const FEATURES = [
   {
     icon: Bot,
     title: "AI píše faktúry za teba",
-    text: "Povedz jednou vetou, čo fakturuješ — doklad je hotový. Bločky a prijaté faktúry vyťaží AI z fotky. Asistent odpovie na otázky o tvojich financiách.",
+    text: "Povedz jednou vetou, čo fakturuješ — AI pripraví koncept, ty ho skontroluješ a vystavíš. Bločky a prijaté faktúry vyťaží z fotky na tvoje potvrdenie. Asistent odpovie na otázky o tvojich financiách.",
   },
   {
     icon: ShieldCheck,

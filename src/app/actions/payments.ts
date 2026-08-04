@@ -4,7 +4,12 @@ import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
 import { round2 } from "@/lib/money"
-import { parseBankCsv } from "@/lib/bank/csv-import"
+import {
+  parseBankCsv,
+  transactionKey,
+  isDuplicateTransaction,
+  shouldAutoBook,
+} from "@/lib/bank/csv-import"
 import { matchTransaction, type MatchableDoc } from "@/lib/matching/match"
 
 type PaymentMethod = "bank" | "card" | "cash" | "other"
@@ -58,13 +63,15 @@ export interface BankImportSummary {
   imported: number
   matched: number
   unmatched: number
+  /** Preskocene duplicity (rovnaky datum, suma, VS a protistrana). */
+  skipped: number
   errors: string[]
 }
 
 /**
  * Imports a bank-statement CSV: stores each transaction, auto-matches incoming
  * payments to open documents (VS = number, then amount), and records payments
- * for confident matches.
+ * only when the amount matches exactly. Already imported transactions are skipped.
  */
 export async function importBankCsv(
   content: string,
@@ -77,6 +84,7 @@ export async function importBankCsv(
       imported: 0,
       matched: 0,
       unmatched: 0,
+      skipped: 0,
       errors: ["Chýba firma."],
     }
   }
@@ -95,11 +103,41 @@ export async function importBankCsv(
     paidAmount: d.paid_amount,
   }))
 
+  // Kluce uz ulozenych pohybov — proti nim overujeme duplicity.
+  const { data: existingRows } = await supabase
+    .from("bank_transactions")
+    .select("booked_at, amount, vs, counterparty")
+    .eq("organization_id", orgId)
+
+  const seen = new Set(
+    (existingRows ?? []).map((r) =>
+      transactionKey({
+        bookedAt: r.booked_at,
+        amount: r.amount,
+        vs: r.vs,
+        counterparty: r.counterparty,
+      }),
+    ),
+  )
+
   let imported = 0
   let matched = 0
   let unmatched = 0
+  let skipped = 0
 
   for (const tx of transactions) {
+    const identity = {
+      bookedAt: tx.bookedAt,
+      amount: tx.amount,
+      vs: tx.vs,
+      counterparty: tx.counterparty,
+    }
+    if (isDuplicateTransaction(identity, seen)) {
+      skipped++
+      continue
+    }
+    seen.add(transactionKey(identity))
+
     const { data: txRow } = await supabase
       .from("bank_transactions")
       .insert({
@@ -120,12 +158,8 @@ export async function importBankCsv(
     imported++
 
     const m = matchTransaction({ amount: tx.amount, vs: tx.vs }, candidates)
-    if (
-      m.documentId &&
-      (m.confidence === "vs_amount" ||
-        m.confidence === "amount" ||
-        m.confidence === "vs")
-    ) {
+    // Knihujeme len presnu zhodu sumy; zhoda len cez VS ostava nesparovana.
+    if (m.documentId && shouldAutoBook(m)) {
       await recordPayment(m.documentId, tx.amount, {
         paidAt: tx.bookedAt,
         method: "bank",
@@ -148,5 +182,5 @@ export async function importBankCsv(
 
   revalidatePath("/app/invoices")
   revalidatePath("/app/bank")
-  return { ok: true, imported, matched, unmatched, errors }
+  return { ok: true, imported, matched, unmatched, skipped, errors }
 }

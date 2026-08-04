@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/server"
 import type { Json } from "@/lib/supabase/database.types"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
 import { formatMoney } from "@/lib/money"
+import { gateFeature } from "@/lib/billing/gate"
+import type { PlanTier } from "@/lib/billing/plans"
 import { generateStructured } from "@/lib/ai/generate"
 import {
   computeForecast,
@@ -20,6 +22,8 @@ export interface GenerateForecastResult {
   /** True when AI was unavailable and a deterministic narrative was used. */
   degraded: boolean
   error?: string
+  /** Vyplnene, ked plan na funkciu nestaci — otvara UpgradeDialog. */
+  upgrade?: PlanTier
 }
 
 const OPEN_STATUSES = ["issued", "sent", "partially_paid", "overdue"] as const
@@ -110,6 +114,9 @@ function heuristicNarrative(
  * recurring invoices and contacts, runs the pure `computeForecast`, builds a SK
  * narrative (AI when available, deterministic otherwise) and persists a row in
  * `forecasts`. Returns the result for immediate rendering.
+ *
+ * Gate na "forecast" stoji PRED vypoctom: cisla, rebricek platcov aj zapis do
+ * `forecasts` su sucastou platenej funkcie, nielen AI veta.
  */
 export async function generateForecast(
   horizonDays = 90,
@@ -123,6 +130,18 @@ export async function generateForecast(
       narrative: "",
       degraded: true,
       error: "Chýba firma.",
+    }
+  }
+
+  const gate = await gateFeature(supabase, orgId, "forecast")
+  if (!gate.allowed) {
+    return {
+      ok: false,
+      data: null,
+      narrative: "",
+      degraded: true,
+      error: gate.reason,
+      upgrade: gate.requiredTier,
     }
   }
 

@@ -21,6 +21,8 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { listAnomalies } from "@/app/actions/ai-anomaly"
+import { useUpgrade } from "@/components/billing/upgrade-dialog"
+import type { PlanTier } from "@/lib/billing/plans"
 import type { Anomaly } from "@/lib/anomaly/detect"
 
 const severityVariant: Record<
@@ -52,14 +54,25 @@ function KindIcon({ kind }: { kind: Anomaly["kind"] }) {
   }
 }
 
+/** Zamietnutie z gate-u: dovod + tier, ktory funkciu odomkne (ak je znamy). */
+type Denied = { reason: string; upgrade?: PlanTier }
+
 export function AnomalyWidget() {
   const [anomalies, setAnomalies] = useState<Anomaly[] | null>(null)
+  const [denied, setDenied] = useState<Denied | null>(null)
   const [pending, startTransition] = useTransition()
+  const { prompt } = useUpgrade()
 
   function refresh() {
     startTransition(async () => {
       const result = await listAnomalies()
-      setAnomalies(result)
+      if (!result.ok) {
+        setDenied({ reason: result.error, upgrade: result.upgrade })
+        setAnomalies([])
+        return
+      }
+      setDenied(null)
+      setAnomalies(result.anomalies)
     })
   }
 
@@ -96,6 +109,18 @@ export function AnomalyWidget() {
       <CardContent>
         {loading ? (
           <p className="text-muted-foreground text-sm">Načítavam…</p>
+        ) : denied ? (
+          <div className="flex flex-col items-start gap-3 py-2">
+            <p className="text-muted-foreground text-sm">{denied.reason}</p>
+            {denied.upgrade && (
+              <Button
+                size="sm"
+                onClick={() => prompt(denied.upgrade!, denied.reason)}
+              >
+                Odomknúť
+              </Button>
+            )}
+          </div>
         ) : isEmpty ? (
           <p className="text-muted-foreground py-4 text-center text-sm">
             Všetko vyzerá v poriadku.

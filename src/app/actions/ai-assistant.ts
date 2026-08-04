@@ -13,6 +13,12 @@ import { generateChat } from "@/lib/ai/generate"
 /** Invoice statuses that represent money still owed (not draft, not paid/cancelled). */
 const OPEN_STATUSES = ["issued", "sent", "partially_paid", "overdue"] as const
 
+/** How many contact candidates `summarize_client` looks at before giving up. */
+const CLIENT_MATCH_LIMIT = 5
+
+/** How many of the newest thread messages are sent to the model as context. */
+const HISTORY_LIMIT = 20
+
 /** A single rendered chat turn for the UI. */
 export interface AssistantMessage {
   id: string
@@ -143,7 +149,10 @@ function buildTools(
     summarize_client: tool({
       description:
         "Nájde klienta podľa (čiastočného) mena a vráti súhrn: celkovo " +
-        "fakturované, uhradené, nesplatené a priemerný počet dní do úhrady.",
+        "fakturované, uhradené, nesplatené a priemerný počet dní do úhrady. " +
+        "Ak menu zodpovedá viac klientov a ani jeden nie je presnou zhodou, " +
+        "nevráti súhrn, ale zoznam kandidátov (ambiguous: true) — vtedy sa " +
+        "musíš používateľa opýtať, ktorého klienta myslí.",
       inputSchema: z.object({
         name: z.string().min(1).describe("Meno klienta (aj čiastočné)."),
       }),
@@ -152,12 +161,39 @@ function buildTools(
           .from("contacts")
           .select("id, name")
           .ilike("name", `%${name}%`)
-          .limit(5)
+          .order("name", { ascending: true })
+          .limit(CLIENT_MATCH_LIMIT)
         if (cErr) return { error: "Nepodarilo sa vyhľadať klienta." }
         if (!contacts || contacts.length === 0) {
           return { found: false, message: `Klient „${name}“ sa nenašiel.` }
         }
-        const contact = contacts[0]
+
+        // A match is unambiguous only when it is the single hit, or the single
+        // exact name match. Otherwise we refuse to summarise the wrong client.
+        const needle = normalizeName(name)
+        const exact = contacts.filter((c) => normalizeName(c.name) === needle)
+        const contact =
+          exact.length === 1
+            ? exact[0]
+            : contacts.length === 1
+              ? contacts[0]
+              : null
+
+        if (!contact) {
+          const candidates = contacts.map((c) => c.name)
+          return {
+            found: false,
+            ambiguous: true,
+            query: name,
+            candidates,
+            truncated: contacts.length >= CLIENT_MATCH_LIMIT,
+            message:
+              `Menu „${name}“ zodpovedá viac klientov (${candidates.join(", ")}) ` +
+              "a ani jeden nie je presnou zhodou. Súhrn nevraciam. Opýtaj sa " +
+              "používateľa, ktorého z nich myslí, a zavolaj nástroj znova s " +
+              "presným menom. Nehádaj a neuveď žiadne čísla.",
+          }
+        }
 
         const { data: docs, error: dErr } = await supabase
           .from("documents")
@@ -202,7 +238,9 @@ function buildTools(
         return {
           found: true,
           client: contact.name,
-          otherMatches: contacts.slice(1).map((c) => c.name),
+          otherMatches: contacts
+            .filter((c) => c.id !== contact.id)
+            .map((c) => c.name),
           invoiceCount: rows.length,
           invoiced,
           invoicedFormatted: formatMoney(invoiced),
@@ -216,6 +254,11 @@ function buildTools(
       },
     }),
   }
+}
+
+/** Normalise a contact name for exact-match comparison (case + whitespace). */
+function normalizeName(value: string | null | undefined): string {
+  return (value ?? "").trim().replace(/\s+/g, " ").toLowerCase()
 }
 
 /** Supabase embeds 1:1 relations as object or (rarely) array — normalise to a name. */
@@ -266,20 +309,30 @@ export async function sendAssistantMessage(input: {
     content: text,
   })
 
-  // Load prior turns (including the one we just stored) to build context.
+  // Load the newest turns only (including the one we just stored) — an
+  // unbounded thread would grow context and cost without limit.
   const { data: history } = await supabase
     .from("ai_messages")
     .select("role, content")
     .eq("thread_id", threadId)
     .eq("organization_id", orgId)
-    .order("created_at", { ascending: true })
+    .order("created_at", { ascending: false })
+    .limit(HISTORY_LIMIT)
 
-  const messages: ModelMessage[] = (history ?? [])
+  // Newest-first from the DB — flip back to chronological order for the model.
+  const recentTurns = [...(history ?? [])]
+    .reverse()
     .filter((m) => m.role === "user" || m.role === "assistant")
-    .map((m) => ({
-      role: m.role as "user" | "assistant",
-      content: m.content ?? "",
-    }))
+
+  // The window must open with a user turn — cutting mid-thread can leave a
+  // dangling assistant reply first, which some providers reject.
+  const firstUser = recentTurns.findIndex((m) => m.role === "user")
+  const messages: ModelMessage[] = (
+    firstUser >= 0 ? recentTurns.slice(firstUser) : []
+  ).map((m) => ({
+    role: m.role as "user" | "assistant",
+    content: m.content ?? "",
+  }))
 
   // Fallback in the unlikely case history read failed.
   if (messages.length === 0) {
@@ -310,6 +363,27 @@ export async function sendAssistantMessage(input: {
   })
 
   return { ok: true, threadId, reply }
+}
+
+/**
+ * Start a fresh, empty thread. Nothing is persisted yet — the id becomes a real
+ * thread once the first message is sent with it.
+ */
+export async function startAssistantThread(): Promise<
+  { ok: true; threadId: string } | { ok: false; error: string }
+> {
+  const supabase = await createClient()
+  const orgId = await getCurrentOrgId(supabase)
+  if (!orgId) {
+    return { ok: false, error: "Chýba firma." }
+  }
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return { ok: false, error: "Nie si prihlásený." }
+  }
+  return { ok: true, threadId: randomUUID() }
 }
 
 /** Load all messages for a thread, oldest-first, for rendering the chat. */

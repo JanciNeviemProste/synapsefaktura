@@ -30,6 +30,12 @@ export type PlanDef = {
   priceEur: string | null
   /** Issued documents per calendar month; null = unlimited. */
   docsPerMonth: number | null
+  /**
+   * Mesačný strop nákladov na AI na organizáciu (kalendárny mesiac), v tej istej
+   * mene ako `ai/cost.ts` — teda odhad v USD, nie EUR; null = bez stropu.
+   * Bráni úteku nákladov, keď sa AI volania nekontrolovane opakujú.
+   */
+  aiMonthlyCostLimit: number | null
   features: ReadonlySet<Feature>
   /** Env var holding the Stripe price id for checkout (server reads it). */
   stripePriceEnv?: string
@@ -56,6 +62,7 @@ export const PLANS: Record<PlanTier, PlanDef> = {
     label: "Free",
     priceEur: null,
     docsPerMonth: 5, // TODO: business decision
+    aiMonthlyCostLimit: 0.25, // TODO: business decision
     features: new Set<Feature>([]),
     blurb: "Základná fakturácia a príjem e-faktúr (Peppol). Ideálne pred 2027.",
   },
@@ -64,6 +71,7 @@ export const PLANS: Record<PlanTier, PlanDef> = {
     label: "Pro",
     priceEur: "12",
     docsPerMonth: null,
+    aiMonthlyCostLimit: 3, // TODO: business decision
     features: new Set<Feature>([
       "aiCapture",
       "nlInvoice",
@@ -79,6 +87,7 @@ export const PLANS: Record<PlanTier, PlanDef> = {
     label: "Business",
     priceEur: "29",
     docsPerMonth: null,
+    aiMonthlyCostLimit: 10, // TODO: business decision
     features: new Set<Feature>(ALL),
     stripePriceEnv: "STRIPE_PRICE_BUSINESS",
     blurb: "Všetko z Pro + prognózy, viac používateľov, odosielanie e-faktúr, API.",

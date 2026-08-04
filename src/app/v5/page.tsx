@@ -31,11 +31,11 @@ const RULE = "#E2DAC8"
 
 const DAY = [
   { time: "6:40", text: "Náradie do dodávky, kávu do ruky. Ideš na stavbu." },
-  { time: "12:15", text: "Obed. Odfotíš bloček z pumpy — AI ho prepíše do nákladov sama." },
+  { time: "12:15", text: "Obed. Odfotíš bloček z pumpy — AI ho prečíta a vyplní, ty len skontroluješ a potvrdíš." },
   { time: "17:50", text: "Hotovo, balíš. Zákazník spokojný, ty tiež." },
   {
     time: "18:03",
-    text: "„Vyfakturuj Beňovi obklad kúpeľne, 24 hodín po 28 €.“ Faktúra s QR platbou odišla z mobilu, kým si vyšiel z dvora.",
+    text: "„Vyfakturuj Beňovi obklad kúpeľne, 24 hodín po 28 €.“ Koncept faktúry s QR platbou máš na obrazovke — prezrieš, vystavíš a odošleš z mobilu, kým si vyšiel z dvora.",
     highlight: true,
   },
   { time: "18:05", text: "Večer máš voľno. Papiere neexistujú." },
@@ -44,11 +44,11 @@ const DAY = [
 const PROMISES = [
   {
     t: "Faktúra jednou vetou",
-    d: "Povieš, čo si robil — AI doplní zákazníka, sadzby aj DPH. Z mobilu, z dodávky, odkiaľkoľvek.",
+    d: "Povieš, čo si robil — AI pripraví koncept aj s položkami, zákazníkom a DPH. Ty ho len prejdeš a vystavíš. Z mobilu, z dodávky, odkiaľkoľvek.",
   },
   {
-    t: "Bločky sa prepíšu samy",
-    d: "Odfotíš a hotovo. Žiadne večerné prepisovanie krabice účteniek.",
+    t: "Bločky prepíše AI",
+    d: "Odfotíš, AI vyplní údaje, ty ich potvrdíš. Žiadne večerné prepisovanie krabice účteniek.",
   },
   {
     t: "Peniaze si ťa nájdu",

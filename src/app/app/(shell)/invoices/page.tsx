@@ -2,6 +2,7 @@ import Link from "next/link"
 import { Plus, FileText } from "lucide-react"
 import { getTranslations } from "next-intl/server"
 import { createClient } from "@/lib/supabase/server"
+import { getCurrentOrgId } from "@/lib/auth/current-org"
 import { formatMoney } from "@/lib/money"
 import { DOCUMENT_TYPE_LABELS, type DocumentType } from "@/lib/documents/labels"
 import { Button } from "@/components/ui/button"
@@ -26,10 +27,15 @@ function fmtDate(iso: string | null): string {
 export default async function InvoicesPage() {
   const t = await getTranslations("invoices")
   const supabase = await createClient()
-  const { data: documents } = await supabase
-    .from("documents")
-    .select("*, contacts(name)")
-    .order("created_at", { ascending: false })
+  const orgId = await getCurrentOrgId(supabase)
+  // Bez aktivnej organizacie nezobrazujeme nic - vykresli sa prazdny stav
+  const { data: documents } = orgId
+    ? await supabase
+        .from("documents")
+        .select("*, contacts(name)")
+        .eq("organization_id", orgId)
+        .order("created_at", { ascending: false })
+    : { data: null }
 
   return (
     <div className="mx-auto grid max-w-5xl gap-6">

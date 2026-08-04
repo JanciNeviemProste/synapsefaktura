@@ -90,7 +90,8 @@ Najsilnejší wow moment = faktúra vetou. 15–30 s, 9:16, titulky (bez zvuku).
 ```
 [0–3 s]  HOOK (text + reč): „Faktúra za 30 sekúnd? Pozeraj."
 [3–20 s] Ukáž obrazovku: napíšeš vetu „Vyfakturuj Jánovi 3 hodiny konzultácie
-         po 50 €" → AI vygeneruje doklad → skontroluje DPH.
+         po 50 €" → AI pripraví koncept dokladu → klikneš na kontrolu
+         náležitostí a DPH (pravidlá §74) → vystavíš.
 [20–27 s] „A je pripravená aj na povinnú e-faktúru 2027."
 [27–30 s] CTA (text): „Vyskúšaj zadarmo — odkaz v bio / komentári."
 ```

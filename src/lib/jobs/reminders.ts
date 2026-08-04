@@ -6,7 +6,6 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { formatMoney } from "@/lib/money"
 import { smartReminderBody } from "@/lib/reminders/smart"
 import { nextReminderLevel } from "@/lib/reminders/level"
-import { hasAiKey } from "@/lib/ai/provider"
 import { hasEmail, sendEmail } from "@/lib/email/provider"
 import { reminderEmail } from "@/lib/email/templates"
 
@@ -66,14 +65,20 @@ export async function createReminderForDocument(
   }
 
   const today = new Date().toISOString().slice(0, 10)
-  const msg = await smartReminderBody(nextLevel, {
-    documentNumber: doc.number ?? "—",
-    customerName: contact?.name ?? "odberateľ",
-    amount: formatMoney(doc.total - doc.paid_amount),
-    dueDate: doc.due_date ? doc.due_date.split("-").reverse().join(".") : "—",
-    daysOverdue: doc.due_date ? daysBetween(doc.due_date, today) : 0,
-    supplierName: org?.name ?? "",
-  })
+  const msg = await smartReminderBody(
+    nextLevel,
+    {
+      documentNumber: doc.number ?? "—",
+      customerName: contact?.name ?? "odberateľ",
+      amount: formatMoney(doc.total - doc.paid_amount),
+      dueDate: doc.due_date ? doc.due_date.split("-").reverse().join(".") : "—",
+      daysOverdue: doc.due_date ? daysBetween(doc.due_date, today) : 0,
+      supplierName: org?.name ?? "",
+    },
+    // Organizacia z uz nacitaneho dokladu — cron nema session, takze bez nej
+    // by gate zamietol aj platiace organizacie a upomienky by boli vzdy sablonove.
+    doc.organization_id,
+  )
 
   // Attempt real delivery; only stamp sent_at when the email actually went out.
   const nowIso = new Date().toISOString()
@@ -98,7 +103,9 @@ export async function createReminderForDocument(
     body: msg.body,
     scheduled_at: nowIso,
     sent_at: sentAt,
-    ai_generated: hasAiKey(),
+    // Podla skutocneho vysledku AI volania, nie podla pritomnosti kluca —
+    // pri fallbacku na sablonu je text sablonovy, nie AI.
+    ai_generated: msg.aiGenerated,
   })
   if (error) return { ok: false, error: "Upomienku sa nepodarilo uložiť." }
 

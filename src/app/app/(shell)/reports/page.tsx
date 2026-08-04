@@ -1,7 +1,9 @@
 import { Download } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
+import { getCurrentOrgId } from "@/lib/auth/current-org"
 import { formatMoney } from "@/lib/money"
 import { computeSummary } from "@/lib/reports/summary"
+import type { SummaryExpense, SummaryInvoice } from "@/lib/reports/summary"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -33,21 +35,33 @@ export default async function ReportsPage({
   const qs = `from=${from}&to=${to}`
 
   const supabase = await createClient()
-  const [{ data: docs }, { data: expenses }] = await Promise.all([
-    supabase
-      .from("documents")
-      .select("status, subtotal, vat_total, total, paid_amount")
-      .eq("type", "invoice")
-      .gte("issue_date", from)
-      .lte("issue_date", to),
-    supabase
-      .from("expenses")
-      .select("subtotal, vat_total, total, paid_amount, tax_deductible")
-      .gte("issue_date", from)
-      .lte("issue_date", to),
-  ])
+  const orgId = await getCurrentOrgId(supabase)
 
-  const summary = computeSummary(docs ?? [], expenses ?? [])
+  // Bez aktivnej organizacie nemame co scitavat - report ostane prazdny.
+  let docs: SummaryInvoice[] = []
+  let expenses: SummaryExpense[] = []
+
+  if (orgId) {
+    const [docsRes, expensesRes] = await Promise.all([
+      supabase
+        .from("documents")
+        .select("status, subtotal, vat_total, total, paid_amount")
+        .eq("organization_id", orgId)
+        .eq("type", "invoice")
+        .gte("issue_date", from)
+        .lte("issue_date", to),
+      supabase
+        .from("expenses")
+        .select("subtotal, vat_total, total, paid_amount, tax_deductible")
+        .eq("organization_id", orgId)
+        .gte("issue_date", from)
+        .lte("issue_date", to),
+    ])
+    docs = docsRes.data ?? []
+    expenses = expensesRes.data ?? []
+  }
+
+  const summary = computeSummary(docs, expenses)
 
   const cards = [
     { label: "Príjmy (základ)", value: summary.incomeBase },

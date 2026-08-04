@@ -1,9 +1,7 @@
-import type { AiResult } from "@/lib/ai/generate"
 import { isZeroVatMode } from "@/lib/vat/engine"
 import { legalNoteForVatMode } from "@/lib/vat/legal-notes"
 import { VAT_MODE_LABELS, type VatMode } from "@/lib/validation/org"
 import type { Database } from "@/lib/supabase/database.types"
-import { z } from "zod"
 
 type DocumentRow = Database["public"]["Tables"]["documents"]["Row"]
 type DocumentItemRow = Database["public"]["Tables"]["document_items"]["Row"]
@@ -244,38 +242,4 @@ export function checkCompliance(input: ComplianceInput): ComplianceResult {
   const score = Math.max(0, Math.min(100, 100 - penalty))
 
   return { score, issues }
-}
-
-const explanationSchema = z.object({
-  summary: z.string(),
-})
-
-/**
- * Optional friendly Slovak summary of the issues via AI. Degrades gracefully:
- * when no AI key is configured it returns the degraded `AiResult` and callers
- * should fall back to the raw issue list.
- */
-export async function explainCompliance(
-  issues: ComplianceIssue[],
-): Promise<AiResult<{ summary: string }>> {
-  if (issues.length === 0) {
-    return {
-      ok: true,
-      data: { summary: "Doklad spĺňa kontrolované pravidlá." },
-    }
-  }
-  const list = issues
-    .map((i) => `- [${i.severity}] ${i.message}${i.fix ? ` (${i.fix})` : ""}`)
-    .join("\n")
-  // Deferred import keeps the pure `checkCompliance` free of the server-only
-  // AI module, so it (and its tests) run in any environment without an AI key.
-  const { generateStructured } = await import("@/lib/ai/generate")
-  return generateStructured({
-    feature: "compliance",
-    schema: explanationSchema,
-    system:
-      "Si slovenský účtovný asistent. Zhrň zistené nedostatky faktúry stručne, " +
-      "vecne a v slovenčine. Maximálne 3 vety. Neuváďaj nič mimo zhrnutia.",
-    prompt: `Zistené nedostatky:\n${list}`,
-  })
 }
