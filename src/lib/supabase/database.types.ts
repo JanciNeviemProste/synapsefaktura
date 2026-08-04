@@ -1499,6 +1499,143 @@ export type Database = {
           },
         ]
       }
+      recurring_trips: {
+        Row: {
+          active: boolean
+          cadence: Database["public"]["Enums"]["recurring_cadence"]
+          contact_id: string | null
+          created_at: string
+          destination: string | null
+          distance_km: number
+          id: string
+          next_run_on: string | null
+          organization_id: string
+          origin: string | null
+          purpose: Database["public"]["Enums"]["trip_purpose"]
+          purpose_note: string | null
+          round_trip: boolean
+          updated_at: string
+          vehicle_id: string
+        }
+        Insert: {
+          active?: boolean
+          cadence?: Database["public"]["Enums"]["recurring_cadence"]
+          contact_id?: string | null
+          created_at?: string
+          destination?: string | null
+          distance_km?: number
+          id?: string
+          next_run_on?: string | null
+          organization_id: string
+          origin?: string | null
+          purpose?: Database["public"]["Enums"]["trip_purpose"]
+          purpose_note?: string | null
+          round_trip?: boolean
+          updated_at?: string
+          vehicle_id: string
+        }
+        Update: {
+          active?: boolean
+          cadence?: Database["public"]["Enums"]["recurring_cadence"]
+          contact_id?: string | null
+          created_at?: string
+          destination?: string | null
+          distance_km?: number
+          id?: string
+          next_run_on?: string | null
+          organization_id?: string
+          origin?: string | null
+          purpose?: Database["public"]["Enums"]["trip_purpose"]
+          purpose_note?: string | null
+          round_trip?: boolean
+          updated_at?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_trips_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_trips_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_trips_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      refuelings: {
+        Row: {
+          created_at: string
+          expense_id: string | null
+          id: string
+          litres: number
+          odometer_km: number | null
+          organization_id: string
+          price_per_litre: number
+          refueled_at: string
+          total_price: number
+          vehicle_id: string
+        }
+        Insert: {
+          created_at?: string
+          expense_id?: string | null
+          id?: string
+          litres: number
+          odometer_km?: number | null
+          organization_id: string
+          price_per_litre: number
+          refueled_at: string
+          total_price: number
+          vehicle_id: string
+        }
+        Update: {
+          created_at?: string
+          expense_id?: string | null
+          id?: string
+          litres?: number
+          odometer_km?: number | null
+          organization_id?: string
+          price_per_litre?: number
+          refueled_at?: string
+          total_price?: number
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "refuelings_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refuelings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refuelings_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reminders: {
         Row: {
           ai_generated: boolean
@@ -1694,6 +1831,129 @@ export type Database = {
           },
         ]
       }
+      travel_rates: {
+        Row: {
+          created_at: string
+          currency: string
+          fuel_rate_per_km: number | null
+          id: string
+          note: string | null
+          organization_id: string | null
+          rate_per_km: number
+          valid_from: string
+          valid_to: string | null
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          fuel_rate_per_km?: number | null
+          id?: string
+          note?: string | null
+          organization_id?: string | null
+          rate_per_km: number
+          valid_from: string
+          valid_to?: string | null
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          fuel_rate_per_km?: number | null
+          id?: string
+          note?: string | null
+          organization_id?: string | null
+          rate_per_km?: number
+          valid_from?: string
+          valid_to?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "travel_rates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trips: {
+        Row: {
+          contact_id: string | null
+          created_at: string
+          destination: string | null
+          distance_km: number
+          driver_name: string | null
+          id: string
+          odometer_end_km: number | null
+          odometer_start_km: number | null
+          organization_id: string
+          origin: string | null
+          purpose: Database["public"]["Enums"]["trip_purpose"]
+          purpose_note: string | null
+          round_trip: boolean
+          trip_date: string
+          updated_at: string
+          vehicle_id: string
+        }
+        Insert: {
+          contact_id?: string | null
+          created_at?: string
+          destination?: string | null
+          distance_km?: number
+          driver_name?: string | null
+          id?: string
+          odometer_end_km?: number | null
+          odometer_start_km?: number | null
+          organization_id: string
+          origin?: string | null
+          purpose?: Database["public"]["Enums"]["trip_purpose"]
+          purpose_note?: string | null
+          round_trip?: boolean
+          trip_date: string
+          updated_at?: string
+          vehicle_id: string
+        }
+        Update: {
+          contact_id?: string | null
+          created_at?: string
+          destination?: string | null
+          distance_km?: number
+          driver_name?: string | null
+          id?: string
+          odometer_end_km?: number | null
+          odometer_start_km?: number | null
+          organization_id?: string
+          origin?: string | null
+          purpose?: Database["public"]["Enums"]["trip_purpose"]
+          purpose_note?: string | null
+          round_trip?: boolean
+          trip_date?: string
+          updated_at?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trips_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trips_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trips_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vat_rates: {
         Row: {
           category_note: string | null
@@ -1717,6 +1977,132 @@ export type Database = {
           valid_to?: string | null
         }
         Relationships: []
+      }
+      vehicle_events: {
+        Row: {
+          cost: number | null
+          created_at: string
+          description: string | null
+          event_date: string
+          expense_id: string | null
+          id: string
+          next_due_on: string | null
+          odometer_km: number | null
+          organization_id: string
+          type: Database["public"]["Enums"]["vehicle_event_type"]
+          updated_at: string
+          vehicle_id: string
+        }
+        Insert: {
+          cost?: number | null
+          created_at?: string
+          description?: string | null
+          event_date?: string
+          expense_id?: string | null
+          id?: string
+          next_due_on?: string | null
+          odometer_km?: number | null
+          organization_id: string
+          type?: Database["public"]["Enums"]["vehicle_event_type"]
+          updated_at?: string
+          vehicle_id: string
+        }
+        Update: {
+          cost?: number | null
+          created_at?: string
+          description?: string | null
+          event_date?: string
+          expense_id?: string | null
+          id?: string
+          next_due_on?: string | null
+          odometer_km?: number | null
+          organization_id?: string
+          type?: Database["public"]["Enums"]["vehicle_event_type"]
+          updated_at?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_events_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_events_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicles: {
+        Row: {
+          active: boolean
+          consumption_l_100km: number | null
+          created_at: string
+          driver_name: string | null
+          fuel_type: Database["public"]["Enums"]["fuel_type"]
+          id: string
+          license_plate: string
+          name: string
+          note: string | null
+          odometer_km: number
+          organization_id: string
+          ownership: Database["public"]["Enums"]["vehicle_ownership"]
+          updated_at: string
+          vin: string | null
+        }
+        Insert: {
+          active?: boolean
+          consumption_l_100km?: number | null
+          created_at?: string
+          driver_name?: string | null
+          fuel_type?: Database["public"]["Enums"]["fuel_type"]
+          id?: string
+          license_plate: string
+          name: string
+          note?: string | null
+          odometer_km?: number
+          organization_id: string
+          ownership?: Database["public"]["Enums"]["vehicle_ownership"]
+          updated_at?: string
+          vin?: string | null
+        }
+        Update: {
+          active?: boolean
+          consumption_l_100km?: number | null
+          created_at?: string
+          driver_name?: string | null
+          fuel_type?: Database["public"]["Enums"]["fuel_type"]
+          id?: string
+          license_plate?: string
+          name?: string
+          note?: string | null
+          odometer_km?: number
+          organization_id?: string
+          ownership?: Database["public"]["Enums"]["vehicle_ownership"]
+          updated_at?: string
+          vin?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -1830,6 +2216,7 @@ export type Database = {
         | "ai_capture"
         | "peppol_inbound"
         | "invoice_by_square"
+      fuel_type: "petrol" | "diesel" | "lpg" | "cng" | "electric" | "hybrid"
       org_role: "owner" | "admin" | "accountant" | "member"
       payment_method: "bank" | "card" | "cash" | "other"
       payment_status: "unpaid" | "partially_paid" | "paid"
@@ -1839,6 +2226,7 @@ export type Database = {
       reminder_channel: "email" | "sms"
       stock_movement_type: "in" | "out" | "adjustment" | "return"
       taggable_type: "document" | "expense" | "contact"
+      trip_purpose: "business" | "private"
       vat_mode:
         | "payer"
         | "non_payer"
@@ -1847,6 +2235,15 @@ export type Database = {
         | "oss"
         | "export"
         | "exempt"
+      vehicle_event_type:
+        | "service"
+        | "inspection"
+        | "insurance"
+        | "repair"
+        | "tyres"
+        | "fine"
+        | "other"
+      vehicle_ownership: "company" | "private" | "leased"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2016,6 +2413,7 @@ export const Constants = {
         "peppol_inbound",
         "invoice_by_square",
       ],
+      fuel_type: ["petrol", "diesel", "lpg", "cng", "electric", "hybrid"],
       org_role: ["owner", "admin", "accountant", "member"],
       payment_method: ["bank", "card", "cash", "other"],
       payment_status: ["unpaid", "partially_paid", "paid"],
@@ -2025,6 +2423,7 @@ export const Constants = {
       reminder_channel: ["email", "sms"],
       stock_movement_type: ["in", "out", "adjustment", "return"],
       taggable_type: ["document", "expense", "contact"],
+      trip_purpose: ["business", "private"],
       vat_mode: [
         "payer",
         "non_payer",
@@ -2034,6 +2433,16 @@ export const Constants = {
         "export",
         "exempt",
       ],
+      vehicle_event_type: [
+        "service",
+        "inspection",
+        "insurance",
+        "repair",
+        "tyres",
+        "fine",
+        "other",
+      ],
+      vehicle_ownership: ["company", "private", "leased"],
     },
   },
 } as const

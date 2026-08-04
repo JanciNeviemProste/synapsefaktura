@@ -11,6 +11,7 @@
     "einvoices": "E-invoices",
     "bank": "Bank",
     "cash": "Cash register",
+    "logbook": "Trip logbook",
     "recurring": "Recurring",
     "reports": "Reports",
     "settings": "Settings",
