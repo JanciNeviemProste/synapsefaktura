@@ -30,6 +30,6 @@ jobs:
             -o /tmp/keepalive.json -w "%{http_code}" \
             -H "apikey: $SUPABASE_ANON_KEY" \
             -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
-            "$SUPABASE_URL/rest/v1/vat_rates?select=id&limit=1")
+            "$SUPABASE_URL/rest/v1/vat_rates?select=code&limit=1")
           echo "HTTP $code"
           cat /tmp/keepalive.json
