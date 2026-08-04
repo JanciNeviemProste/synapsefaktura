@@ -3,6 +3,9 @@
 import { createClient } from "@/lib/supabase/server"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
 import { documentExtractor, type ExtractedDocument } from "@/lib/ai/extractor"
+import { checkAiRateLimit } from "@/lib/ai/rate-limit"
+import type { AiFailureReason } from "@/lib/ai/generate"
+import type { PlanTier } from "@/lib/billing/plans"
 import { createExpense, type ExpenseActionResult } from "@/app/actions/expenses"
 import type { Json } from "@/lib/supabase/database.types"
 
@@ -13,7 +16,14 @@ export type ExtractCaptureResult =
       parsed: ExtractedDocument
       matchedContactId: string | null
     }
-  | { ok: false; degraded: boolean; error: string }
+  | {
+      ok: false
+      degraded: boolean
+      error: string
+      /** Prítomné, keď zlyhanie rieši upgrade tarifu — UI otvorí UpgradeDialog. */
+      upgrade?: PlanTier
+      reason?: AiFailureReason
+    }
 
 /**
  * §7.1 — AI Document Capture. Reads an uploaded supplier doc, runs the
@@ -28,20 +38,33 @@ export async function extractFromUpload(
     return { ok: false, degraded: false, error: "Žiadny súbor." }
   }
 
-  const data = new Uint8Array(Buffer.from(await file.arrayBuffer()))
-  const mediaType = file.type || "application/octet-stream"
-
-  const result = await documentExtractor.extract({ data, mediaType })
-  if (!result.ok) {
-    return { ok: false, degraded: result.degraded, error: result.error }
-  }
-  const parsed = result.data
-
+  // Organizáciu zisťujeme PRED volaním modelu — inak by sa spálil token aj
+  // vtedy, keď používateľ firmu nemá a výsledok sa aj tak zahodí.
   const supabase = await createClient()
   const orgId = await getCurrentOrgId(supabase)
   if (!orgId) {
     return { ok: false, degraded: false, error: "Chýba firma." }
   }
+
+  const limited = await checkAiRateLimit(supabase, orgId, "capture")
+  if (!limited.ok) {
+    return { ok: false, degraded: false, error: limited.error }
+  }
+
+  const data = new Uint8Array(Buffer.from(await file.arrayBuffer()))
+  const mediaType = file.type || "application/octet-stream"
+
+  const result = await documentExtractor.extract({ data, mediaType })
+  if (!result.ok) {
+    return {
+      ok: false,
+      degraded: result.degraded,
+      error: result.error,
+      reason: result.reason,
+      ...(result.upgrade ? { upgrade: result.upgrade } : {}),
+    }
+  }
+  const parsed = result.data
 
   // Match supplier to an existing contact by IČO (supplier / both).
   let matchedContactId: string | null = null

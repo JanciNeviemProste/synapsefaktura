@@ -1,6 +1,11 @@
 "use server"
 
-import { generateStructured } from "@/lib/ai/generate"
+import {
+  generateStructured,
+  type AiFailureReason,
+} from "@/lib/ai/generate"
+import { checkAiRateLimit } from "@/lib/ai/rate-limit"
+import type { PlanTier } from "@/lib/billing/plans"
 import { nlInvoiceDraftSchema } from "@/lib/validation/nl-invoice"
 import { saveDocument } from "@/app/actions/documents"
 import type { DocumentInput } from "@/lib/validation/document"
@@ -12,7 +17,14 @@ import type { VatMode } from "@/lib/validation/org"
 
 export type DraftInvoiceResult =
   | { ok: true; id: string }
-  | { ok: false; degraded: boolean; error: string }
+  | {
+      ok: false
+      degraded: boolean
+      error: string
+      /** Prítomné, keď zlyhanie rieši upgrade tarifu — UI otvorí UpgradeDialog. */
+      upgrade?: PlanTier
+      reason?: AiFailureReason
+    }
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10)
@@ -68,6 +80,13 @@ export async function draftInvoiceFromText(
     `vatMode nastav na '${defaultVatMode}', ak nie je zjavné inak.`,
   ].join(" ")
 
+  if (orgId) {
+    const limited = await checkAiRateLimit(supabase, orgId, "nl_invoice")
+    if (!limited.ok) {
+      return { ok: false, degraded: false, error: limited.error }
+    }
+  }
+
   const ai = await generateStructured({
     feature: "nl_invoice",
     schema: nlInvoiceDraftSchema,
@@ -76,7 +95,13 @@ export async function draftInvoiceFromText(
   })
 
   if (!ai.ok) {
-    return { ok: false, degraded: ai.degraded, error: ai.error }
+    return {
+      ok: false,
+      degraded: ai.degraded,
+      error: ai.error,
+      reason: ai.reason,
+      ...(ai.upgrade ? { upgrade: ai.upgrade } : {}),
+    }
   }
 
   const draft = ai.data

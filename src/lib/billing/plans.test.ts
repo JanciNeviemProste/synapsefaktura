@@ -21,6 +21,29 @@ describe("plan feature matrix", () => {
     expect(PLANS.business.docsPerMonth).toBeNull()
   })
 
+  it("every plan has a positive AI per-minute limit", () => {
+    // Nula alebo zaporne cislo by ticho zablokovalo AI aj platiacim —
+    // rate limit je poistka proti narazu, nie vypinac funkcie.
+    for (const tier of PLAN_ORDER) {
+      expect(PLANS[tier].aiCallsPerMinute).toBeGreaterThan(0)
+    }
+  })
+
+  it("AI limits grow with the plan", () => {
+    // Drahsi plan nesmie mat prisnejsi strop nez lacnejsi.
+    expect(PLANS.pro.aiCallsPerMinute).toBeGreaterThanOrEqual(
+      PLANS.free.aiCallsPerMinute,
+    )
+    expect(PLANS.business.aiCallsPerMinute).toBeGreaterThanOrEqual(
+      PLANS.pro.aiCallsPerMinute,
+    )
+    // To iste pre mesacny strop nakladov (null = bez stropu, teda najvyssi).
+    const cap = (t: (typeof PLAN_ORDER)[number]) =>
+      PLANS[t].aiMonthlyCostLimit ?? Number.POSITIVE_INFINITY
+    expect(cap("pro")).toBeGreaterThanOrEqual(cap("free"))
+    expect(cap("business")).toBeGreaterThanOrEqual(cap("pro"))
+  })
+
   it("pro grants the AI features but not Business-only ones", () => {
     expect(planHasFeature("pro", "aiCapture")).toBe(true)
     expect(planHasFeature("pro", "nlInvoice")).toBe(true)

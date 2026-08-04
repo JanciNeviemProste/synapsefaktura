@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 import { sendAssistantMessage } from "@/app/actions/ai-assistant"
 import type { AssistantMessage } from "@/app/actions/ai-assistant"
 import { Button } from "@/components/ui/button"
+import { useUpgrade } from "@/components/billing/upgrade-dialog"
 
 const STARTERS = [
   "Koľko som vyfakturoval tento mesiac?",
@@ -32,6 +33,7 @@ export function AssistantChat({
   initialMessages: AssistantMessage[]
   degraded: boolean
 }) {
+  const { prompt } = useUpgrade()
   const [threadId, setThreadId] = useState<string | undefined>(initialThreadId)
   const [messages, setMessages] = useState<ChatMessage[]>(
     initialMessages.map((m) => ({
@@ -67,9 +69,12 @@ export function AssistantChat({
           ...prev,
           { id: localId("a"), role: "assistant", content: res.reply },
         ])
+      } else if (res.upgrade) {
+        // Paywall má ponúknuť upgrade, nie tvrdiť, že chýba kľúč.
+        prompt(res.upgrade, res.error)
       } else {
         toast.error(
-          res.degraded
+          res.reason === "no_key"
             ? "AI asistent nie je nakonfigurovaný (chýba kľúč)."
             : res.error || "Odpoveď sa nepodarilo získať.",
         )

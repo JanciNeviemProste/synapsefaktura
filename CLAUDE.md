@@ -19,7 +19,7 @@
 | `pnpm dev` | Dev server (`next dev`) |
 | `pnpm build` | Produkčný build |
 | `pnpm typecheck` | `tsc --noEmit` |
-| `pnpm lint` | ESLint (`next lint`) |
+| `pnpm lint` | ESLint CLI (`eslint .`, flat config) |
 | `pnpm test` | `vitest run` |
 | `pnpm format` | Prettier (zápis) |
 | `pnpm db:start` / `db:stop` | Lokálny Supabase (Docker) |
@@ -81,13 +81,15 @@ Voliteľné (feature sa aktivuje kľúčom): `OPENROUTER_API_KEY` (má prednosť
   certifikovaný Digitálny poštár za `DigitalPostmanProvider` interface — čaká na
   externú akreditáciu.
 - **Billing tiery** — `billing/plans.ts` ceny/limity `TODO: confirm` (biznis rozhodnutie).
+  Týka sa aj AI stropov: `aiMonthlyCostLimit` (mesačný náklad, odhad v USD podľa
+  `ai/cost.ts`) a `aiCallsPerMinute` (nárazový limit interaktívnych volaní).
 - **Externé kľúče chýbajú** — AI/Stripe/Email/Upstash bežia graceful bez kľúča;
   produkcia potrebuje hosted Supabase + Vercel env.
 
 ## Stav (posledné 📊 — 2026-08-04)
 
-`main`: `typecheck` PASS · `lint` PASS · `test` 171/171 PASS (po merge PR #1).
-Nasadené na `synapsefaktura.vercel.app` (`bc1b421`). Supabase
+`main`: `typecheck` PASS · `lint` PASS · `test` 173/173 PASS · `build` PASS
+(po merge PR #2). Nasadené na `synapsefaktura.vercel.app`. Supabase
 `oukooqfpxeunhdzndsid` je `ACTIVE_HEALTHY` — **36 tabuliek, 23 enumov,
 81 policies, 10 migrácií** (schéma je pred kódom: fázy 3 a 4 z PR #6/#7 sú
 aplikované, kód ešte nie je zmergovaný); keep-alive workflow beží (HTTP 200).
@@ -95,6 +97,44 @@ Verejné stránky bežia aj bez databázy. Blokátory: Stripe/e-mail/analytics k
 firemné údaje, neoverená SK legislatíva.
 
 ## Session log
+
+### 2026-08-04: Audit — org scoping, bankový import, AI gating a náklady
+Externý audit proti štruktúre SuperFaktúry našiel tri triedy problémov. Fáza 0
+= opravy, nie nové funkcie. Ďalej nasleduje parita (typy dokladov, chýbajúce
+moduly, kniha jázd) a až potom AI ako odlišovač.
+
+- **Fáza 0 hotová (PR #1, `2981cfe`):**
+  - **Únik dát medzi organizáciami** — 9 čítacích ciest ignorovalo
+    `getCurrentOrgId` a spoliehalo sa na RLS, ktorá pustí *všetky* organizácie
+    používateľa. Kto bol v dvoch firmách, videl zmiešané dáta; export pre
+    účtovníka bral organizáciu cez `limit(1)`. Doplnený filter všade.
+  - **Bankový import** — knihoval platbu aj pri zhode samotného VS s nesediacou
+    sumou (preplatok pretlačil `paid_amount` nad `total`); pridaná detekcia
+    duplicít podľa `(dátum, suma, VS, protistrana)`.
+  - **AI tarifné diery** — `anomaly` bola Pro funkcia dostupná zadarmo (nevolá
+    AI, teda nikdy neprešla cez gate); `forecast` bol Business-only len naoko;
+    cron obchádzal gate aj účtovanie (`orgId` null → `ok:true`). Gate je teraz
+    fail-closed a `orgId` sa do cronu posiela z načítaného dokladu.
+  - **Náklady** — `ai_usage` sa zapisovalo, ale nikdy nečítalo; pridaný mesačný
+    strop (`lib/ai/budget.ts`, čistá funkcia + testy).
+  - **Chyby** — párovanie kontaktu cez `needle.includes(hay)` spájalo kontakt
+    menom „a" s ľubovoľnou vetou (`lib/contacts/match-name.ts` + testy); prompt
+    nedostával údaje firmy, takže neplatiteľ DPH dostal 23 %; `summarize_client`
+    ticho bral prvý výsledok; chyby AI sa prehĺtali v prázdnom `catch`.
+  - **Texty** — landing page sľubovala veci, ktoré kód nerobí; zosúladené.
+    ADR: poskytovateľ je Gemini, nie Claude, ako tvrdí master prompt.
+- **Fáza 0 doplnky (táto vetva):**
+  - **Rate limit na AI** — `checkRateLimit` bol len na checkout a pozvánky;
+    `lib/ai/rate-limit.ts` ho pridáva na interaktívne AI akcie
+    (`aiCallsPerMinute` per plán). Zámerne NIE v `generate.ts` — cron legitímne
+    generuje desiatky upomienok v jednom behu.
+  - **`degraded` vs `gated`** — obidva prípady vracali `degraded: true`, takže
+    Free používateľ na paywalle dostal hlášku „chýba kľúč" namiesto ponuky
+    upgradu. Pribudol `AiFailureReason`; tri AI komponenty teraz používajú
+    `useUpgrade()` rovnako ako zvyšok appky. Akcie prestali zahadzovať `upgrade`.
+  - **`next lint` → `eslint .`** — `next lint` je deprecated a v Next 16 mizne.
+  - Pri tom: `ai-capture` volal model *pred* zistením organizácie, takže spálil
+    token aj keď používateľ firmu nemal.
 
 ### 2026-08-04: Externý prispievateľ — migrácie fáz 3 a 4 aplikované cez MCP
 Roman (`csrom`, write prístup) otvoril 6 stacked PR (#2 → #3 → #4 → #5 → #6 → #7).
@@ -116,7 +156,8 @@ Roman (`csrom`, write prístup) otvoril 6 stacked PR (#2 → #3 → #4 → #5 �
 - ⚠️ **CI na stacked PR nebeží** — `ci.yml` má `on: pull_request: branches:[main]`,
   čo filtruje podľa *base* vetvy; #3–#7 mieria na predošlé vetvy stacku. Bežia len
   GitGuardian + Vercel build. Overené lokálne na vrchole stacku: typecheck PASS,
-  `eslint .` PASS, **324/324 testov** (main má 130).
+  `eslint .` PASS, **324/324 testov**. Opravené na `main`: `pull_request` už
+  nemá `branches` filter, takže checky bežia aj na stacked PR.
 - Produkcia nedotknutá: `/` `/login` 200, `/app/dashboard` 307, runtime errors 0.
   Security advisors bez nového nálezu.
 - **Schéma je pred kódom** — 14 prázdnych tabuliek, ktoré nasadený kód nepozná.
