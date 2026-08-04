@@ -5,6 +5,18 @@ import { supabaseEnv } from "./env"
 type CookieToSet = { name: string; value: string; options?: CookieOptions }
 
 /**
+ * Auth is on the critical path of every protected request, so it gets a hard
+ * budget: 2.5 s per network call and 3 s for the whole refresh. Without it a
+ * dead Supabase host (paused project → `ENOTFOUND`) makes supabase-js retry
+ * until the Edge function hits its 25 s limit and the request returns 504.
+ */
+const AUTH_FETCH_TIMEOUT_MS = 2_500
+const AUTH_TOTAL_BUDGET_MS = 3_000
+
+const timeoutFetch: typeof fetch = (input, init) =>
+  fetch(input, { ...init, signal: AbortSignal.timeout(AUTH_FETCH_TIMEOUT_MS) })
+
+/**
  * Refreshes the Supabase auth session on every request and guards the
  * authenticated app area. Unauthenticated users hitting protected routes are
  * redirected to /login; authenticated users on auth pages go to the dashboard.
@@ -22,15 +34,21 @@ export async function updateSession(request: NextRequest) {
   }
 
   try {
-    return await refreshAndGuard(
-      request,
-      env.url as string,
-      env.anonKey as string,
-    )
+    return await Promise.race([
+      refreshAndGuard(request, env.url as string, env.anonKey as string),
+      deadline(AUTH_TOTAL_BUDGET_MS),
+    ])
   } catch (err) {
     console.error("[middleware] auth refresh failed", err)
     return NextResponse.next({ request })
   }
+}
+
+/** Rejects once the budget is spent, so the caller falls open instead of hanging. */
+function deadline(ms: number): Promise<never> {
+  return new Promise((_, reject) =>
+    setTimeout(() => reject(new Error(`auth refresh exceeded ${ms}ms`)), ms),
+  )
 }
 
 async function refreshAndGuard(
@@ -41,6 +59,7 @@ async function refreshAndGuard(
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(url, anonKey, {
+    global: { fetch: timeoutFetch },
     cookies: {
       getAll() {
         return request.cookies.getAll()

@@ -22,6 +22,11 @@ export const AI_MODEL =
   process.env.AI_MODEL ??
   (process.env.OPENROUTER_API_KEY ? OPENROUTER_DEFAULT_MODEL : GOOGLE_DEFAULT_MODEL)
 
+/** Which backend `aiModel()` will use — provider options are keyed by it. */
+export function aiBackend(): "openrouter" | "google" {
+  return hasOpenRouter() ? "openrouter" : "google"
+}
+
 /** True when an AI key is configured; AI features degrade gracefully otherwise. */
 export function hasAiKey(): boolean {
   return hasOpenRouter() || Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY)

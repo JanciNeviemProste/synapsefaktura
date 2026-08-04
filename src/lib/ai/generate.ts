@@ -9,7 +9,7 @@ import {
 } from "ai"
 import type { z } from "zod"
 
-import { aiModel, hasAiKey, AI_MODEL } from "./provider"
+import { aiBackend, aiModel, hasAiKey, AI_MODEL } from "./provider"
 import { estimateCost } from "./cost"
 import { createClient } from "@/lib/supabase/server"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
@@ -122,7 +122,12 @@ export async function generateStructured<SCHEMA extends z.ZodType>(opts: {
         ? { messages: opts.messages }
         : { prompt: opts.prompt ?? "" }),
       // Allow zod unions/optionals that Google's strict structured mode rejects.
-      providerOptions: { google: { structuredOutputs: false } },
+      // Only meaningful on the direct Google backend — provider options are
+      // keyed by provider, so sending `google` while OpenRouter is active would
+      // be silently dropped.
+      ...(aiBackend() === "google"
+        ? { providerOptions: { google: { structuredOutputs: false } } }
+        : {}),
     })
     await logUsage(opts.feature, AI_MODEL, usage)
     return { ok: true, data: object as z.infer<SCHEMA> }

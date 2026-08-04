@@ -1,0 +1,35 @@
+name: Supabase keep-alive
+
+# Supabase pauses a free-tier project after ~7 days without database activity
+# and drops its DNS record — which is exactly what took production down on
+# 2026-08-03 (ENOTFOUND → edge middleware timeout → 504). One real query a day
+# keeps the project awake. Runs on GitHub Actions so it stays independent of the
+# Vercel plan's cron limits.
+
+on:
+  schedule:
+    - cron: "15 4 * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Query the database
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::error::Missing SUPABASE_URL / SUPABASE_ANON_KEY repository secrets — the project is NOT being kept alive."
+            exit 1
+          fi
+          # A real PostgREST select (not just /auth/v1/health) so the query
+          # reaches Postgres and counts as activity. RLS may return [] — fine.
+          code=$(curl -sS --fail-with-body --max-time 30 \
+            -o /tmp/keepalive.json -w "%{http_code}" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            "$SUPABASE_URL/rest/v1/vat_rates?select=id&limit=1")
+          echo "HTTP $code"
+          cat /tmp/keepalive.json

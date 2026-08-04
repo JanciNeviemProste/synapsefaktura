@@ -8,6 +8,29 @@ import { createClient } from "@/lib/supabase/server"
 
 export type AuthActionResult = { error: string } | undefined
 
+const UNAVAILABLE =
+  "Prihlásenie je momentálne nedostupné (služba neodpovedá). Skús to prosím o chvíľu."
+
+/**
+ * Runs a Supabase auth call and turns an *infrastructure* failure (unset env,
+ * unreachable or paused project) into a readable message. Without this the
+ * exception escapes the Server Action and the user only sees the generic
+ * „Niečo sa pokazilo" screen from `global-error.tsx`. Auth failures the API
+ * reports normally (bad password, taken e-mail) stay in `data.error` and are
+ * handled by each caller.
+ */
+async function withSupabase<T>(
+  fn: (supabase: Awaited<ReturnType<typeof createClient>>) => Promise<T>,
+): Promise<{ ok: true; data: T } | { ok: false; error: string }> {
+  try {
+    const supabase = await createClient()
+    return { ok: true, data: await fn(supabase) }
+  } catch (err) {
+    console.error("[auth] Supabase nedostupné", err)
+    return { ok: false, error: UNAVAILABLE }
+  }
+}
+
 const credentialsSchema = z.object({
   email: z.string().email("Zadaj platný e-mail."),
   password: z.string().min(6, "Heslo musí mať aspoň 6 znakov."),
@@ -26,9 +49,11 @@ export async function signIn(formData: FormData): Promise<AuthActionResult> {
     return { error: parsed.error.issues[0].message }
   }
 
-  const supabase = await createClient()
-  const { error } = await supabase.auth.signInWithPassword(parsed.data)
-  if (error) {
+  const res = await withSupabase((supabase) =>
+    supabase.auth.signInWithPassword(parsed.data),
+  )
+  if (!res.ok) return { error: res.error }
+  if (res.data.error) {
     return { error: "Nesprávny e-mail alebo heslo." }
   }
 
@@ -50,16 +75,19 @@ export async function signUp(formData: FormData): Promise<AuthActionResult> {
     return { error: parsed.error.issues[0].message }
   }
 
-  const supabase = await createClient()
-  const { data, error } = await supabase.auth.signUp({
-    email: parsed.data.email,
-    password: parsed.data.password,
-    options: {
-      data: parsed.data.fullName
-        ? { full_name: parsed.data.fullName }
-        : undefined,
-    },
-  })
+  const res = await withSupabase((supabase) =>
+    supabase.auth.signUp({
+      email: parsed.data.email,
+      password: parsed.data.password,
+      options: {
+        data: parsed.data.fullName
+          ? { full_name: parsed.data.fullName }
+          : undefined,
+      },
+    }),
+  )
+  if (!res.ok) return { error: res.error }
+  const { data, error } = res.data
   if (error) {
     return { error: error.message }
   }
@@ -75,14 +103,17 @@ export async function signUp(formData: FormData): Promise<AuthActionResult> {
 }
 
 export async function signInWithGoogle(): Promise<AuthActionResult> {
-  const supabase = await createClient()
   const origin =
     (await headers()).get("origin") ?? process.env.NEXT_PUBLIC_SITE_URL
 
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: { redirectTo: `${origin}/auth/callback` },
-  })
+  const res = await withSupabase((supabase) =>
+    supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${origin}/auth/callback` },
+    }),
+  )
+  if (!res.ok) return { error: res.error }
+  const { data, error } = res.data
   if (error || !data.url) {
     return { error: "Prihlásenie cez Google zlyhalo." }
   }
@@ -91,8 +122,8 @@ export async function signInWithGoogle(): Promise<AuthActionResult> {
 }
 
 export async function signOut(): Promise<void> {
-  const supabase = await createClient()
-  await supabase.auth.signOut()
+  // Best effort: even if the service is down, clear the UI and send them out.
+  await withSupabase((supabase) => supabase.auth.signOut())
   revalidatePath("/", "layout")
   redirect("/login")
 }
