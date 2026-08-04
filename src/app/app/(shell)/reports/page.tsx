@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
 import { formatMoney } from "@/lib/money"
 import { computeSummary } from "@/lib/reports/summary"
+import { REPORTED_DOCUMENT_TYPES } from "@/lib/documents/reporting"
 import type { SummaryExpense, SummaryInvoice } from "@/lib/reports/summary"
 import { Button } from "@/components/ui/button"
 import {
@@ -47,7 +48,7 @@ export default async function ReportsPage({
         .from("documents")
         .select("status, subtotal, vat_total, total, paid_amount")
         .eq("organization_id", orgId)
-        .eq("type", "invoice")
+        .in("type", REPORTED_DOCUMENT_TYPES)
         .gte("issue_date", from)
         .lte("issue_date", to),
       supabase

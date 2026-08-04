@@ -14,8 +14,10 @@ import {
 import { TripsView } from "@/components/logbook/trips-view"
 import { RefuelingsView } from "@/components/logbook/refuelings-view"
 import { VehicleEventsView } from "@/components/logbook/vehicle-events-view"
+import { LogbookSummary } from "@/components/logbook/logbook-summary"
 
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 
@@ -39,11 +41,23 @@ function formatLitres(value: number): string {
 
 export default async function VehicleLogbookPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ vehicleId: string }>
+  searchParams: Promise<{ from?: string; to?: string }>
 }) {
-  // V Next 15 su `params` promise — bez awaitu by sme citali `undefined`.
+  // V Next 15 su `params` aj `searchParams` promise — bez awaitu by sme citali
+  // `undefined`.
   const { vehicleId } = await params
+  const sp = await searchParams
+
+  // Kniha jazd sa vykazuje za obdobie, nie za celu historiu vozidla. Bez
+  // obmedzenia by karta uznatelneho paliva scitala vsetky jazdy od zaciatku,
+  // kym kontrola pod nou by hlasila nalezy len za obdobie — dve rozne cisla
+  // na jednej obrazovke. Preto ma cela stranka jedno spolocne obdobie.
+  const now = new Date()
+  const periodFrom = sp.from ?? `${now.getFullYear()}-01-01`
+  const periodTo = sp.to ?? now.toISOString().slice(0, 10)
 
   const supabase = await createClient()
   const orgId = await getCurrentOrgId(supabase)
@@ -72,13 +86,19 @@ export default async function VehicleLogbookPage({
       .select("*")
       .eq("organization_id", orgId)
       .eq("vehicle_id", vehicleId)
+      .gte("trip_date", periodFrom)
+      .lte("trip_date", periodTo)
       .order("trip_date", { ascending: false }),
     supabase
       .from("refuelings")
       .select("*")
       .eq("organization_id", orgId)
       .eq("vehicle_id", vehicleId)
+      .gte("refueled_at", periodFrom)
+      .lte("refueled_at", periodTo)
       .order("refueled_at", { ascending: false }),
+    // Udalosti (STK, servis, poistka) sa ZAMERNE neorezavaju obdobim — ich
+    // zmyslom je upozornit na to, co prave prichadza alebo preslo.
     supabase
       .from("vehicle_events")
       .select("*")
@@ -152,6 +172,34 @@ export default async function VehicleLogbookPage({
         </div>
       </div>
 
+      <form className="flex flex-wrap items-end gap-3">
+        <label className="grid gap-1 text-sm">
+          <span className="text-muted-foreground">Od</span>
+          <input
+            type="date"
+            name="from"
+            defaultValue={periodFrom}
+            className="border-input h-8 rounded-md border bg-transparent px-2 text-sm"
+          />
+        </label>
+        <label className="grid gap-1 text-sm">
+          <span className="text-muted-foreground">Do</span>
+          <input
+            type="date"
+            name="to"
+            defaultValue={periodTo}
+            className="border-input h-8 rounded-md border bg-transparent px-2 text-sm"
+          />
+        </label>
+        <Button type="submit" variant="outline" size="sm">
+          Použiť obdobie
+        </Button>
+        <p className="text-muted-foreground w-full text-xs">
+          Jazdy aj tankovania nižšie sú za zvolené obdobie. Udalosti vozidla sa
+          zobrazujú vždy všetky.
+        </p>
+      </form>
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Daňovo uznateľné palivo</CardTitle>
@@ -205,6 +253,12 @@ export default async function VehicleLogbookPage({
           )}
         </CardContent>
       </Card>
+
+      <LogbookSummary
+        vehicleId={vehicle.id}
+        periodFrom={periodFrom}
+        periodTo={periodTo}
+      />
 
       <TripsView
         vehicleId={vehicle.id}

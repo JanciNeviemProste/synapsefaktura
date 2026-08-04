@@ -7,6 +7,8 @@ import { formatMoney } from "@/lib/money"
 import { DOCUMENT_TYPE_LABELS, type DocumentType } from "@/lib/documents/labels"
 import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/invoice/status-badge"
+import { TagFilter } from "@/components/tags/tag-filter"
+import { listTags, taggedEntityIds } from "@/app/actions/tags"
 import {
   Table,
   TableBody,
@@ -47,27 +49,37 @@ function parseType(value: string | string[] | undefined): DocumentType | null {
 export default async function InvoicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string | string[] }>
+  searchParams: Promise<{ type?: string | string[]; tag?: string | string[] }>
 }) {
   const sp = await searchParams
   const activeType = parseType(sp.type)
+  const activeTagId = typeof sp.tag === "string" ? sp.tag : null
   const t = await getTranslations("invoices")
   const supabase = await createClient()
   const orgId = await getCurrentOrgId(supabase)
+
+  const [tags, taggedIds] = await Promise.all([
+    listTags(),
+    taggedEntityIds("document", activeTagId ?? undefined),
+  ])
+
   // Bez aktivnej organizacie nezobrazujeme nic - vykresli sa prazdny stav
-  const query = orgId
+  let query = orgId
     ? supabase
         .from("documents")
         .select("*, contacts(name)")
         .eq("organization_id", orgId)
     : null
   // Bez parametra ostava zoznam nezmeneny - vypisu sa vsetky typy
+  if (query && activeType) query = query.eq("type", activeType)
+  // `taggedIds === null` znamena "bez filtra", `[]` znamena "nic nevyhovuje".
+  if (query && taggedIds) query = query.in("id", taggedIds)
+
   const { data: documents } = query
-    ? await (activeType ? query.eq("type", activeType) : query).order(
-        "created_at",
-        { ascending: false },
-      )
+    ? await query.order("created_at", { ascending: false })
     : { data: null }
+
+  const activeTag = tags.find((t) => t.id === activeTagId) ?? null
 
   return (
     <div className="mx-auto grid max-w-5xl gap-6">
@@ -94,7 +106,11 @@ export default async function InvoicesPage({
           variant={activeType ? "ghost" : "secondary"}
           aria-current={activeType ? undefined : "page"}
         >
-          <Link href="/app/invoices">Všetky</Link>
+          <Link
+            href={activeTagId ? `/app/invoices?tag=${activeTagId}` : "/app/invoices"}
+          >
+            Všetky
+          </Link>
         </Button>
         {FILTER_TYPES.map((type) => (
           <Button
@@ -104,12 +120,25 @@ export default async function InvoicesPage({
             variant={activeType === type ? "secondary" : "ghost"}
             aria-current={activeType === type ? "page" : undefined}
           >
-            <Link href={`/app/invoices?type=${type}`}>
+            <Link
+              href={
+                activeTagId
+                  ? `/app/invoices?type=${type}&tag=${activeTagId}`
+                  : `/app/invoices?type=${type}`
+              }
+            >
               {DOCUMENT_TYPE_LABELS[type]}
             </Link>
           </Button>
         ))}
       </nav>
+
+      <TagFilter
+        tags={tags}
+        activeTagId={activeTagId}
+        basePath="/app/invoices"
+        keep={{ type: activeType ?? undefined }}
+      />
 
       {!documents || documents.length === 0 ? (
         <div className="bg-card flex flex-col items-center justify-center gap-3 rounded-lg border py-16 text-center">
@@ -118,14 +147,18 @@ export default async function InvoicesPage({
           </div>
           <div>
             <p className="font-medium">
-              {activeType
-                ? `Žiadne doklady typu „${DOCUMENT_TYPE_LABELS[activeType]}“`
-                : t("emptyTitle")}
+              {activeTag
+                ? `Žiadne doklady so štítkom „${activeTag.name}“`
+                : activeType
+                  ? `Žiadne doklady typu „${DOCUMENT_TYPE_LABELS[activeType]}“`
+                  : t("emptyTitle")}
             </p>
             <p className="text-muted-foreground text-sm">
-              {activeType
-                ? `Vytvor nový doklad a zvoľ typ „${DOCUMENT_TYPE_LABELS[activeType]}“.`
-                : t("emptyHint")}
+              {activeTag
+                ? "Štítok priradíš na detaile dokladu."
+                : activeType
+                  ? `Vytvor nový doklad a zvoľ typ „${DOCUMENT_TYPE_LABELS[activeType]}“.`
+                  : t("emptyHint")}
             </p>
           </div>
           <Button asChild variant="outline">

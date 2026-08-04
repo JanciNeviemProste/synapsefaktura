@@ -6,7 +6,10 @@
  * would say "Spolu na uhradu". Neither is correct, so the rules live here in
  * one place instead of being spread over the renderers.
  *
- * There is no `show_prices` column yet — everything is derived from the type.
+ * The type gives the default. `documents.show_prices` may override it per
+ * document — a delivery note with prices is a common request, and without the
+ * override the column would sit in the schema unused while the user has no way
+ * to ask for one.
  */
 
 import type { DocumentType } from "@/lib/documents/labels"
@@ -85,7 +88,60 @@ const PRESENTATION: Record<DocumentType, DocumentPresentation> = {
   delivery_note: DELIVERY_NOTE,
 }
 
-/** Presentation rules for the given document type. */
-export function documentPresentation(type: DocumentType): DocumentPresentation {
-  return PRESENTATION[type]
+/**
+ * Vedome nastavenie na konkretnom doklade (`documents.show_*`).
+ *
+ * `null`/`undefined` znamena "rozhodne typ dokladu" — preto su stlpce v DB
+ * nullable. Keby mali `not null default true`, nedalo by sa odlisit vedome
+ * zapnutie od nedotknuteho defaultu a dodaci list by tlacil ceny.
+ */
+export type PresentationOverrides = {
+  showPrices?: boolean | null
+  showQr?: boolean | null
+  signatureArea?: boolean | null
+}
+
+/**
+ * Presentation rules for the given document type, plus per-document overrides.
+ *
+ * Prepinace su NAD typom, nie namiesto neho:
+ *
+ * - `showPrices: false` zhasne aj rekapitulaciu DPH, platobny blok a QR kod.
+ *   Doklad bez cien s platobnym QR kodom by bol nezmysel — QR nesie sumu,
+ *   ktoru doklad netlaci.
+ * - `showPrices: true` rozsvieti ceny a rekapitulaciu DPH, ale NIE platobny
+ *   blok. O tom, ci je doklad vyzvou na uhradu, rozhoduje typ — dodaci list
+ *   s cenami je stale dodaci list, nie faktura.
+ * - `showQr` sa vzdy orezava na `showPrices && isPayable`. Zapnut QR na
+ *   cenovej ponuke sa proste neda: nie je co uhradit.
+ * - `signatureArea` prejde tak, ako je — miesto na podpis nikde neskodi.
+ */
+export function documentPresentation(
+  type: DocumentType,
+  overrides?: PresentationOverrides,
+): DocumentPresentation {
+  const base = PRESENTATION[type]
+  if (!overrides) return base
+
+  const showPrices = overrides.showPrices ?? base.showPrices
+
+  let p: DocumentPresentation = base
+  if (showPrices !== base.showPrices) {
+    p = showPrices
+      ? { ...base, showPrices: true, showVatRecap: true }
+      : {
+          ...base,
+          showPrices: false,
+          showVatRecap: false,
+          showPaymentBlock: false,
+          showQr: false,
+        }
+  }
+
+  const wantsQr = overrides.showQr ?? p.showQr
+  const showQr = wantsQr && p.showPrices && p.isPayable
+  const signatureArea = overrides.signatureArea ?? p.signatureArea
+
+  if (showQr === p.showQr && signatureArea === p.signatureArea) return p
+  return { ...p, showQr, signatureArea }
 }

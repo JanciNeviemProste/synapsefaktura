@@ -10,6 +10,7 @@ import {
   buildSuhrnnyVykaz,
   type ExportOrg,
 } from "@/lib/export/fs-sr"
+import { REPORTED_DOCUMENT_TYPES } from "@/lib/documents/reporting"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -108,12 +109,13 @@ export async function GET(
     )
   }
 
-  // Invoice-based exports.
+  // Invoice-based exports. Dobropisy patria dnu tiez — su to opravne danove
+  // doklady a maju zaporne sumy, takze vykazanu DPH znizia samy.
   const { data: docs } = await supabase
     .from("documents")
     .select("*, contacts(name, ico, ic_dph)")
     .eq("organization_id", orgId)
-    .eq("type", "invoice")
+    .in("type", REPORTED_DOCUMENT_TYPES)
     .gte("issue_date", from)
     .lte("issue_date", to)
     .order("issue_date")

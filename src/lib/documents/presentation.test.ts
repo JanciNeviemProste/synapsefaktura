@@ -118,3 +118,84 @@ describe("documentPresentation", () => {
     }
   })
 })
+
+describe("documentPresentation — prepinace na doklade", () => {
+  it("null aj prazdny objekt nechavaju rozhodnut typ", () => {
+    for (const type of ALL_TYPES) {
+      const base = documentPresentation(type)
+      expect(documentPresentation(type, {})).toEqual(base)
+      expect(
+        documentPresentation(type, {
+          showPrices: null,
+          showQr: null,
+          signatureArea: null,
+        }),
+      ).toEqual(base)
+    }
+  })
+
+  it("dodaci list vie na poziadanie tlacit ceny, ale nestane sa fakturou", () => {
+    const p = documentPresentation("delivery_note", { showPrices: true })
+    expect(p.showPrices).toBe(true)
+    expect(p.showVatRecap).toBe(true)
+    // Ceny ano — vyzva na uhradu nie. O tom rozhoduje typ.
+    expect(p.showPaymentBlock).toBe(false)
+    expect(p.showQr).toBe(false)
+    expect(p.isPayable).toBe(false)
+    expect(p.totalLabelKey).toBe("total")
+  })
+
+  it("vypnute ceny zhasnu aj DPH rekapitulaciu, platobny blok a QR", () => {
+    const p = documentPresentation("invoice", { showPrices: false })
+    expect(p).toMatchObject({
+      showPrices: false,
+      showVatRecap: false,
+      showPaymentBlock: false,
+      showQr: false,
+    })
+  })
+
+  it("QR sa neda zapnut tam, kde nie je co uhradit", () => {
+    // Cenova ponuka nie je vyzvou na uhradu, takze QR ostava zhasnute aj ked
+    // si ho niekto vyslovne vypyta.
+    expect(documentPresentation("quote", { showQr: true }).showQr).toBe(false)
+    // A na doklade bez cien tiez — QR nesie sumu, ktoru doklad netlaci.
+    expect(
+      documentPresentation("invoice", { showPrices: false, showQr: true })
+        .showQr,
+    ).toBe(false)
+  })
+
+  it("QR sa da vypnut na faktrue, ktora by ho inak mala", () => {
+    expect(documentPresentation("invoice").showQr).toBe(true)
+    expect(documentPresentation("invoice", { showQr: false }).showQr).toBe(
+      false,
+    )
+  })
+
+  it("miesto na podpis sa da zapnut aj vypnut", () => {
+    expect(
+      documentPresentation("invoice", { signatureArea: true }).signatureArea,
+    ).toBe(true)
+    expect(
+      documentPresentation("delivery_note", { signatureArea: false })
+        .signatureArea,
+    ).toBe(false)
+  })
+
+  it("prepinace nikdy neporusia invariant 'bez cien = bez suma'", () => {
+    for (const type of ALL_TYPES) {
+      for (const showPrices of [true, false, null] as const) {
+        for (const showQr of [true, false, null] as const) {
+          const p = documentPresentation(type, { showPrices, showQr })
+          if (!p.showPrices) {
+            expect(p.showVatRecap).toBe(false)
+            expect(p.showPaymentBlock).toBe(false)
+            expect(p.showQr).toBe(false)
+          }
+          if (p.showQr) expect(p.isPayable).toBe(true)
+        }
+      }
+    }
+  })
+})

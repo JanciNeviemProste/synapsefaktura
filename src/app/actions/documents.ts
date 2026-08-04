@@ -165,6 +165,10 @@ export async function saveDocument(
     ...(v.relatedDocumentId !== undefined
       ? { related_document_id: v.relatedDocumentId }
       : {}),
+    // Prepinac cien sa zapise len ked ho formular naozaj poslal. Bez tejto
+    // podmienky by kazde ulozenie z ineho miesta (prevod, cron) prepisalo
+    // vedome nastavenie na hodnotu odvodenu z typu.
+    ...(v.showPrices !== undefined ? { show_prices: v.showPrices } : {}),
     // Rovnaky dovod ako vyssie: oba stlpce sa zapisuju len pri vystaveni.
     // Pri snapshote to nie je len opatrnost — opakovany zapis odmietne DB
     // trigger a spadla by cela akcia.

@@ -94,6 +94,8 @@ export function InvoiceEditor({
       vatMode: (doc?.vat_mode as VatMode) ?? defaultVatMode,
       notes: doc?.notes ?? "",
       footerNotes: doc?.footer_notes ?? "",
+      // `null` = "podla typu dokladu". Nie `false`, ani `true`.
+      showPrices: doc?.show_prices ?? null,
       items:
         existingItems && existingItems.length
           ? existingItems.map((i) => ({
@@ -150,7 +152,12 @@ export function InvoiceEditor({
     )
   }, [doc?.type])
 
-  const presentation = documentPresentation((type as DocumentType) ?? "invoice")
+  const showPrices = useWatch({ control: form.control, name: "showPrices" })
+  const docType = (type as DocumentType) ?? "invoice"
+  const presentation = documentPresentation(docType, { showPrices })
+  // Co by doklad robil bez vedomeho nastavenia — podla toho vieme pomenovat,
+  // ci je prepinac zapnuty proti svojmu typu.
+  const typeDefaultShowsPrices = documentPresentation(docType).showPrices
 
   const legalNote = legalNoteForVatMode(
     vatMode as VatMode,
@@ -178,7 +185,9 @@ export function InvoiceEditor({
       startTransition(async () => {
         // Splatnost sa pri neplatobnom type v UI nezobrazuje, tak ju ani
         // neukladame - inak by v DB ostala hodnota, ktoru pouzivatel nevidel.
-        const payload = documentPresentation(values.type).isPayable
+        const payload = documentPresentation(values.type, {
+          showPrices: values.showPrices,
+        }).isPayable
           ? values
           : { ...values, dueDate: "" }
         const res = await saveDocument(payload, { id: doc?.id, issue })
@@ -555,6 +564,48 @@ export function InvoiceEditor({
                   {formatMoney(totals.total, currency)}
                 </span>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Tlac */}
+        <Card>
+          <CardContent className="grid gap-4 pt-6">
+            <div className="grid gap-2">
+              <Label>Ceny na doklade</Label>
+              <Select
+                value={
+                  showPrices === null || showPrices === undefined
+                    ? "auto"
+                    : showPrices
+                      ? "yes"
+                      : "no"
+                }
+                onValueChange={(v) =>
+                  form.setValue(
+                    "showPrices",
+                    v === "auto" ? null : v === "yes",
+                    { shouldDirty: true },
+                  )
+                }
+              >
+                <SelectTrigger className="w-full sm:w-72">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto">
+                    Podľa typu dokladu (
+                    {typeDefaultShowsPrices ? "s cenami" : "bez cien"})
+                  </SelectItem>
+                  <SelectItem value="yes">Vždy tlačiť ceny</SelectItem>
+                  <SelectItem value="no">Netlačiť ceny</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-muted-foreground text-xs">
+                Dodací list sa bežne tlačí bez cien, časť odberateľov ich však
+                chce. Bez cien sa nevytlačí ani rekapitulácia DPH a platobný QR
+                kód — nesie sumu, ktorú by doklad neuvádzal.
+              </p>
             </div>
           </CardContent>
         </Card>

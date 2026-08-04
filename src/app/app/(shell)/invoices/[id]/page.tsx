@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
+import { getCurrentOrgId } from "@/lib/auth/current-org"
 import { formatMoney } from "@/lib/money"
+import { listTags, listEntityTags } from "@/app/actions/tags"
+import { TagPicker } from "@/components/tags/tag-picker"
 import { DOCUMENT_TYPE_LABELS, type DocumentType } from "@/lib/documents/labels"
 import { docLabels } from "@/lib/documents/doc-labels"
 import { resolveClientDetails } from "@/lib/documents/client-details"
@@ -33,24 +36,34 @@ export default async function InvoiceDetailPage({
 }) {
   const { id } = await params
   const supabase = await createClient()
+  const orgId = await getCurrentOrgId(supabase)
+  if (!orgId) notFound()
 
-  const [{ data: doc }, { data: items }, { data: org }] = await Promise.all([
-    supabase
-      .from("documents")
-      .select("*, contacts(name, ic_dph)")
-      .eq("id", id)
-      .maybeSingle(),
-    supabase
-      .from("document_items")
-      .select("*")
-      .eq("document_id", id)
-      .order("position"),
-    supabase
-      .from("organizations")
-      .select("einvoice_enabled")
-      .limit(1)
-      .maybeSingle(),
-  ])
+  // Kazdy dotaz je org-scoped. Samotna RLS nestaci — pusti vsetky organizacie,
+  // ktorych je pouzivatel clenom, takze clen dvoch firiem by cez podvrhnute id
+  // videl doklad tej druhej. `organizations` sa z rovnakeho dovodu neberie cez
+  // `limit(1)`: vratilo by lubovolnu firmu a s nou cudzie nastavenie e-faktury.
+  const [{ data: doc }, { data: items }, { data: org }, tags, entityTags] =
+    await Promise.all([
+      supabase
+        .from("documents")
+        .select("*, contacts(name, ic_dph)")
+        .eq("id", id)
+        .eq("organization_id", orgId)
+        .maybeSingle(),
+      supabase
+        .from("document_items")
+        .select("*")
+        .eq("document_id", id)
+        .order("position"),
+      supabase
+        .from("organizations")
+        .select("einvoice_enabled")
+        .eq("id", orgId)
+        .maybeSingle(),
+      listTags(),
+      listEntityTags("document", id),
+    ])
 
   if (!doc) notFound()
 
@@ -150,6 +163,19 @@ export default async function InvoiceDetailPage({
               {doc.legal_notes}
             </p>
           ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Štítky</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <TagPicker
+            tags={tags}
+            value={entityTags.map((t) => t.id)}
+            taggable={{ type: "document", id: doc.id }}
+          />
         </CardContent>
       </Card>
 

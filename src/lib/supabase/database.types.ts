@@ -709,9 +709,9 @@ export type Database = {
           related_document_id: string | null
           rounding: Database["public"]["Enums"]["rounding_mode"]
           sequence_id: string | null
-          show_prices: boolean
-          show_qr_payment: boolean
-          show_signature: boolean
+          show_prices: boolean | null
+          show_qr_payment: boolean | null
+          show_signature: boolean | null
           source: string
           specific_symbol: string | null
           status: Database["public"]["Enums"]["document_status"]
@@ -772,9 +772,9 @@ export type Database = {
           related_document_id?: string | null
           rounding?: Database["public"]["Enums"]["rounding_mode"]
           sequence_id?: string | null
-          show_prices?: boolean
-          show_qr_payment?: boolean
-          show_signature?: boolean
+          show_prices?: boolean | null
+          show_qr_payment?: boolean | null
+          show_signature?: boolean | null
           source?: string
           specific_symbol?: string | null
           status?: Database["public"]["Enums"]["document_status"]
@@ -835,9 +835,9 @@ export type Database = {
           related_document_id?: string | null
           rounding?: Database["public"]["Enums"]["rounding_mode"]
           sequence_id?: string | null
-          show_prices?: boolean
-          show_qr_payment?: boolean
-          show_signature?: boolean
+          show_prices?: boolean | null
+          show_qr_payment?: boolean | null
+          show_signature?: boolean | null
           source?: string
           specific_symbol?: string | null
           status?: Database["public"]["Enums"]["document_status"]

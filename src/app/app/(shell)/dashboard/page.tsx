@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server"
 import { createClient } from "@/lib/supabase/server"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
 import { round2, formatMoney } from "@/lib/money"
+import { REPORTED_DOCUMENT_TYPES } from "@/lib/documents/reporting"
 import { Button } from "@/components/ui/button"
 import { ForecastWidget } from "@/components/dashboard/forecast-widget"
 import { AnomalyWidget } from "@/components/dashboard/anomaly-widget"
@@ -47,7 +48,7 @@ export default async function DashboardPage() {
         .from("documents")
         .select("type, status, total, paid_amount, issue_date, due_date")
         .eq("organization_id", orgId)
-        .eq("type", "invoice")
+        .in("type", REPORTED_DOCUMENT_TYPES)
     : { data: null }
 
   const invoices = docs ?? []

@@ -36,6 +36,13 @@ export const documentSchema = z.object({
   vatMode: vatModeSchema.default("payer"),
   notes: z.string().trim().optional().or(z.literal("")),
   footerNotes: z.string().trim().optional().or(z.literal("")),
+  /**
+   * Prepinac cien NAD typom dokladu. `undefined` znamena "rozhodne typ" —
+   * preto tu nie je `.default()`: default by z kazdeho ulozenia spravil
+   * vyslovne rozhodnutie a dodaci list by sa uz nikdy nevratil k svojmu
+   * prirodzenemu spravaniu.
+   */
+  showPrices: z.boolean().nullable().optional(),
   // Vazba na zdrojovy doklad (prevod, dobropis). Ked chyba, zapis sa jej
   // nedotkne — existujuca vazba tak prezije bezne ulozenie z editora.
   relatedDocumentId: z.string().uuid().nullable().optional(),

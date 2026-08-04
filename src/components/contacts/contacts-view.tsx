@@ -10,6 +10,8 @@ import { CONTACT_TYPE_LABELS } from "@/lib/validation/contact"
 import { deleteContact } from "@/app/actions/contacts"
 import { ContactForm } from "./contact-form"
 import { ContactPersonsPanel } from "./contact-persons-panel"
+import { TagPicker } from "@/components/tags/tag-picker"
+import { TagFilter } from "@/components/tags/tag-filter"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -40,8 +42,21 @@ import {
 } from "@/components/ui/alert-dialog"
 
 type Contact = Database["public"]["Tables"]["contacts"]["Row"]
+type Tag = Database["public"]["Tables"]["tags"]["Row"]
 
-export function ContactsView({ contacts }: { contacts: Contact[] }) {
+export function ContactsView({
+  contacts,
+  tags = [],
+  tagsByContact = {},
+  activeTagId = null,
+}: {
+  contacts: Contact[]
+  /** Vsetky stitky firmy — ponuka pre vyber aj pruh filtra. */
+  tags?: Tag[]
+  /** Priradene stitky, kluc je id kontaktu. */
+  tagsByContact?: Record<string, string[]>
+  activeTagId?: string | null
+}) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Contact | null>(null)
@@ -93,6 +108,12 @@ export function ContactsView({ contacts }: { contacts: Contact[] }) {
         </Button>
       </div>
 
+      <TagFilter
+        tags={tags}
+        activeTagId={activeTagId}
+        basePath="/app/contacts"
+      />
+
       {contacts.length === 0 ? (
         <div className="bg-card flex flex-col items-center justify-center gap-3 rounded-lg border py-16 text-center">
           <div className="bg-muted flex size-12 items-center justify-center rounded-full">
@@ -119,6 +140,7 @@ export function ContactsView({ contacts }: { contacts: Contact[] }) {
                 <TableHead>IČO</TableHead>
                 <TableHead>IČ DPH</TableHead>
                 <TableHead>E-mail</TableHead>
+                <TableHead>Štítky</TableHead>
                 <TableHead className="w-32 text-right">Akcie</TableHead>
               </TableRow>
             </TableHeader>
@@ -136,6 +158,13 @@ export function ContactsView({ contacts }: { contacts: Contact[] }) {
                   <TableCell>{c.ico ?? "—"}</TableCell>
                   <TableCell>{c.ic_dph ?? "—"}</TableCell>
                   <TableCell>{c.email ?? "—"}</TableCell>
+                  <TableCell>
+                    <TagPicker
+                      tags={tags}
+                      value={tagsByContact[c.id] ?? []}
+                      taggable={{ type: "contact", id: c.id }}
+                    />
+                  </TableCell>
                   <TableCell className="text-right">
                     <Button
                       variant="ghost"
