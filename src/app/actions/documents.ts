@@ -5,6 +5,11 @@ import { createClient } from "@/lib/supabase/server"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
 import { documentSchema, type DocumentInput } from "@/lib/validation/document"
 import { checkConversion } from "@/lib/documents/convert"
+import { variableSymbolFromNumber } from "@/lib/documents/variable-symbol"
+import {
+  buildClientSnapshot,
+  type ClientSnapshot,
+} from "@/lib/documents/client-snapshot"
 import type { DocumentType } from "@/lib/documents/labels"
 import { computeInvoice } from "@/lib/vat/engine"
 import { legalNoteForVatMode } from "@/lib/vat/legal-notes"
@@ -51,16 +56,19 @@ export async function saveDocument(
   let number: string | null = null
   let status: "draft" | "issued" = "draft"
   let wasIssued = false
+  let existingVariableSymbol: string | null = null
 
   if (opts.id) {
     const { data: existing } = await supabase
       .from("documents")
-      .select("number, status")
+      .select("number, status, variable_symbol")
       .eq("id", opts.id)
+      .eq("organization_id", orgId)
       .maybeSingle()
     number = existing?.number ?? null
     status = (existing?.status as "draft" | "issued") ?? "draft"
     wasIssued = existing?.status === "issued"
+    existingVariableSymbol = existing?.variable_symbol ?? null
   }
 
   // Plan limit applies to every first transition to "issued" (not re-saves of an
@@ -83,6 +91,50 @@ export async function saveDocument(
     status = "issued"
   } else if (opts.issue) {
     status = "issued"
+  }
+
+  // Prechod draft -> issued. Len tu sa doplna variabilny symbol a snapshot
+  // odberatela — na uz vystavenom doklade su obidve nemenne.
+  const isIssuing = Boolean(opts.issue) && !wasIssued
+
+  // VS odvodzujeme z prideleneho cisla rovnako, ako to robi PDF a parovanie
+  // uhrad. Uz vyplneny symbol NEPREPISUJEME — odberatel ho ma na doklade,
+  // ktory mu uz odisiel, a zmena by rozbila parovanie platby.
+  const variableSymbol =
+    isIssuing && !existingVariableSymbol
+      ? variableSymbolFromNumber(number)
+      : null
+
+  // Snapshot sa v DB zmrazuje triggerom `freeze_client_snapshot` — druhy zapis
+  // vyhodi vynimku. Preto ho zostavujeme vylucne pri vystaveni a do UPDATE ho
+  // pri dalsich ulozeniach vobec neposielame.
+  let clientSnapshot: ClientSnapshot | null = null
+  if (isIssuing && v.contactId) {
+    const { data: contact, error: contactErr } = await supabase
+      .from("contacts")
+      // POZN.: `iban`/`swift` na `contacts` zatial neexistuju — snapshot ich
+      // drzi ako null, aby mal stabilny tvar, ked stlpce pribudnu.
+      .select(
+        "name, ico, dic, ic_dph, street, city, postal_code, country, email, phone",
+      )
+      .eq("id", v.contactId)
+      .eq("organization_id", orgId)
+      .maybeSingle()
+    if (contactErr || !contact) {
+      // Nefatalne: doklad sa vystavi aj bez snapshotu (stlpec je nullable a
+      // udaje sa dovtedy citaju zivo z contacts), ale chceme o tom vediet.
+      console.error(
+        "[saveDocument] snapshot odberatela sa nepodarilo zostavit",
+        {
+          documentId: opts.id,
+          phase: "contacts:snapshot",
+          contactId: v.contactId,
+          error: contactErr?.message ?? "kontakt sa nenasiel",
+        },
+      )
+    } else {
+      clientSnapshot = buildClientSnapshot(contact)
+    }
   }
 
   const docRow = {
@@ -109,74 +161,14 @@ export async function saveDocument(
     ...(v.relatedDocumentId !== undefined
       ? { related_document_id: v.relatedDocumentId }
       : {}),
-  }
-
-  let documentId = opts.id
-
-  // Pri uprave sa polozky najprv mazu a az potom vkladaju nove. Bez kopie
-  // povodnych riadkov v pamati by zlyhany insert znamenal ich definitivnu
-  // stratu, preto si ich nacitame este pred akymkolvek zapisom.
-  const backup = opts.id
-    ? await supabase
-        .from("document_items")
-        .select("*")
-        .eq("document_id", opts.id)
-        .order("position")
-    : null
-  if (backup?.error) {
-    console.error("[saveDocument] nacitanie povodnych poloziek zlyhalo", {
-      documentId: opts.id,
-      phase: "items:backup",
-      error: backup.error.message,
-    })
-    return { ok: false, error: "Doklad sa nepodarilo uložiť." }
-  }
-  const previousItems = backup?.data ?? null
-
-  if (documentId) {
-    const { error } = await supabase
-      .from("documents")
-      .update(docRow)
-      .eq("id", documentId)
-    if (error) {
-      console.error("[saveDocument] update dokladu zlyhal", {
-        documentId,
-        phase: "documents:update",
-        error: error.message,
-      })
-      return { ok: false, error: "Doklad sa nepodarilo uložiť." }
-    }
-    const { error: delErr } = await supabase
-      .from("document_items")
-      .delete()
-      .eq("document_id", documentId)
-    if (delErr) {
-      console.error("[saveDocument] mazanie povodnych poloziek zlyhalo", {
-        documentId,
-        phase: "items:delete",
-        error: delErr.message,
-      })
-      return { ok: false, error: "Položky sa nepodarilo uložiť." }
-    }
-  } else {
-    const { data, error } = await supabase
-      .from("documents")
-      .insert(docRow)
-      .select("id")
-      .single()
-    if (error || !data) {
-      console.error("[saveDocument] vytvorenie dokladu zlyhalo", {
-        phase: "documents:insert",
-        number,
-        error: error?.message,
-      })
-      return { ok: false, error: "Doklad sa nepodarilo vytvoriť." }
-    }
-    documentId = data.id
+    // Rovnaky dovod ako vyssie: oba stlpce sa zapisuju len pri vystaveni.
+    // Pri snapshote to nie je len opatrnost — opakovany zapis odmietne DB
+    // trigger a spadla by cela akcia.
+    ...(variableSymbol ? { variable_symbol: variableSymbol } : {}),
+    ...(clientSnapshot ? { client_snapshot: clientSnapshot } : {}),
   }
 
   const itemRows = computed.lines.map((line, idx) => ({
-    document_id: documentId!,
     position: idx,
     description: v.items[idx].description ?? "",
     quantity: line.quantity,
@@ -190,75 +182,40 @@ export async function saveDocument(
     product_id: v.items[idx].productId ?? null,
   }))
 
-  const { error: itemsErr } = await supabase
-    .from("document_items")
-    .insert(itemRows)
-  if (itemsErr) {
-    console.error("[saveDocument] ulozenie poloziek zlyhalo", {
-      documentId,
-      phase: "items:insert",
+  // Hlavicka aj polozky idu do DB jednym volanim, ktore je na strane Postgresu
+  // jedna transakcia. Ked cokolvek zlyha, nezostane po nom nic — ziadna zaloha
+  // poloziek v pamati ani uklid rozrobeneho dokladu uz netreba.
+  // POZN.: cislo pridelene cez `next_document_number` sa pri zlyhani NEVRACIA
+  // (citac sa inkrementuje vo vlastnej transakcii uz predtym), takze v ciselnom
+  // rade moze vzniknut diera. To je zamer: precislovavanie uz vystavenych
+  // dokladov by bolo horsie ako medzera.
+  const { data: savedId, error: saveErr } = await supabase.rpc(
+    "save_document_with_items",
+    {
+      p_document: docRow,
+      p_items: itemRows,
+      ...(opts.id ? { p_id: opts.id } : {}),
+    },
+  )
+  if (saveErr || !savedId) {
+    console.error("[saveDocument] atomicky zapis dokladu zlyhal", {
+      documentId: opts.id,
+      phase: "rpc:save_document_with_items",
       mode: opts.id ? "update" : "create",
       itemCount: itemRows.length,
-      error: itemsErr.message,
+      number,
+      error: saveErr?.message,
     })
-
-    if (previousItems) {
-      // Uprava: vraciame povodne polozky spat (aj s povodnymi id), aby
-      // pouzivatel neprisiel o to, co uz mal ulozene.
-      if (previousItems.length) {
-        const { error: restoreErr } = await supabase
-          .from("document_items")
-          .insert(previousItems)
-        if (restoreErr) {
-          console.error(
-            "[saveDocument] obnova povodnych poloziek zlyhala — doklad ostal bez poloziek",
-            {
-              documentId,
-              phase: "items:restore",
-              itemCount: previousItems.length,
-              error: restoreErr.message,
-            },
-          )
-          return {
-            ok: false,
-            error:
-              "Položky sa nepodarilo uložiť a pôvodné sa nepodarilo obnoviť. Skontroluj doklad.",
-          }
-        }
-      }
-      return {
-        ok: false,
-        error: previousItems.length
-          ? "Položky sa nepodarilo uložiť. Pôvodné položky zostali zachované."
-          : "Položky sa nepodarilo uložiť.",
-      }
+    return {
+      ok: false,
+      error: opts.id
+        ? "Doklad sa nepodarilo uložiť."
+        : "Doklad sa nepodarilo vytvoriť.",
     }
-
-    // Vytvaranie: mazeme prave vytvoreny riadok, aby neostal ocislovany doklad
-    // bez poloziek (document_items visia na ON DELETE CASCADE).
-    // POZN.: cislo pridelene cez `next_document_number` sa tymto NEVRACIA —
-    // citac len inkrementuje, takze v ciselnom rade vznikne diera. Skutocnu
-    // atomicitu (vratane vratenia cisla) vie zabezpecit az databazova funkcia.
-    const { error: cleanupErr } = await supabase
-      .from("documents")
-      .delete()
-      .eq("id", documentId!)
-    if (cleanupErr) {
-      console.error(
-        "[saveDocument] uklid rozrobeneho dokladu zlyhal — ostal ocislovany doklad bez poloziek",
-        {
-          documentId,
-          phase: "documents:cleanup",
-          number,
-          error: cleanupErr.message,
-        },
-      )
-    }
-    return { ok: false, error: "Doklad sa nepodarilo vytvoriť." }
   }
 
   revalidatePath("/app/invoices")
-  return { ok: true, id: documentId! }
+  return { ok: true, id: savedId }
 }
 
 export async function deleteDocument(

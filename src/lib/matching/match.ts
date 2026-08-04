@@ -2,9 +2,9 @@ import { round2 } from "@/lib/money"
 
 /**
  * Pure payment-matching logic. Matches a bank transaction to an open record by
- * variable symbol (VS = invoice number) first, then by amount. Returns the
- * chosen id and a confidence label. Deterministic + unit-tested; the action
- * layer applies the result.
+ * variable symbol first (explicit `variable_symbol`, fallback = digits of the
+ * document number), then by amount. Returns the chosen id and a confidence
+ * label. Deterministic + unit-tested; the action layer applies the result.
  *
  * Prichodzia platba (kladna suma) sa paruje s pohladavkami (`documents`),
  * odchodzia (zaporna suma) so zavazkami (`expenses`) — dve oddelene funkcie,
@@ -14,6 +14,11 @@ import { round2 } from "@/lib/money"
 export interface MatchableDoc {
   id: string
   number: string | null
+  /**
+   * Explicitny VS dokladu (`documents.variable_symbol`). Doklady vystavene
+   * pred jeho zavedenim ho nemaju — vtedy sa paruje cez cislo dokladu.
+   */
+  variableSymbol?: string | null
   total: number
   paidAmount: number
 }
@@ -33,12 +38,25 @@ function digits(s: string | null): string {
 interface Candidate {
   id: string
   number: string | null
+  variableSymbol?: string | null
   total: number
   paidAmount: number
 }
 
 function outstanding(d: Candidate): number {
   return round2(d.total - d.paidAmount)
+}
+
+/**
+ * VS kandidata. Primarne je to explicitny `variable_symbol` — to je hodnota,
+ * ktoru klient realne vidi na doklade a zadava do prikazu. Az ked ju doklad
+ * nema (vystaveny pred zavedenim stlpca), spadne sa spat na cislice z cisla
+ * dokladu, aby sa starsie doklady prestali parovat.
+ *
+ * Cislice sa beru z oboch stran: banka VS casto vracia s medzerami.
+ */
+function candidateVs(d: Candidate): string {
+  return digits(d.variableSymbol ?? null) || digits(d.number)
 }
 
 /**
@@ -52,9 +70,9 @@ function matchCandidates(
 ): { id: string | null; confidence: MatchConfidence } {
   const vs = digits(vsRaw)
 
-  // 1) Variable symbol matches the invoice number.
+  // 1) Variable symbol matches the document VS (or its number as a fallback).
   if (vs) {
-    const byVs = docs.filter((d) => digits(d.number) === vs)
+    const byVs = docs.filter((d) => candidateVs(d) === vs)
     if (byVs.length === 1) {
       const exact = outstanding(byVs[0]) === amount
       return { id: byVs[0].id, confidence: exact ? "vs_amount" : "vs" }

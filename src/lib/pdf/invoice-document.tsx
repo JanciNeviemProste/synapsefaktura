@@ -15,11 +15,11 @@ import {
   documentPresentation,
   type DocumentPresentation,
 } from "@/lib/documents/presentation"
+import type { ClientDetails } from "@/lib/documents/client-details"
 
 type DocRow = Database["public"]["Tables"]["documents"]["Row"]
 type ItemRow = Database["public"]["Tables"]["document_items"]["Row"]
 type Org = Database["public"]["Tables"]["organizations"]["Row"]
-type Contact = Database["public"]["Tables"]["contacts"]["Row"]
 type Bank = Database["public"]["Tables"]["bank_accounts"]["Row"]
 
 const styles = StyleSheet.create({
@@ -179,7 +179,7 @@ export function InvoiceDocument({
   document: doc,
   items,
   org,
-  contact,
+  client,
   bank,
   qrDataUrl,
   logoDataUrl = null,
@@ -189,7 +189,9 @@ export function InvoiceDocument({
   document: DocRow
   items: ItemRow[]
   org: Org
-  contact: Contact | null
+  /** Udaje odberatela uz vybrate cez `resolveClientDetails` — na doklade musia
+   *  byt tie, ktore platili pri vystaveni, nie aktualny stav kontaktu. */
+  client: ClientDetails | null
   bank: Bank | null
   qrDataUrl: string | null
   /** Firemne obrazky ako data URI - render.tsx ich stiahne vopred, aby
@@ -255,8 +257,8 @@ export function InvoiceDocument({
           </View>
           <View style={styles.party}>
             <Text style={styles.sectionTitle}>{L.customer}</Text>
-            {contact ? (
-              partyLines(contact, L)
+            {client ? (
+              partyLines(client, L)
             ) : (
               <Text style={styles.muted}>—</Text>
             )}

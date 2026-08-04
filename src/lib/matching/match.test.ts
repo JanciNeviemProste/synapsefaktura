@@ -45,6 +45,64 @@ describe("matchTransaction", () => {
     const r = matchTransaction({ amount: 100, vs: null }, partial)
     expect(r).toEqual({ documentId: "x", confidence: "amount" })
   })
+
+  it("prefers the explicit variable symbol over the document number", () => {
+    const withVs = [
+      {
+        id: "a",
+        number: "FA2026-0001",
+        variableSymbol: "2026000123",
+        total: 246,
+        paidAmount: 0,
+      },
+    ]
+    // VS z dokladu sedi, cislice z cisla dokladu nie — rozhoduje VS.
+    const r = matchTransaction({ amount: 246, vs: "2026000123" }, withVs)
+    expect(r).toEqual({ documentId: "a", confidence: "vs_amount" })
+    // Cislice z cisla dokladu uz VS nenahradia (suma tiez nesedi -> ziadna zhoda).
+    expect(
+      matchTransaction({ amount: 100, vs: "20260001" }, withVs).documentId,
+    ).toBeNull()
+  })
+
+  it("does not let two number series with the same digits collide", () => {
+    // FA2026-0001 aj PP2026-0001 daju po odstraneni znakov 20260001; explicitny
+    // VS ich rozlisi, takze platba nespadne na nespravny doklad.
+    const collide = [
+      {
+        id: "fa",
+        number: "FA2026-0001",
+        variableSymbol: "1202600 01",
+        total: 100,
+        paidAmount: 0,
+      },
+      {
+        id: "pp",
+        number: "PP2026-0001",
+        variableSymbol: "2202600 01",
+        total: 100,
+        paidAmount: 0,
+      },
+    ]
+    const r = matchTransaction({ amount: 100, vs: "220260001" }, collide)
+    expect(r).toEqual({ documentId: "pp", confidence: "vs_amount" })
+  })
+
+  it("falls back to the number for documents issued before the VS column", () => {
+    const legacy = [
+      {
+        id: "old",
+        number: "FA2026-0007",
+        variableSymbol: null,
+        total: 50,
+        paidAmount: 0,
+      },
+    ]
+    expect(matchTransaction({ amount: 50, vs: "20260007" }, legacy)).toEqual({
+      documentId: "old",
+      confidence: "vs_amount",
+    })
+  })
 })
 
 const expenses = [

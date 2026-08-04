@@ -6,6 +6,7 @@ import type { Database } from "@/lib/supabase/database.types"
 import { InvoiceDocument, showsSupplierMark } from "@/lib/pdf/invoice-document"
 import { paymentQrDataUrl } from "@/lib/qr/payment-qr"
 import { documentPresentation } from "@/lib/documents/presentation"
+import { resolveClientDetails } from "@/lib/documents/client-details"
 import type { DocumentType } from "@/lib/documents/labels"
 
 type Db = SupabaseClient<Database>
@@ -16,6 +17,10 @@ type Org = Database["public"]["Tables"]["organizations"]["Row"]
 export type RenderedInvoice = {
   buffer: Buffer
   doc: DocRow
+  /**
+   * ZIVY kontakt — sluzi na dorucenie (aktualny e-mail), nie na to, co je
+   * vytlacene v PDF. Vytlacene udaje urcuje `resolveClientDetails`.
+   */
   contact: Contact | null
   org: Org
 }
@@ -118,6 +123,10 @@ export async function renderInvoicePdf(
     ? await db.from("contacts").select("*").eq("id", doc.contact_id).maybeSingle()
     : { data: null }
 
+  // Na doklad patria udaje odberatela k okamihu vystavenia. Zivy kontakt sa
+  // pouzije len tam, kde snapshot nie je (koncepty a doklady spred migracie).
+  const client = resolveClientDetails(doc.client_snapshot, contact)
+
   const presentation = documentPresentation(doc.type as DocumentType)
 
   // Podpis a peciatku dodavatela tlacime len tam, kde ich doklad unesie, tak
@@ -137,7 +146,7 @@ export async function renderInvoicePdf(
             variableSymbol: doc.number?.replace(/\D/g, "") ?? null,
             note: doc.number ?? null,
             dueDate: doc.due_date,
-            customerCountry: contact?.country ?? null,
+            customerCountry: client?.country ?? null,
             beneficiaryName: org.name,
           })
         : null,
@@ -151,7 +160,7 @@ export async function renderInvoicePdf(
       document={doc}
       items={items ?? []}
       org={org}
-      contact={contact}
+      client={client}
       bank={bank}
       qrDataUrl={qrDataUrl}
       logoDataUrl={logoDataUrl}

@@ -16,9 +16,21 @@ import {
   type MatchableDoc,
   type MatchableExpense,
 } from "@/lib/matching/match"
+import { documentPresentation } from "@/lib/documents/presentation"
+import { DOCUMENT_TYPE_LABELS, type DocumentType } from "@/lib/documents/labels"
 import { recordExpensePayment } from "@/app/actions/expenses"
 
 type PaymentMethod = "bank" | "card" | "cash" | "other"
+
+/**
+ * Typy dokladov, ktore su vyzvou na uhradu. Cenova ponuka ani dodaci list nou
+ * nie su, takze nesmu pohltit prichodziu platbu. Zoznam sa odvodzuje z
+ * prezentacnych pravidiel (`isPayable`), aby sa nerozisiel s tym, co doklad
+ * realne tvrdi navonok.
+ */
+const PAYABLE_DOCUMENT_TYPES = (
+  Object.keys(DOCUMENT_TYPE_LABELS) as DocumentType[]
+).filter((t) => documentPresentation(t).isPayable)
 
 /**
  * Records a payment against a document and recomputes its paid amount + status.
@@ -31,15 +43,34 @@ export async function recordPayment(
     paidAt?: string | null
     method?: PaymentMethod
     bankTransactionId?: string | null
+    /** Mena, v ktorej uhrada realne prisla (z bankoveho vypisu). */
+    currency?: string | null
+    /** VS tak, ako realne prisiel — moze sa lisit od VS dokladu. */
+    variableSymbol?: string | null
+    /** Uz zistena organizacia (bankovy import); inak si ju akcia zisti sama. */
+    orgId?: string | null
   } = {},
 ): Promise<{ ok: boolean; error?: string }> {
   const supabase = await createClient()
+  const orgId = opts.orgId ?? (await getCurrentOrgId(supabase))
+  if (!orgId) return { ok: false, error: "Chýba firma." }
+
   const { data: doc } = await supabase
     .from("documents")
-    .select("total, paid_amount")
+    .select("total, paid_amount, currency, exchange_rate")
     .eq("id", documentId)
+    .eq("organization_id", orgId)
     .maybeSingle()
   if (!doc) return { ok: false, error: "Doklad sa nenašiel." }
+
+  // Mena uhrady = co realne prislo z banky, inak mena dokladu.
+  const currency = (opts.currency || doc.currency).toUpperCase()
+  // Kurz NEHADAME. Ked uhrada prisla v mene dokladu, plati kurz dokladu; pri
+  // inej mene zapiseme 1 — dopocet skutocneho kurzu dna uhrady je samostatna
+  // praca a tichy odhad by bol horsi nez ziadny. `amount_home` dopocita
+  // trigger `payments_fill_amount_home`.
+  const exchangeRate =
+    currency === doc.currency.toUpperCase() ? doc.exchange_rate : 1
 
   const { error: payErr } = await supabase.from("payments").insert({
     document_id: documentId,
@@ -47,6 +78,9 @@ export async function recordPayment(
     paid_at: opts.paidAt || undefined,
     method: opts.method ?? "bank",
     bank_transaction_id: opts.bankTransactionId ?? null,
+    currency,
+    exchange_rate: exchangeRate,
+    variable_symbol: opts.variableSymbol ?? null,
   })
   if (payErr) return { ok: false, error: "Platbu sa nepodarilo uložiť." }
 
@@ -57,6 +91,7 @@ export async function recordPayment(
     .from("documents")
     .update({ paid_amount: newPaid, status })
     .eq("id", documentId)
+    .eq("organization_id", orgId)
   if (error) return { ok: false, error: "Stav dokladu sa nepodarilo upraviť." }
 
   revalidatePath("/app/invoices")
@@ -76,8 +111,8 @@ export interface BankImportSummary {
 
 /**
  * Imports a bank-statement CSV: stores each transaction, auto-matches incoming
- * payments to open documents and outgoing payments to open expenses (VS =
- * number, then amount), and records payments only when the amount matches
+ * payments to open payable documents and outgoing payments to open expenses
+ * (VS, then amount), and records payments only when the amount matches
  * exactly. Already imported transactions are skipped.
  */
 export async function importBankCsv(
@@ -100,13 +135,15 @@ export async function importBankCsv(
 
   const { data: openDocs } = await supabase
     .from("documents")
-    .select("id, number, total, paid_amount")
+    .select("id, number, variable_symbol, total, paid_amount")
     .eq("organization_id", orgId)
+    .in("type", PAYABLE_DOCUMENT_TYPES)
     .in("status", ["issued", "sent", "partially_paid", "overdue"])
 
   const candidates: MatchableDoc[] = (openDocs ?? []).map((d) => ({
     id: d.id,
     number: d.number,
+    variableSymbol: d.variable_symbol,
     total: d.total,
     paidAmount: d.paid_amount,
   }))
@@ -191,6 +228,11 @@ export async function importBankCsv(
           paidAt: tx.bookedAt,
           method: "bank",
           bankTransactionId: txRow?.id ?? null,
+          // Mena a VS su to, co realne prislo z banky — nie to, co ocakava
+          // doklad; pri rieseni nezrovnalosti treba vediet oboje.
+          currency: tx.currency,
+          variableSymbol: tx.vs,
+          orgId,
         })
         // Keep local candidates in sync so we don't double-match the same doc.
         const c = candidates.find((x) => x.id === m.documentId)

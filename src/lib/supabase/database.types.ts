@@ -2306,6 +2306,10 @@ export type Database = {
         }
         Returns: string
       }
+      save_document_with_items: {
+        Args: { p_document: Json; p_id?: string; p_items: Json }
+        Returns: string
+      }
     }
     Enums: {
       bank_match_status: "unmatched" | "matched" | "ignored"
