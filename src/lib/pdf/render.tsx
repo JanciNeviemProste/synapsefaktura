@@ -133,7 +133,11 @@ export async function renderInvoicePdf(
   // pouzije len tam, kde snapshot nie je (koncepty a doklady spred migracie).
   const client = resolveClientDetails(doc.client_snapshot, contact)
 
-  const presentation = documentPresentation(doc.type as DocumentType)
+  const presentation = documentPresentation(doc.type as DocumentType, {
+    showPrices: doc.show_prices,
+    showQr: doc.show_qr_payment,
+    signatureArea: doc.show_signature,
+  })
 
   // Podpis a peciatku dodavatela tlacime len tam, kde ich doklad unesie, tak
   // ich inde ani nestahujeme (viz showsSupplierMark).

@@ -94,6 +94,14 @@ export function InvoiceEditor({
       vatMode: (doc?.vat_mode as VatMode) ?? defaultVatMode,
       notes: doc?.notes ?? "",
       footerNotes: doc?.footer_notes ?? "",
+      // `null` = "podla typu dokladu". Nie `false`, ani `true`.
+      showPrices: doc?.show_prices ?? null,
+      // Uctovne clenenie je na polozkach; formular ho drzi na doklade, takze
+      // sa nacita z prvej polozky — vsetky ho maju rovnake.
+      accountCode: existingItems?.[0]?.account_code ?? "",
+      costCenter: existingItems?.[0]?.cost_center ?? "",
+      projectCode: existingItems?.[0]?.project_code ?? "",
+      activityCode: existingItems?.[0]?.activity_code ?? "",
       items:
         existingItems && existingItems.length
           ? existingItems.map((i) => ({
@@ -150,7 +158,12 @@ export function InvoiceEditor({
     )
   }, [doc?.type])
 
-  const presentation = documentPresentation((type as DocumentType) ?? "invoice")
+  const showPrices = useWatch({ control: form.control, name: "showPrices" })
+  const docType = (type as DocumentType) ?? "invoice"
+  const presentation = documentPresentation(docType, { showPrices })
+  // Co by doklad robil bez vedomeho nastavenia — podla toho vieme pomenovat,
+  // ci je prepinac zapnuty proti svojmu typu.
+  const typeDefaultShowsPrices = documentPresentation(docType).showPrices
 
   const legalNote = legalNoteForVatMode(
     vatMode as VatMode,
@@ -178,7 +191,9 @@ export function InvoiceEditor({
       startTransition(async () => {
         // Splatnost sa pri neplatobnom type v UI nezobrazuje, tak ju ani
         // neukladame - inak by v DB ostala hodnota, ktoru pouzivatel nevidel.
-        const payload = documentPresentation(values.type).isPayable
+        const payload = documentPresentation(values.type, {
+          showPrices: values.showPrices,
+        }).isPayable
           ? values
           : { ...values, dueDate: "" }
         const res = await saveDocument(payload, { id: doc?.id, issue })
@@ -555,6 +570,87 @@ export function InvoiceEditor({
                   {formatMoney(totals.total, currency)}
                 </span>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Uctovne clenenie */}
+        <Card>
+          <CardContent className="grid gap-4 pt-6">
+            <div className="grid gap-1">
+              <Label>Účtovné členenie</Label>
+              <p className="text-muted-foreground text-xs">
+                Voliteľné. Zapíše sa na všetky položky dokladu a vstúpi do
+                exportu pre účtovníka.
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-4">
+              <div className="grid gap-2">
+                <Label htmlFor="account-code" className="text-xs">
+                  Účet
+                </Label>
+                <Input id="account-code" {...form.register("accountCode")} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="cost-center" className="text-xs">
+                  Stredisko
+                </Label>
+                <Input id="cost-center" {...form.register("costCenter")} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="project-code" className="text-xs">
+                  Zákazka
+                </Label>
+                <Input id="project-code" {...form.register("projectCode")} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="activity-code" className="text-xs">
+                  Činnosť
+                </Label>
+                <Input id="activity-code" {...form.register("activityCode")} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Tlac */}
+        <Card>
+          <CardContent className="grid gap-4 pt-6">
+            <div className="grid gap-2">
+              <Label>Ceny na doklade</Label>
+              <Select
+                value={
+                  showPrices === null || showPrices === undefined
+                    ? "auto"
+                    : showPrices
+                      ? "yes"
+                      : "no"
+                }
+                onValueChange={(v) =>
+                  form.setValue(
+                    "showPrices",
+                    v === "auto" ? null : v === "yes",
+                    { shouldDirty: true },
+                  )
+                }
+              >
+                <SelectTrigger className="w-full sm:w-72">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto">
+                    Podľa typu dokladu (
+                    {typeDefaultShowsPrices ? "s cenami" : "bez cien"})
+                  </SelectItem>
+                  <SelectItem value="yes">Vždy tlačiť ceny</SelectItem>
+                  <SelectItem value="no">Netlačiť ceny</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-muted-foreground text-xs">
+                Dodací list sa bežne tlačí bez cien, časť odberateľov ich však
+                chce. Bez cien sa nevytlačí ani rekapitulácia DPH a platobný QR
+                kód — nesie sumu, ktorú by doklad neuvádzal.
+              </p>
             </div>
           </CardContent>
         </Card>

@@ -115,6 +115,7 @@ export function RecurringView({
                 <TableHead>Odberateľ</TableHead>
                 <TableHead>Interval</TableHead>
                 <TableHead>Najbližšie</TableHead>
+                <TableHead>Po vystavení</TableHead>
                 <TableHead>Stav</TableHead>
                 <TableHead className="w-32 text-right">Akcie</TableHead>
               </TableRow>
@@ -128,6 +129,17 @@ export function RecurringView({
                     {CADENCE_LABELS[r.cadence as keyof typeof CADENCE_LABELS]}
                   </TableCell>
                   <TableCell>{fmtDate(r.next_run_at)}</TableCell>
+                  <TableCell>
+                    {r.send_method === "none" ? (
+                      <span className="text-muted-foreground text-sm">
+                        Len vystaviť
+                      </span>
+                    ) : (
+                      <Badge variant="secondary">
+                        {r.send_method === "email" ? "E-mail" : "Peppol"}
+                      </Badge>
+                    )}
+                  </TableCell>
                   <TableCell>
                     {r.active ? (
                       <Badge>Aktívne</Badge>

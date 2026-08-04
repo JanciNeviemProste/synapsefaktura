@@ -4,12 +4,14 @@ import { OrgSettings } from "@/components/settings/org-settings"
 import { SequencesSettings } from "@/components/settings/sequences-settings"
 import { BankAccountsSettings } from "@/components/settings/bank-accounts-settings"
 import { TagsSettings } from "@/components/settings/tags-settings"
+import { TravelRatesSettings } from "@/components/settings/travel-rates-settings"
 import { EInvoiceSettings } from "@/components/settings/einvoice-settings"
 import { BillingSettings } from "@/components/settings/billing-settings"
 import { MembersSettings } from "@/components/settings/members-settings"
 import { getOrganizationProfile } from "@/app/actions/org"
 import { listBankAccounts } from "@/app/actions/bank-accounts"
 import { listTags } from "@/app/actions/tags"
+import { listTravelRates } from "@/app/actions/travel-rates"
 import { getEInvoiceSettings } from "@/app/actions/einvoice-settings"
 import { getBillingInfo } from "@/app/actions/billing"
 import { listMembers, listPendingInvites } from "@/app/actions/members"
@@ -21,32 +23,41 @@ export const metadata = { title: "Nastavenia — Synapse Faktúra" }
 export default async function SettingsPage() {
   const supabase = await createClient()
 
+  // `orgId` sa zistuje SAMOSTATNE a pred zvyskom, lebo ho potrebuje filter na
+  // `number_sequences`. Bez neho by sa cislovanie citalo len cez RLS — a ta
+  // pusti vsetky organizacie, ktorych je pouzivatel clenom, takze clen dvoch
+  // firiem by tu videl zmiesane rady oboch.
+  const orgId = await getCurrentOrgId(supabase)
+
   const [
     { data: sequences },
     bankAccounts,
     tags,
+    travelRates,
     orgProfile,
     einvoice,
     billing,
     members,
     invites,
     { data: user },
-    orgId,
   ] = await Promise.all([
-    supabase
-      .from("number_sequences")
-      .select("*")
-      .order("year", { ascending: false })
-      .order("doc_type"),
+    orgId
+      ? supabase
+          .from("number_sequences")
+          .select("*")
+          .eq("organization_id", orgId)
+          .order("year", { ascending: false })
+          .order("doc_type")
+      : Promise.resolve({ data: [] }),
     listBankAccounts(),
     listTags(),
+    listTravelRates(),
     getOrganizationProfile(),
     getEInvoiceSettings(),
     getBillingInfo(),
     listMembers(),
     listPendingInvites(),
     supabase.auth.getUser(),
-    getCurrentOrgId(supabase),
   ])
 
   // Caller's role in the active org → who may manage the team.
@@ -91,6 +102,8 @@ export default async function SettingsPage() {
       <BankAccountsSettings accounts={bankAccounts} />
 
       <TagsSettings tags={tags} />
+
+      <TravelRatesSettings rates={travelRates} />
 
       <SequencesSettings sequences={sequences ?? []} />
       {einvoice ? <EInvoiceSettings initial={einvoice} /> : null}

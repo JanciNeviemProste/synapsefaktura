@@ -22,6 +22,8 @@ import { deleteExpense, getAttachmentSignedUrl } from "@/app/actions/expenses"
 import { ExpenseForm } from "./expense-form"
 import { ExpensePaymentForm } from "./expense-payment-form"
 import { AiCaptureDialog } from "./ai-capture-dialog"
+import { TagPicker } from "@/components/tags/tag-picker"
+import { TagFilter } from "@/components/tags/tag-filter"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -51,6 +53,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
+type Tag = Database["public"]["Tables"]["tags"]["Row"]
+type ExpenseItem = Database["public"]["Tables"]["expense_items"]["Row"]
+type ExpensePayment = Database["public"]["Tables"]["expense_payments"]["Row"]
+
 type Expense = Database["public"]["Tables"]["expenses"]["Row"] & {
   contacts?: { name?: string } | null
 }
@@ -74,9 +80,23 @@ const PAYMENT_VARIANT: Record<
 export function ExpensesView({
   expenses,
   suppliers,
+  tags = [],
+  tagsByExpense = {},
+  itemsByExpense = {},
+  paymentsByExpense = {},
+  activeTagId = null,
 }: {
   expenses: Expense[]
   suppliers: Supplier[]
+  /** Vsetky stitky firmy — ponuka pre vyber aj pruh filtra. */
+  tags?: Tag[]
+  /** Priradene stitky, kluc je id nakladu. */
+  tagsByExpense?: Record<string, string[]>
+  /** Ulozeny rozpis poloziek, kluc je id nakladu. */
+  itemsByExpense?: Record<string, ExpenseItem[]>
+  /** Zaevidovane uhrady, kluc je id nakladu. */
+  paymentsByExpense?: Record<string, ExpensePayment[]>
+  activeTagId?: string | null
 }) {
   const router = useRouter()
   const t = useTranslations("expenses")
@@ -159,6 +179,12 @@ export function ExpensesView({
 
       <AiCaptureDialog open={captureOpen} onOpenChange={setCaptureOpen} />
 
+      <TagFilter
+        tags={tags}
+        activeTagId={activeTagId}
+        basePath="/app/expenses"
+      />
+
       {expenses.length === 0 ? (
         <div className="bg-card flex flex-col items-center justify-center gap-3 rounded-lg border py-16 text-center">
           <div className="bg-muted flex size-12 items-center justify-center rounded-full">
@@ -178,6 +204,7 @@ export function ExpensesView({
                 <TableHead>{t("colSupplier")}</TableHead>
                 <TableHead>{t("colNumber")}</TableHead>
                 <TableHead>{t("colCategory")}</TableHead>
+                <TableHead>Štítky</TableHead>
                 <TableHead className="text-right">{t("colTotal")}</TableHead>
                 <TableHead>{t("colPaid")}</TableHead>
                 <TableHead className="w-36 text-right">
@@ -194,6 +221,13 @@ export function ExpensesView({
                   </TableCell>
                   <TableCell>{e.document_number ?? "—"}</TableCell>
                   <TableCell>{e.category ?? "—"}</TableCell>
+                  <TableCell>
+                    <TagPicker
+                      tags={tags}
+                      value={tagsByExpense[e.id] ?? []}
+                      taggable={{ type: "expense", id: e.id }}
+                    />
+                  </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {formatMoney(e.total, e.currency)}
                   </TableCell>
@@ -268,6 +302,7 @@ export function ExpensesView({
           </DialogHeader>
           <ExpenseForm
             expense={editing}
+            expenseItems={editing ? itemsByExpense[editing.id] : undefined}
             suppliers={suppliers}
             onDone={handleDone}
           />
@@ -281,7 +316,11 @@ export function ExpensesView({
             <DialogDescription>{t("payDescription")}</DialogDescription>
           </DialogHeader>
           {paying && (
-            <ExpensePaymentForm expense={paying} onDone={handlePaid} />
+            <ExpensePaymentForm
+              expense={paying}
+              payments={paymentsByExpense[paying.id] ?? []}
+              onDone={handlePaid}
+            />
           )}
         </DialogContent>
       </Dialog>

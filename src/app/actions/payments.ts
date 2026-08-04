@@ -270,6 +270,11 @@ export async function importBankCsv(
         const res = await recordExpensePayment({
           expenseId: m.expenseId,
           amount: paid,
+          paidAt: tx.bookedAt ?? "",
+          method: "bank",
+          // Vazba na pohyb je klucom idempotencie: pri opatovnom importe toho
+          // isteho vypisu sa tato uhrada uz nezauctuje druhy raz.
+          bankTransactionId: txRow?.id ?? null,
         })
         if (res.ok) {
           const c = expenseCandidates.find((x) => x.id === m.expenseId)

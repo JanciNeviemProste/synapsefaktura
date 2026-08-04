@@ -202,7 +202,11 @@ export function InvoiceDocument({
 }) {
   const currency = doc.currency
   const L = docLabels(doc.language)
-  const p = documentPresentation(doc.type as DocumentType)
+  const p = documentPresentation(doc.type as DocumentType, {
+    showPrices: doc.show_prices,
+    showQr: doc.show_qr_payment,
+    signatureArea: doc.show_signature,
+  })
 
   // VAT recapitulation grouped by rate.
   const recapMap = new Map<number, { base: number; vat: number }>()

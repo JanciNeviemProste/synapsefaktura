@@ -3,13 +3,16 @@ import { getCurrentOrgId } from "@/lib/auth/current-org"
 import {
   buildAccountingCsv,
   buildAccountingXml,
+  buildAccountingItemsCsv,
   type ExportInvoice,
+  type ExportInvoiceItem,
 } from "@/lib/export/accounting"
 import {
   buildKontrolnyVykaz,
   buildSuhrnnyVykaz,
   type ExportOrg,
 } from "@/lib/export/fs-sr"
+import { REPORTED_DOCUMENT_TYPES } from "@/lib/documents/reporting"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -108,12 +111,13 @@ export async function GET(
     )
   }
 
-  // Invoice-based exports.
+  // Invoice-based exports. Dobropisy patria dnu tiez — su to opravne danove
+  // doklady a maju zaporne sumy, takze vykazanu DPH znizia samy.
   const { data: docs } = await supabase
     .from("documents")
     .select("*, contacts(name, ico, ic_dph)")
     .eq("organization_id", orgId)
-    .eq("type", "invoice")
+    .in("type", REPORTED_DOCUMENT_TYPES)
     .gte("issue_date", from)
     .lte("issue_date", to)
     .order("issue_date")
@@ -165,6 +169,51 @@ export async function GET(
         "application/xml",
         `uctovny-export-${to}.xml`,
       )
+    case "accounting-items-csv": {
+      // Uctovne clenenie sedi na polozke, takze polozky treba dotiahnut zvlast.
+      // Filtruje sa cez `document_id in (...)` — `document_items` vlastny
+      // `organization_id` nema a doklady su uz org-scoped vyssie.
+      const docIds = (docs ?? []).map((d) => d.id)
+      const { data: items } = docIds.length
+        ? await supabase
+            .from("document_items")
+            .select("*")
+            .in("document_id", docIds)
+            .order("position")
+        : { data: [] }
+
+      const byId = new Map((docs ?? []).map((d) => [d.id, d]))
+      const rows: ExportInvoiceItem[] = (items ?? []).map((it) => {
+        const d = byId.get(it.document_id)
+        const c = d?.contacts as { name?: string; ico?: string } | null
+        return {
+          documentNumber: d?.number ?? null,
+          issueDate: d?.issue_date ?? null,
+          supplyDate: d?.supply_date ?? null,
+          contactName: c?.name ?? null,
+          contactIco: c?.ico ?? null,
+          description: it.description,
+          quantity: it.quantity,
+          unit: it.unit,
+          unitPrice: it.unit_price,
+          vatRate: it.vat_rate,
+          lineBase: it.line_base,
+          lineVat: it.line_vat,
+          lineTotal: it.line_total,
+          currency: d?.currency ?? "EUR",
+          accountCode: it.account_code,
+          costCenter: it.cost_center,
+          projectCode: it.project_code,
+          activityCode: it.activity_code,
+        }
+      })
+
+      return file(
+        buildAccountingItemsCsv(rows),
+        "text/csv",
+        `uctovny-export-polozky-${to}.csv`,
+      )
+    }
     case "kontrolny-vykaz": {
       // Kontrolny vykaz sa podava za jeden kalendarny mesiac.
       if (

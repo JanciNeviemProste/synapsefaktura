@@ -21,7 +21,11 @@ const isoDate = z
   .trim()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Zadaj dátum v tvare RRRR-MM-DD.")
 
-export const logbookSummarySchema = z
+// ZAMERNE neexportovana: subor ma `"use server"` a taky smie exportovat len
+// async funkcie. Kym sa `LogbookSummary` nikde nerenderoval, subor sa do buildu
+// nedostal a toto nikdy nevyplavalo — build spadol az pri jeho zapojeni.
+// Typy nizsie exportovat mozno, tie sa pri prekladie zahodia.
+const logbookSummarySchema = z
   .object({
     vehicleId: z.string().uuid("Vyber vozidlo."),
     periodFrom: isoDate,

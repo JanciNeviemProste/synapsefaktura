@@ -23,6 +23,7 @@ function toRow(v: ReturnType<typeof recurringSchema.parse>) {
     interval_days: v.intervalDays ?? null,
     next_run_at: v.nextRunAt,
     active: v.active,
+    send_method: v.sendMethod,
     template: v.template as unknown as Json,
   }
 }

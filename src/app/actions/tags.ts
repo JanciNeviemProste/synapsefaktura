@@ -1,6 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { z } from "zod"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 import { createClient } from "@/lib/supabase/server"
@@ -148,6 +149,82 @@ export async function listEntityTags(
     .in("id", tagIds)
     .order("name", { ascending: true })
   return data ?? []
+}
+
+/**
+ * Id zaznamov daneho typu, ktore nesu zadany stitok — podklad pre filter nad
+ * zoznamom faktur, nakladov a klientov.
+ *
+ * Vracia `null`, ked sa filtrovat nema (chybajuci alebo cudzi stitok), a
+ * prazdne pole, ked stitok nikto nenesie. To su dva rozne stavy: `null`
+ * znamena "ukaz vsetko", `[]` znamena "nic nevyhovuje". Keby sa zlucili,
+ * podvrhnuty `?tag=` z cudzej firmy by ticho vypisal cely zoznam.
+ */
+export async function taggedEntityIds(
+  taggableType: TaggableType,
+  tagId: string | undefined,
+): Promise<string[] | null> {
+  if (!tagId) return null
+
+  const parsedType = taggableTypeSchema.safeParse(taggableType)
+  if (!parsedType.success) return null
+  // Bez kontroly tvaru by `?tag=abc` poslal do Postgresu neplatne uuid a dotaz
+  // by spadol na chybe namiesto toho, aby ticho nic nenasiel.
+  if (!z.string().uuid().safeParse(tagId).success) return []
+
+  const supabase = await createClient()
+  const orgId = await getCurrentOrgId(supabase)
+  if (!orgId) return null
+
+  // Cudzi stitok sa tvari ako neexistujuci, nie ako "bez filtra".
+  if (!(await tagInOrg(supabase, orgId, tagId))) return []
+
+  const { data } = await supabase
+    .from("taggings")
+    .select("taggable_id")
+    .eq("taggable_type", parsedType.data)
+    .eq("tag_id", tagId)
+  return (data ?? []).map((t) => t.taggable_id)
+}
+
+/**
+ * Priradene stitky pre CELY zoznam naraz — kluc je id zaznamu.
+ *
+ * Nacitat stitky pre kazdy riadok zvlast by pri stovke nakladov znamenalo
+ * stovku dotazov. Tu ide jeden dotaz na `taggings` a jeden na `tags`.
+ */
+export async function entityTagMap(
+  taggableType: TaggableType,
+  ids: string[],
+): Promise<Record<string, string[]>> {
+  const parsedType = taggableTypeSchema.safeParse(taggableType)
+  if (!parsedType.success || ids.length === 0) return {}
+
+  const supabase = await createClient()
+  const orgId = await getCurrentOrgId(supabase)
+  if (!orgId) return {}
+
+  const { data: links } = await supabase
+    .from("taggings")
+    .select("tag_id, taggable_id")
+    .eq("taggable_type", parsedType.data)
+    .in("taggable_id", ids)
+  if (!links || links.length === 0) return {}
+
+  // `taggings` nema stlpec pre firmu, takze cudzie stitky sa odfiltruju az tu.
+  const { data: ownTags } = await supabase
+    .from("tags")
+    .select("id")
+    .eq("organization_id", orgId)
+    .in("id", [...new Set(links.map((l) => l.tag_id))])
+  const allowed = new Set((ownTags ?? []).map((t) => t.id))
+
+  const map: Record<string, string[]> = {}
+  for (const link of links) {
+    if (!allowed.has(link.tag_id)) continue
+    ;(map[link.taggable_id] ??= []).push(link.tag_id)
+  }
+  return map
 }
 
 export async function createTag(input: TagInput): Promise<TagActionResult> {
