@@ -54,6 +54,8 @@ import {
 } from "@/components/ui/alert-dialog"
 
 type Tag = Database["public"]["Tables"]["tags"]["Row"]
+type ExpenseItem = Database["public"]["Tables"]["expense_items"]["Row"]
+type ExpensePayment = Database["public"]["Tables"]["expense_payments"]["Row"]
 
 type Expense = Database["public"]["Tables"]["expenses"]["Row"] & {
   contacts?: { name?: string } | null
@@ -80,6 +82,8 @@ export function ExpensesView({
   suppliers,
   tags = [],
   tagsByExpense = {},
+  itemsByExpense = {},
+  paymentsByExpense = {},
   activeTagId = null,
 }: {
   expenses: Expense[]
@@ -88,6 +92,10 @@ export function ExpensesView({
   tags?: Tag[]
   /** Priradene stitky, kluc je id nakladu. */
   tagsByExpense?: Record<string, string[]>
+  /** Ulozeny rozpis poloziek, kluc je id nakladu. */
+  itemsByExpense?: Record<string, ExpenseItem[]>
+  /** Zaevidovane uhrady, kluc je id nakladu. */
+  paymentsByExpense?: Record<string, ExpensePayment[]>
   activeTagId?: string | null
 }) {
   const router = useRouter()
@@ -294,6 +302,7 @@ export function ExpensesView({
           </DialogHeader>
           <ExpenseForm
             expense={editing}
+            expenseItems={editing ? itemsByExpense[editing.id] : undefined}
             suppliers={suppliers}
             onDone={handleDone}
           />
@@ -307,7 +316,11 @@ export function ExpensesView({
             <DialogDescription>{t("payDescription")}</DialogDescription>
           </DialogHeader>
           {paying && (
-            <ExpensePaymentForm expense={paying} onDone={handlePaid} />
+            <ExpensePaymentForm
+              expense={paying}
+              payments={paymentsByExpense[paying.id] ?? []}
+              onDone={handlePaid}
+            />
           )}
         </DialogContent>
       </Dialog>

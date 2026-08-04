@@ -6,6 +6,21 @@ const optionalString = z
   .optional()
   .transform((v) => (v === "" ? undefined : v))
 
+export const expenseItemSchema = z.object({
+  description: z.string().trim().default(""),
+  quantity: z.coerce.number().finite("Zadaj množstvo ako číslo.").default(1),
+  unit: z.string().trim().default("ks"),
+  unitPrice: z.coerce
+    .number()
+    .finite("Zadaj jednotkovú cenu ako číslo.")
+    .default(0),
+  vatRate: z.coerce
+    .number()
+    .min(0, "Sadzba DPH nesmie byť záporná.")
+    .max(100, "Sadzba DPH môže byť najviac 100 %.")
+    .default(23),
+})
+
 export const expenseSchema = z.object({
   supplierContactId: z.string().uuid().nullable().optional(),
   documentNumber: optionalString,
@@ -20,7 +35,16 @@ export const expenseSchema = z.object({
   taxDeductible: z.boolean().default(true),
   notes: optionalString,
   attachmentUrl: optionalString,
+  /**
+   * Rozpis položiek. Voliteľný ZÁMERNE — AI OCR z bločku aj prijatá e-faktúra
+   * podávajú jednu sumu a jednu sadzbu a majú tak fungovať ďalej. Keď položky
+   * prídu, majú prednosť: `subtotal` a `vatRate` sa z nich prepočítajú a
+   * hodnoty poslané volajúcim sa zahodia.
+   */
+  items: z.array(expenseItemSchema).optional(),
 })
+
+export type ExpenseItemInput = z.input<typeof expenseItemSchema>
 
 export type ExpenseInput = z.input<typeof expenseSchema>
 export type ExpenseValues = z.output<typeof expenseSchema>

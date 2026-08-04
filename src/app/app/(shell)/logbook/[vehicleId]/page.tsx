@@ -21,6 +21,8 @@ import { TripsView } from "@/components/logbook/trips-view"
 import { RefuelingsView } from "@/components/logbook/refuelings-view"
 import { VehicleEventsView } from "@/components/logbook/vehicle-events-view"
 import { LogbookSummary } from "@/components/logbook/logbook-summary"
+import { RecurringTripsView } from "@/components/logbook/recurring-trips-view"
+import { listRecurringTrips } from "@/app/actions/recurring-trips"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -152,7 +154,10 @@ export default async function VehicleLogbookPage({
   // Nahrada za km sa berie sadzbou platnou ku KONCU obdobia. Presnejsie by
   // bolo ratat kazdu jazdu jej vlastnou sadzbou; to ma zmysel az vtedy, ked
   // sa obdobie tiahne cez zmenu sadzby, a vtedy to tu aj priznavame.
-  const travelRates = await listTravelRates()
+  const [travelRates, recurringTrips] = await Promise.all([
+    listTravelRates(),
+    listRecurringTrips(vehicleId),
+  ])
   const rate = resolveTravelRate(travelRates, periodTo)
   const rateAtStart = resolveTravelRate(travelRates, periodFrom)
   const rateChangedInPeriod =
@@ -332,6 +337,14 @@ export default async function VehicleLogbookPage({
       <TripsView
         vehicleId={vehicle.id}
         trips={tripRows}
+        contacts={contacts ?? []}
+      />
+
+      <Separator />
+
+      <RecurringTripsView
+        vehicleId={vehicle.id}
+        recurringTrips={recurringTrips}
         contacts={contacts ?? []}
       />
 

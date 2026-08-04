@@ -1,6 +1,10 @@
 import { createClient } from "@/lib/supabase/server"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
 import { listTags, taggedEntityIds, entityTagMap } from "@/app/actions/tags"
+import {
+  expenseItemsByExpense,
+  expensePaymentsByExpense,
+} from "@/app/actions/expenses"
 import { ExpensesView } from "@/components/expenses/expenses-view"
 
 export const metadata = { title: "Náklady — Synapse Faktúra" }
@@ -44,10 +48,12 @@ export default async function ExpensesPage({
   ])
 
   const rows = expenses ?? []
-  const tagsByExpense = await entityTagMap(
-    "expense",
-    rows.map((e) => e.id),
-  )
+  const ids = rows.map((e) => e.id)
+  const [tagsByExpense, itemsByExpense, paymentsByExpense] = await Promise.all([
+    entityTagMap("expense", ids),
+    expenseItemsByExpense(ids),
+    expensePaymentsByExpense(ids),
+  ])
 
   return (
     <ExpensesView
@@ -55,6 +61,8 @@ export default async function ExpensesPage({
       suppliers={contacts ?? []}
       tags={tags}
       tagsByExpense={tagsByExpense}
+      itemsByExpense={itemsByExpense}
+      paymentsByExpense={paymentsByExpense}
       activeTagId={activeTagId}
     />
   )

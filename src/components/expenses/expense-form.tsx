@@ -1,9 +1,9 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, useFieldArray, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Loader2, Paperclip } from "lucide-react"
+import { Loader2, Paperclip, Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 import type { Database } from "@/lib/supabase/database.types"
@@ -14,6 +14,7 @@ import {
 } from "@/lib/validation/expense"
 import { CURRENT_VAT_RATES, vatRateLabel } from "@/lib/vat/rates"
 import { round2, formatMoney } from "@/lib/money"
+import { computeExpenseItems } from "@/lib/expenses/items"
 import {
   createExpense,
   updateExpense,
@@ -42,12 +43,17 @@ import {
 type Expense = Database["public"]["Tables"]["expenses"]["Row"]
 type Supplier = { id: string; name: string }
 
+type ExpenseItem = Database["public"]["Tables"]["expense_items"]["Row"]
+
 export function ExpenseForm({
   expense,
+  expenseItems,
   suppliers,
   onDone,
 }: {
   expense?: Expense | null
+  /** Ulozeny rozpis. Prazdny znamena naklad s jednou sumou. */
+  expenseItems?: ExpenseItem[]
   suppliers: Supplier[]
   onDone: () => void
 }) {
@@ -74,13 +80,51 @@ export function ExpenseForm({
       taxDeductible: expense?.tax_deductible ?? true,
       notes: expense?.notes ?? "",
       attachmentUrl: expense?.attachment_url ?? "",
+      // `undefined`, nie `[]` — prazdne pole by sa tvarilo ako zapnuty rozpis
+      // bez poloziek a prepocet by naklad vynuloval.
+      items:
+        expenseItems && expenseItems.length > 0
+          ? expenseItems.map((i) => ({
+              description: i.description,
+              quantity: i.quantity,
+              unit: i.unit,
+              unitPrice: i.unit_price,
+              vatRate: i.vat_rate,
+            }))
+          : undefined,
     },
+  })
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "items",
   })
 
   const subtotal = Number(form.watch("subtotal")) || 0
   const vatRate = Number(form.watch("vatRate")) || 0
   const vat = round2((subtotal * vatRate) / 100)
   const total = round2(subtotal + vat)
+
+  const watchedItems = useWatch({ control: form.control, name: "items" })
+  const itemized = (watchedItems?.length ?? 0) > 0
+
+  // Ten isty prepocet ako na serveri — cista funkcia, ziadna druha
+  // implementacia. Nahlad tak nemoze ukazat ine cislo, nez sa ulozi.
+  const itemTotals = itemized
+    ? computeExpenseItems(
+        (watchedItems ?? []).map((i) => ({
+          description: i.description ?? "",
+          quantity: Number(i.quantity) || 0,
+          unit: i.unit ?? "ks",
+          unitPrice: Number(i.unitPrice) || 0,
+          vatRate: Number(i.vatRate) || 0,
+        })),
+      )
+    : null
+
+  const shownBase = itemTotals ? itemTotals.subtotal : subtotal
+  const shownVat = itemTotals ? itemTotals.vat_total : vat
+  const shownTotal = itemTotals ? itemTotals.total : total
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -209,47 +253,51 @@ export function ExpenseForm({
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
-          <FormField
-            control={form.control}
-            name="subtotal"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Základ (bez DPH)</FormLabel>
-                <FormControl>
-                  <Input type="number" step="0.01" min={0} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="vatRate"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>DPH</FormLabel>
-                <Select
-                  value={String(field.value)}
-                  onValueChange={(v) => field.onChange(Number(v))}
-                >
-                  <FormControl>
-                    <SelectTrigger className="w-full">
-                      <SelectValue>
-                        {(v: string) => vatRateLabel(Number(v))}
-                      </SelectValue>
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {CURRENT_VAT_RATES.map((r) => (
-                      <SelectItem key={r} value={String(r)}>
-                        {vatRateLabel(r)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormItem>
-            )}
-          />
+          {itemized ? null : (
+            <>
+              <FormField
+                control={form.control}
+                name="subtotal"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Základ (bez DPH)</FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" min={0} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="vatRate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>DPH</FormLabel>
+                    <Select
+                      value={String(field.value)}
+                      onValueChange={(v) => field.onChange(Number(v))}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue>
+                            {(v: string) => vatRateLabel(Number(v))}
+                          </SelectValue>
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {CURRENT_VAT_RATES.map((r) => (
+                          <SelectItem key={r} value={String(r)}>
+                            {vatRateLabel(r)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+            </>
+          )}
           <FormField
             control={form.control}
             name="category"
@@ -280,10 +328,149 @@ export function ExpenseForm({
           />
         </div>
 
+        {/* Rozpis na polozky — dodavatelska faktura s viacerymi sadzbami DPH */}
+        <div className="grid gap-2">
+          <div className="flex items-center justify-between">
+            <FormLabel>Rozpis položiek</FormLabel>
+            {itemized ? (
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    append({
+                      description: "",
+                      quantity: 1,
+                      unit: "ks",
+                      unitPrice: 0,
+                      vatRate: 23,
+                    })
+                  }
+                >
+                  <Plus className="size-4" />
+                  Položka
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => form.setValue("items", undefined)}
+                >
+                  Zrušiť rozpis
+                </Button>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  form.setValue("items", [
+                    {
+                      description: "",
+                      quantity: 1,
+                      // Prva polozka prevezme uz zadanu sumu a sadzbu, aby sa
+                      // prepnutim na rozpis nestratilo, co uz pouzivatel vypisal.
+                      unit: "ks",
+                      unitPrice: subtotal,
+                      vatRate,
+                    },
+                  ])
+                }
+              >
+                <Plus className="size-4" />
+                Rozpísať na položky
+              </Button>
+            )}
+          </div>
+
+          {itemized ? (
+            <>
+              <p className="text-muted-foreground text-xs">
+                Základ, DPH aj celková suma sa počítajú z položiek — samostatné
+                polia sa preto skryli.
+              </p>
+              {fields.map((f, i) => (
+                <div
+                  key={f.id}
+                  className="grid grid-cols-2 items-end gap-2 sm:grid-cols-12"
+                >
+                  <div className="col-span-2 sm:col-span-4">
+                    <Input
+                      placeholder="Popis"
+                      {...form.register(`items.${i}.description`)}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Input
+                      type="number"
+                      step="0.001"
+                      placeholder="Množstvo"
+                      {...form.register(`items.${i}.quantity`)}
+                    />
+                  </div>
+                  <div className="sm:col-span-1">
+                    <Input
+                      placeholder="MJ"
+                      {...form.register(`items.${i}.unit`)}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Input
+                      type="number"
+                      step="0.0001"
+                      placeholder="Cena/MJ"
+                      {...form.register(`items.${i}.unitPrice`)}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <select
+                      className="border-input h-9 w-full rounded-md border bg-transparent px-2 text-sm"
+                      {...form.register(`items.${i}.vatRate`)}
+                    >
+                      {CURRENT_VAT_RATES.map((r) => (
+                        <option key={r} value={r}>
+                          {vatRateLabel(r)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="sm:col-span-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => remove(i)}
+                      disabled={fields.length === 1}
+                      title="Odstrániť položku"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+
+              {itemTotals && itemTotals.vat_rate_breakdown.length > 1 ? (
+                <div className="text-muted-foreground grid gap-0.5 text-xs">
+                  {itemTotals.vat_rate_breakdown.map((r) => (
+                    <span key={r.rate}>
+                      {vatRateLabel(r.rate)}: základ{" "}
+                      {formatMoney(r.base, form.watch("currency"))}, DPH{" "}
+                      {formatMoney(r.vat, form.watch("currency"))}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </>
+          ) : null}
+        </div>
+
         <div className="text-muted-foreground flex items-center justify-end gap-4 text-sm">
-          <span>DPH: {formatMoney(vat, form.watch("currency"))}</span>
+          <span>Základ: {formatMoney(shownBase, form.watch("currency"))}</span>
+          <span>DPH: {formatMoney(shownVat, form.watch("currency"))}</span>
           <span className="text-foreground font-medium">
-            Spolu: {formatMoney(total, form.watch("currency"))}
+            Spolu: {formatMoney(shownTotal, form.watch("currency"))}
           </span>
         </div>
 
