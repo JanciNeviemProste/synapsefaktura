@@ -44,3 +44,35 @@ export const createOrganizationSchema = z.object({
 
 export type CreateOrganizationInput = z.input<typeof createOrganizationSchema>
 export type CreateOrganizationValues = z.output<typeof createOrganizationSchema>
+
+/**
+ * Firemny profil upravovany v nastaveniach. Oproti `createOrganizationSchema`
+ * je to plny objekt (formular posiela vsetky polia naraz), takze volitelne
+ * textove polia maju default "" — prazdny retazec sa v akcii uklada ako NULL.
+ * Banka tu nie je: `organizations` nema stlpce pre IBAN/SWIFT, bankove ucty su
+ * vlastna tabulka.
+ */
+export const updateOrganizationSchema = z.object({
+  name: z.string().trim().min(1, "Zadaj názov firmy."),
+  legalForm: z.string().trim().default(""),
+  ico: z.string().trim().default(""),
+  dic: z.string().trim().default(""),
+  icDph: z.string().trim().default(""),
+  isVatPayer: z.boolean().default(false),
+  vatModeDefault: vatModeSchema.default("non_payer"),
+  street: z.string().trim().default(""),
+  city: z.string().trim().default(""),
+  postalCode: z.string().trim().default(""),
+  country: z.string().trim().min(1, "Zadaj krajinu.").default("SK"),
+  defaultCurrency: z.string().trim().min(1, "Zadaj menu.").default("EUR"),
+  defaultLanguage: z.string().trim().min(1, "Zadaj jazyk.").default("sk"),
+  defaultDueDays: z.coerce
+    .number()
+    .int("Splatnosť musí byť celé číslo.")
+    .min(0, "Splatnosť musí byť 0 až 365 dní.")
+    .max(365, "Splatnosť musí byť 0 až 365 dní.")
+    .default(14),
+})
+
+export type UpdateOrganizationInput = z.input<typeof updateOrganizationSchema>
+export type UpdateOrganizationValues = z.output<typeof updateOrganizationSchema>

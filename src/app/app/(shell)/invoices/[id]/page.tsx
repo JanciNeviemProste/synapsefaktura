@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 import { formatMoney } from "@/lib/money"
 import { DOCUMENT_TYPE_LABELS, type DocumentType } from "@/lib/documents/labels"
 import { docLabels } from "@/lib/documents/doc-labels"
+import { resolveClientDetails } from "@/lib/documents/client-details"
 import { StatusBadge } from "@/components/invoice/status-badge"
 import { DocumentActions } from "@/components/invoice/document-actions"
 import { CompliancePanel } from "@/components/invoice/compliance-panel"
@@ -54,6 +55,9 @@ export default async function InvoiceDetailPage({
   if (!doc) notFound()
 
   const contact = doc.contacts as { name?: string; ic_dph?: string } | null
+  // Vystaveny doklad ukazuje odberatela tak, ako vyzeral pri vystaveni;
+  // premenovanie kontaktu uz s nim nehybe. Koncepty citaju zivy kontakt.
+  const client = resolveClientDetails(doc.client_snapshot, contact)
   const L = docLabels(doc.language)
   const title = DOCUMENT_TYPE_LABELS[doc.type as DocumentType] ?? L.document
 
@@ -68,10 +72,15 @@ export default async function InvoiceDetailPage({
             <StatusBadge status={doc.status} />
           </div>
           <p className="text-muted-foreground text-sm">
-            {contact?.name ?? L.noCustomer}
+            {client?.name ?? L.noCustomer}
           </p>
+          {client?.frozen ? (
+            <p className="text-muted-foreground/70 text-xs">
+              Údaje odberateľa k dátumu vystavenia
+            </p>
+          ) : null}
         </div>
-        <DocumentActions id={doc.id} status={doc.status} />
+        <DocumentActions id={doc.id} status={doc.status} type={doc.type} />
       </div>
 
       <Card>

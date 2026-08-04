@@ -10,6 +10,7 @@ import { toast } from "sonner"
 import type { Database } from "@/lib/supabase/database.types"
 import { documentSchema, type DocumentValues } from "@/lib/validation/document"
 import { DOCUMENT_TYPE_LABELS, type DocumentType } from "@/lib/documents/labels"
+import { documentPresentation } from "@/lib/documents/presentation"
 import { VAT_MODE_LABELS, type VatMode } from "@/lib/validation/org"
 import { CURRENT_VAT_RATES, vatRateLabel } from "@/lib/vat/rates"
 import { computeInvoice } from "@/lib/vat/engine"
@@ -43,6 +44,13 @@ type Contact = Database["public"]["Tables"]["contacts"]["Row"]
 type Product = Database["public"]["Tables"]["products"]["Row"]
 type DocRow = Database["public"]["Tables"]["documents"]["Row"]
 type ItemRow = Database["public"]["Tables"]["document_items"]["Row"]
+
+// "draft" je aj stav dokladu (document_status), nie realny typ dokladu. Doklad
+// ulozeny s type="draft" vypadne z kazdeho dotazu filtrovaneho na type="invoice"
+// (dashboard, vykazy), takze si ho pouzivatel nechtiac schova. Koncept sa robi
+// ulozenim bez vystavenia (saveDocument s issue:false), nie volbou typu.
+// V DOCUMENT_TYPE_LABELS "draft" zostava, aby sa stare zaznamy dali zobrazit.
+const HIDDEN_DOCUMENT_TYPES: DocumentType[] = ["draft"]
 
 function today() {
   return new Date().toISOString().slice(0, 10)
@@ -116,6 +124,7 @@ export function InvoiceEditor({
   })
 
   const watchedItems = useWatch({ control: form.control, name: "items" })
+  const type = useWatch({ control: form.control, name: "type" })
   const vatMode = useWatch({ control: form.control, name: "vatMode" })
   const currency = useWatch({ control: form.control, name: "currency" })
   const language = useWatch({ control: form.control, name: "language" })
@@ -131,6 +140,17 @@ export function InvoiceEditor({
       vatMode as VatMode,
     )
   }, [watchedItems, vatMode])
+
+  // Skryte typy sa ponukaju len vtedy, ak taky typ uz ma nacitany doklad -
+  // inak by Select tichu hodnotu prepisal alebo ju nemal cim zobrazit.
+  const typeOptions = useMemo(() => {
+    const keys = Object.keys(DOCUMENT_TYPE_LABELS) as DocumentType[]
+    return keys.filter(
+      (t) => !HIDDEN_DOCUMENT_TYPES.includes(t) || t === doc?.type,
+    )
+  }, [doc?.type])
+
+  const presentation = documentPresentation((type as DocumentType) ?? "invoice")
 
   const legalNote = legalNoteForVatMode(
     vatMode as VatMode,
@@ -156,7 +176,12 @@ export function InvoiceEditor({
   function submit(issue: boolean) {
     form.handleSubmit((values) => {
       startTransition(async () => {
-        const res = await saveDocument(values, { id: doc?.id, issue })
+        // Splatnost sa pri neplatobnom type v UI nezobrazuje, tak ju ani
+        // neukladame - inak by v DB ostala hodnota, ktoru pouzivatel nevidel.
+        const payload = documentPresentation(values.type).isPayable
+          ? values
+          : { ...values, dueDate: "" }
+        const res = await saveDocument(payload, { id: doc?.id, issue })
         if (!res.ok) {
           if (res.upgrade) prompt(res.upgrade, res.error)
           else toast.error(res.error)
@@ -217,13 +242,11 @@ export function InvoiceEditor({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {Object.entries(DOCUMENT_TYPE_LABELS).map(
-                        ([v, label]) => (
-                          <SelectItem key={v} value={v}>
-                            {label}
-                          </SelectItem>
-                        ),
-                      )}
+                      {typeOptions.map((v) => (
+                        <SelectItem key={v} value={v}>
+                          {DOCUMENT_TYPE_LABELS[v]}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </FormItem>
@@ -341,7 +364,11 @@ export function InvoiceEditor({
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-2 gap-2">
+            <div
+              className={
+                presentation.isPayable ? "grid grid-cols-2 gap-2" : "grid gap-2"
+              }
+            >
               <FormField
                 control={form.control}
                 name="supplyDate"
@@ -354,18 +381,22 @@ export function InvoiceEditor({
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="dueDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Splatnosť</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+              {/* Cenova ponuka, objednavky a dodaci list nikoho nevyzyvaju
+                  na platbu, splatnost pre ne nema zmysel. */}
+              {presentation.isPayable && (
+                <FormField
+                  control={form.control}
+                  name="dueDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Splatnosť</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              )}
             </div>
           </CardContent>
         </Card>

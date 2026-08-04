@@ -36,6 +36,9 @@ export const documentSchema = z.object({
   vatMode: vatModeSchema.default("payer"),
   notes: z.string().trim().optional().or(z.literal("")),
   footerNotes: z.string().trim().optional().or(z.literal("")),
+  // Vazba na zdrojovy doklad (prevod, dobropis). Ked chyba, zapis sa jej
+  // nedotkne — existujuca vazba tak prezije bezne ulozenie z editora.
+  relatedDocumentId: z.string().uuid().nullable().optional(),
   items: z.array(documentItemSchema).min(1, "Pridaj aspoň jednu položku."),
 })
 

@@ -1,15 +1,24 @@
 import { round2 } from "@/lib/money"
 
 /**
- * Pure payment-matching logic. Matches an incoming bank transaction to an open
- * document by variable symbol (VS = invoice number) first, then by amount.
- * Returns the chosen document id and a confidence label. Deterministic +
- * unit-tested; the action layer applies the result.
+ * Pure payment-matching logic. Matches a bank transaction to an open record by
+ * variable symbol first (explicit `variable_symbol`, fallback = digits of the
+ * document number), then by amount. Returns the chosen id and a confidence
+ * label. Deterministic + unit-tested; the action layer applies the result.
+ *
+ * Prichodzia platba (kladna suma) sa paruje s pohladavkami (`documents`),
+ * odchodzia (zaporna suma) so zavazkami (`expenses`) — dve oddelene funkcie,
+ * aby sa typy pohladavok a zavazkov nemiesali.
  */
 
 export interface MatchableDoc {
   id: string
   number: string | null
+  /**
+   * Explicitny VS dokladu (`documents.variable_symbol`). Doklady vystavene
+   * pred jeho zavedenim ho nemaju — vtedy sa paruje cez cislo dokladu.
+   */
+  variableSymbol?: string | null
   total: number
   paidAmount: number
 }
@@ -25,8 +34,64 @@ function digits(s: string | null): string {
   return (s ?? "").replace(/\D/g, "")
 }
 
-function outstanding(d: MatchableDoc): number {
+/** Spolocny tvar parovania: cislo dokladu + zostatok. */
+interface Candidate {
+  id: string
+  number: string | null
+  variableSymbol?: string | null
+  total: number
+  paidAmount: number
+}
+
+function outstanding(d: Candidate): number {
   return round2(d.total - d.paidAmount)
+}
+
+/**
+ * VS kandidata. Primarne je to explicitny `variable_symbol` — to je hodnota,
+ * ktoru klient realne vidi na doklade a zadava do prikazu. Az ked ju doklad
+ * nema (vystaveny pred zavedenim stlpca), spadne sa spat na cislice z cisla
+ * dokladu, aby sa starsie doklady prestali parovat.
+ *
+ * Cislice sa beru z oboch stran: banka VS casto vracia s medzerami.
+ */
+function candidateVs(d: Candidate): string {
+  return digits(d.variableSymbol ?? null) || digits(d.number)
+}
+
+/**
+ * Jadro parovania (VS, potom jednoznacna suma). `amount` je uz kladna suma
+ * platby. Zdielaju ho pohladavky aj zavazky, aby sa pravidla nerozisli.
+ */
+function matchCandidates(
+  vsRaw: string | null,
+  amount: number,
+  docs: Candidate[],
+): { id: string | null; confidence: MatchConfidence } {
+  const vs = digits(vsRaw)
+
+  // 1) Variable symbol matches the document VS (or its number as a fallback).
+  if (vs) {
+    const byVs = docs.filter((d) => candidateVs(d) === vs)
+    if (byVs.length === 1) {
+      const exact = outstanding(byVs[0]) === amount
+      return { id: byVs[0].id, confidence: exact ? "vs_amount" : "vs" }
+    }
+    if (byVs.length > 1) {
+      // Disambiguate by amount.
+      const exact = byVs.find((d) => outstanding(d) === amount)
+      if (exact) return { id: exact.id, confidence: "vs_amount" }
+      return { id: byVs[0].id, confidence: "vs" }
+    }
+  }
+
+  // 2) No VS hit — fall back to a unique outstanding amount.
+  const byAmount = docs.filter((d) => outstanding(d) === amount)
+  if (byAmount.length === 1) {
+    return { id: byAmount[0].id, confidence: "amount" }
+  }
+
+  return { id: null, confidence: "none" }
 }
 
 export function matchTransaction(
@@ -36,31 +101,46 @@ export function matchTransaction(
   // Only incoming payments settle receivables.
   if (tx.amount <= 0) return { documentId: null, confidence: "none" }
 
-  const vs = digits(tx.vs)
-  const amount = round2(tx.amount)
+  const r = matchCandidates(tx.vs, round2(tx.amount), docs)
+  return { documentId: r.id, confidence: r.confidence }
+}
 
-  // 1) Variable symbol matches the invoice number.
-  if (vs) {
-    const byVs = docs.filter((d) => digits(d.number) === vs)
-    if (byVs.length === 1) {
-      const exact = outstanding(byVs[0]) === amount
-      return { documentId: byVs[0].id, confidence: exact ? "vs_amount" : "vs" }
-    }
-    if (byVs.length > 1) {
-      // Disambiguate by amount.
-      const exact = byVs.find((d) => outstanding(d) === amount)
-      if (exact) return { documentId: exact.id, confidence: "vs_amount" }
-      return { documentId: byVs[0].id, confidence: "vs" }
-    }
-  }
+/** Otvoreny naklad (zavazok) — `expenses.document_number` hra rolu VS. */
+export interface MatchableExpense {
+  id: string
+  documentNumber: string | null
+  total: number
+  paidAmount: number
+}
 
-  // 2) No VS hit — fall back to a unique outstanding amount.
-  const byAmount = docs.filter((d) => outstanding(d) === amount)
-  if (byAmount.length === 1) {
-    return { documentId: byAmount[0].id, confidence: "amount" }
-  }
+export interface ExpenseMatchResult {
+  expenseId: string | null
+  confidence: MatchConfidence
+}
 
-  return { documentId: null, confidence: "none" }
+/**
+ * Odchodzia platba (zaporna suma) proti nakladom. Naklad je uhradeny, ked sa
+ * suma platby zhoduje so zostatkom (total - paid_amount); ak ma naklad
+ * `document_number`, porovnava sa s VS rovnako ako cislo faktury.
+ */
+export function matchExpenseTransaction(
+  tx: { amount: number; vs: string | null },
+  expenses: MatchableExpense[],
+): ExpenseMatchResult {
+  // Only outgoing payments settle payables.
+  if (tx.amount >= 0) return { expenseId: null, confidence: "none" }
+
+  const r = matchCandidates(
+    tx.vs,
+    round2(-tx.amount),
+    expenses.map((e) => ({
+      id: e.id,
+      number: e.documentNumber,
+      total: e.total,
+      paidAmount: e.paidAmount,
+    })),
+  )
+  return { expenseId: r.id, confidence: r.confidence }
 }
 
 /** Recompute a payment status from total + the new paid amount. */

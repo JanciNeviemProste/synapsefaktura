@@ -2,8 +2,19 @@
 
 import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
 import { documentSchema, type DocumentInput } from "@/lib/validation/document"
+import {
+  checkConversion,
+  conversionQuantitySign,
+} from "@/lib/documents/convert"
+import { variableSymbolFromNumber } from "@/lib/documents/variable-symbol"
+import {
+  buildClientSnapshot,
+  type ClientSnapshot,
+} from "@/lib/documents/client-snapshot"
+import type { DocumentType } from "@/lib/documents/labels"
 import { computeInvoice } from "@/lib/vat/engine"
 import { legalNoteForVatMode } from "@/lib/vat/legal-notes"
 import { gateDocumentIssue } from "@/lib/billing/gate"
@@ -49,16 +60,19 @@ export async function saveDocument(
   let number: string | null = null
   let status: "draft" | "issued" = "draft"
   let wasIssued = false
+  let existingVariableSymbol: string | null = null
 
   if (opts.id) {
     const { data: existing } = await supabase
       .from("documents")
-      .select("number, status")
+      .select("number, status, variable_symbol")
       .eq("id", opts.id)
+      .eq("organization_id", orgId)
       .maybeSingle()
     number = existing?.number ?? null
     status = (existing?.status as "draft" | "issued") ?? "draft"
     wasIssued = existing?.status === "issued"
+    existingVariableSymbol = existing?.variable_symbol ?? null
   }
 
   // Plan limit applies to every first transition to "issued" (not re-saves of an
@@ -83,6 +97,50 @@ export async function saveDocument(
     status = "issued"
   }
 
+  // Prechod draft -> issued. Len tu sa doplna variabilny symbol a snapshot
+  // odberatela — na uz vystavenom doklade su obidve nemenne.
+  const isIssuing = Boolean(opts.issue) && !wasIssued
+
+  // VS odvodzujeme z prideleneho cisla rovnako, ako to robi PDF a parovanie
+  // uhrad. Uz vyplneny symbol NEPREPISUJEME — odberatel ho ma na doklade,
+  // ktory mu uz odisiel, a zmena by rozbila parovanie platby.
+  const variableSymbol =
+    isIssuing && !existingVariableSymbol
+      ? variableSymbolFromNumber(number)
+      : null
+
+  // Snapshot sa v DB zmrazuje triggerom `freeze_client_snapshot` — druhy zapis
+  // vyhodi vynimku. Preto ho zostavujeme vylucne pri vystaveni a do UPDATE ho
+  // pri dalsich ulozeniach vobec neposielame.
+  let clientSnapshot: ClientSnapshot | null = null
+  if (isIssuing && v.contactId) {
+    const { data: contact, error: contactErr } = await supabase
+      .from("contacts")
+      // POZN.: `iban`/`swift` na `contacts` zatial neexistuju — snapshot ich
+      // drzi ako null, aby mal stabilny tvar, ked stlpce pribudnu.
+      .select(
+        "name, ico, dic, ic_dph, street, city, postal_code, country, email, phone",
+      )
+      .eq("id", v.contactId)
+      .eq("organization_id", orgId)
+      .maybeSingle()
+    if (contactErr || !contact) {
+      // Nefatalne: doklad sa vystavi aj bez snapshotu (stlpec je nullable a
+      // udaje sa dovtedy citaju zivo z contacts), ale chceme o tom vediet.
+      console.error(
+        "[saveDocument] snapshot odberatela sa nepodarilo zostavit",
+        {
+          documentId: opts.id,
+          phase: "contacts:snapshot",
+          contactId: v.contactId,
+          error: contactErr?.message ?? "kontakt sa nenasiel",
+        },
+      )
+    } else {
+      clientSnapshot = buildClientSnapshot(contact)
+    }
+  }
+
   const docRow = {
     organization_id: orgId,
     type: v.type,
@@ -102,30 +160,19 @@ export async function saveDocument(
     notes: v.notes || null,
     footer_notes: v.footerNotes || null,
     legal_notes: legalNote,
-  }
-
-  let documentId = opts.id
-
-  if (documentId) {
-    const { error } = await supabase
-      .from("documents")
-      .update(docRow)
-      .eq("id", documentId)
-    if (error) return { ok: false, error: "Doklad sa nepodarilo uložiť." }
-    await supabase.from("document_items").delete().eq("document_id", documentId)
-  } else {
-    const { data, error } = await supabase
-      .from("documents")
-      .insert(docRow)
-      .select("id")
-      .single()
-    if (error || !data)
-      return { ok: false, error: "Doklad sa nepodarilo vytvoriť." }
-    documentId = data.id
+    // Vazbu zapisujeme len ked ju volajuci posle — inak by kazde ulozenie
+    // z editora prepisalo existujuci related_document_id na null.
+    ...(v.relatedDocumentId !== undefined
+      ? { related_document_id: v.relatedDocumentId }
+      : {}),
+    // Rovnaky dovod ako vyssie: oba stlpce sa zapisuju len pri vystaveni.
+    // Pri snapshote to nie je len opatrnost — opakovany zapis odmietne DB
+    // trigger a spadla by cela akcia.
+    ...(variableSymbol ? { variable_symbol: variableSymbol } : {}),
+    ...(clientSnapshot ? { client_snapshot: clientSnapshot } : {}),
   }
 
   const itemRows = computed.lines.map((line, idx) => ({
-    document_id: documentId!,
     position: idx,
     description: v.items[idx].description ?? "",
     quantity: line.quantity,
@@ -139,13 +186,50 @@ export async function saveDocument(
     product_id: v.items[idx].productId ?? null,
   }))
 
-  const { error: itemsErr } = await supabase
-    .from("document_items")
-    .insert(itemRows)
-  if (itemsErr) return { ok: false, error: "Položky sa nepodarilo uložiť." }
+  // Hlavicka aj polozky idu do DB jednym volanim, ktore je na strane Postgresu
+  // jedna transakcia. Ked cokolvek zlyha, nezostane po nom nic — ziadna zaloha
+  // poloziek v pamati ani uklid rozrobeneho dokladu uz netreba.
+  // POZN.: cislo pridelene cez `next_document_number` sa pri zlyhani NEVRACIA
+  // (citac sa inkrementuje vo vlastnej transakcii uz predtym), takze v ciselnom
+  // rade moze vzniknut diera. To je zamer: precislovavanie uz vystavenych
+  // dokladov by bolo horsie ako medzera.
+  // Service-role klient je tu NUTNY, nie pohodlnost: funkcia je odobrata
+  // beznym pouzivatelom (20260805090000_lock_save_document_rpc.sql), lebo je
+  // `security definer` a doveruje zoznamu stlpcov od volajuceho — cez PostgREST
+  // by si klient nastavil `total`, `paid_amount` aj `status` sam.
+  //
+  // Org scoping tym netrpi: `docRow.organization_id` je `orgId` z overeneho
+  // `getCurrentOrgId`, nie z requestu, a funkcia pri UPDATE filtruje
+  // `where d.id = ... and d.organization_id = ...`, takze cudzi doklad
+  // nezasiahne. Klientovy vstup sa sem dostane az po prepocte cez `computeInvoice`.
+  const admin = createAdminClient()
+  const { data: savedId, error: saveErr } = await admin.rpc(
+    "save_document_with_items",
+    {
+      p_document: docRow,
+      p_items: itemRows,
+      ...(opts.id ? { p_id: opts.id } : {}),
+    },
+  )
+  if (saveErr || !savedId) {
+    console.error("[saveDocument] atomicky zapis dokladu zlyhal", {
+      documentId: opts.id,
+      phase: "rpc:save_document_with_items",
+      mode: opts.id ? "update" : "create",
+      itemCount: itemRows.length,
+      number,
+      error: saveErr?.message,
+    })
+    return {
+      ok: false,
+      error: opts.id
+        ? "Doklad sa nepodarilo uložiť."
+        : "Doklad sa nepodarilo vytvoriť.",
+    }
+  }
 
   revalidatePath("/app/invoices")
-  return { ok: true, id: documentId! }
+  return { ok: true, id: savedId }
 }
 
 export async function deleteDocument(
@@ -196,7 +280,11 @@ export async function markAsSent(
 ): Promise<{ ok: boolean; error?: string; delivered?: boolean }> {
   const supabase = await createClient()
 
-  const rendered = await renderInvoicePdf(supabase, id)
+  // Organizaciu posielame aj tu: RLS pusti vsetky organizacie pouzivatela,
+  // takze bez nej by odberatel mohol dostat fakturu s hlavickou a IBAN-om
+  // druhej firmy, ktorej je odosielatel clenom.
+  const orgId = await getCurrentOrgId(supabase)
+  const rendered = await renderInvoicePdf(supabase, id, orgId ?? undefined)
   if (!rendered) return { ok: false, error: "Doklad sa nenašiel." }
   const { buffer, doc, contact, org } = rendered
 
@@ -304,4 +392,70 @@ export async function duplicateDocument(
 
   revalidatePath("/app/invoices")
   return { ok: true, id: created.id }
+}
+
+/**
+ * Converts a document to another type (quote -> invoice, invoice -> credit
+ * note, ...). The new document is always a DRAFT without a number: the user
+ * checks it and issues it himself. The source is left untouched — the only
+ * trace is `related_document_id` on the new document.
+ *
+ * Writing goes through `saveDocument`, so totals are recomputed and the legal
+ * note is derived exactly like on any other save.
+ */
+export async function convertDocument(
+  sourceId: string,
+  targetType: DocumentType,
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const supabase = await createClient()
+  const orgId = await getCurrentOrgId(supabase)
+  if (!orgId) return { ok: false, error: "Chýba firma." }
+
+  const { data: src } = await supabase
+    .from("documents")
+    .select("*")
+    .eq("id", sourceId)
+    .eq("organization_id", orgId)
+    .maybeSingle()
+  if (!src) return { ok: false, error: "Doklad sa nenašiel." }
+
+  const allowed = checkConversion(src.type, targetType)
+  if (!allowed.ok) return allowed
+
+  const { data: srcItems } = await supabase
+    .from("document_items")
+    .select("*")
+    .eq("document_id", sourceId)
+    .order("position")
+  if (!srcItems?.length) {
+    return { ok: false, error: "Doklad nemá žiadne položky na prevedenie." }
+  }
+
+  // Novy doklad vznika dnes; datum dodania a splatnost si doplni pouzivatel
+  // v editore — prenasat ich zo zdroja by dalo faktúre splatnost ponuky.
+  const today = new Date().toISOString().slice(0, 10)
+
+  const sign = conversionQuantitySign(targetType)
+
+  return saveDocument({
+    type: targetType,
+    contactId: src.contact_id,
+    issueDate: today,
+    currency: src.currency,
+    exchangeRate: src.exchange_rate,
+    language: src.language,
+    vatMode: src.vat_mode,
+    notes: src.notes ?? "",
+    footerNotes: src.footer_notes ?? "",
+    relatedDocumentId: sourceId,
+    items: srcItems.map((it) => ({
+      description: it.description,
+      quantity: sign * it.quantity,
+      unit: it.unit,
+      unitPrice: it.unit_price,
+      vatRate: it.vat_rate,
+      discountPct: it.discount_pct,
+      productId: it.product_id,
+    })),
+  })
 }
