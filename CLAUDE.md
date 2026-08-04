@@ -87,10 +87,11 @@ Voliteľné (feature sa aktivuje kľúčom): `OPENROUTER_API_KEY` (má prednosť
 ## Stav (posledné 📊 — 2026-08-04)
 
 `typecheck` PASS · `lint` PASS · `test` 130/130 PASS · `build` PASS.
-Nasadené na `synapsefaktura.vercel.app` (`ecbc8e5`). Verejné stránky bežia aj bez
-databázy (0× 5xx za 25 min). Blokátory: **uspatý Supabase projekt**
-`oukooqfpxeunhdzndsid` (čaká na restore — bez neho nefunguje login ani `/app`),
-GitHub secrets pre keep-alive, neoverená SK legislatíva.
+Nasadené na `synapsefaktura.vercel.app` (`a9dc384`). Supabase
+`oukooqfpxeunhdzndsid` je `ACTIVE_HEALTHY` (22 tabuliek, 34 policies, 8 migrácií,
+2 orgs/users — restore bez straty dát); keep-alive workflow beží (HTTP 200).
+Verejné stránky bežia aj bez databázy. Blokátory: Stripe/e-mail/analytics kľúče,
+firemné údaje, neoverená SK legislatíva.
 
 ## Session log
 
@@ -171,6 +172,17 @@ errors (`getaddrinfo ENOTFOUND` ×67/24 h, `stopped … within 25s` ×9), logy
   (od `51a0f25` má prednosť) → nový `aiBackend()` v `ai/provider.ts`.
 - Overené: 130/130, build PASS, lokálne bez DB `/` 0,2 s a `/app/*` → 307 login;
   po deployi 72/72 produkčných requestov 200, **0× 5xx za 25 min** (DB stále mŕtva).
-- **OTVORENÉ:** prebudiť Supabase projekt (restore) + doplniť GitHub secrets.
-  Pozn.: keď je DB dole, `/app` a login zostávajú nefunkčné — to je zámer, appka
+- **Restore hotový (cez Supabase MCP):** projekt `ACTIVE_HEALTHY`, dáta prežili —
+  22 tabuliek, 34 policies, 8 migrácií, 6 `vat_rates`, 2 orgs, 2 users.
+  ⚠️ **Počas `COMING_UP` vracia DB prázdnu schému** (0 tabuliek, 0 users) —
+  nie je to strata dát; pred akýmkoľvek zásahom počkaj na `ACTIVE_HEALTHY`.
+- Keep-alive: repo secrets `SUPABASE_URL`/`SUPABASE_ANON_KEY` nastavené cez
+  `gh secret set`, prvý beh HTTP 200 (`vat_rates` má stĺpec `code`, nie `id`).
+  RLS vráti anonymovi `[]` — dotaz aj tak prejde do Postgresu, čo stačí.
+- Finálne overenie: `/` `/v5` `/login` `/register` = 200, `/app/dashboard` = 307,
+  runtime errors za 40 min **žiadne**.
+- Advisori (WARN, nič kritické): `SECURITY DEFINER` RLS helpery sú zámer;
+  odporúčané zapnúť **leaked password protection** v Auth nastaveniach a doplniť
+  `search_path` funkcii `set_updated_at`.
+- Pozn.: keď je DB dole, `/app` a login zostávajú nefunkčné — to je zámer, appka
   bez DB fungovať nemôže; ide o to, aby nepadal *verejný* web.
