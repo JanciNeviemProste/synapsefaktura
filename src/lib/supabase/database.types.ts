@@ -667,93 +667,202 @@ export type Database = {
       }
       documents: {
         Row: {
+          accounting_date: string | null
+          already_paid: number
+          bank_account_id: string | null
+          client_snapshot: Json | null
+          constant_symbol: string | null
           contact_id: string | null
           created_at: string
           created_by: string | null
           currency: string
+          delivery_city: string | null
+          delivery_country: string | null
+          delivery_method: Database["public"]["Enums"]["delivery_method"] | null
+          delivery_name: string | null
+          delivery_phone: string | null
+          delivery_postal_code: string | null
+          delivery_street: string | null
+          deposit: number
+          discount_pct: number
           due_date: string | null
           exchange_rate: number
           footer_notes: string | null
+          header_notes: string | null
           id: string
+          internal_notes: string | null
           issue_date: string | null
+          issued_by_email: string | null
+          issued_by_name: string | null
+          issued_by_phone: string | null
           language: string
           legal_notes: string | null
           notes: string | null
           number: string | null
+          order_number: string | null
           organization_id: string
+          oss: boolean
           paid_amount: number
+          parcel_count: number | null
           pdf_url: string | null
+          pickup_point_id: string | null
           related_document_id: string | null
+          rounding: Database["public"]["Enums"]["rounding_mode"]
           sequence_id: string | null
+          show_prices: boolean
+          show_qr_payment: boolean
+          show_signature: boolean
           source: string
+          specific_symbol: string | null
           status: Database["public"]["Enums"]["document_status"]
           subtotal: number
           supply_date: string | null
+          tax_date: string | null
+          tax_document: boolean
           total: number
+          tracking_number: string | null
           type: Database["public"]["Enums"]["document_type"]
           updated_at: string
+          variable_symbol: string | null
           vat_mode: Database["public"]["Enums"]["vat_mode"]
           vat_total: number
+          vat_transfer: boolean
+          weight_kg: number | null
         }
         Insert: {
+          accounting_date?: string | null
+          already_paid?: number
+          bank_account_id?: string | null
+          client_snapshot?: Json | null
+          constant_symbol?: string | null
           contact_id?: string | null
           created_at?: string
           created_by?: string | null
           currency?: string
+          delivery_city?: string | null
+          delivery_country?: string | null
+          delivery_method?: Database["public"]["Enums"]["delivery_method"] | null
+          delivery_name?: string | null
+          delivery_phone?: string | null
+          delivery_postal_code?: string | null
+          delivery_street?: string | null
+          deposit?: number
+          discount_pct?: number
           due_date?: string | null
           exchange_rate?: number
           footer_notes?: string | null
+          header_notes?: string | null
           id?: string
+          internal_notes?: string | null
           issue_date?: string | null
+          issued_by_email?: string | null
+          issued_by_name?: string | null
+          issued_by_phone?: string | null
           language?: string
           legal_notes?: string | null
           notes?: string | null
           number?: string | null
+          order_number?: string | null
           organization_id: string
+          oss?: boolean
           paid_amount?: number
+          parcel_count?: number | null
           pdf_url?: string | null
+          pickup_point_id?: string | null
           related_document_id?: string | null
+          rounding?: Database["public"]["Enums"]["rounding_mode"]
           sequence_id?: string | null
+          show_prices?: boolean
+          show_qr_payment?: boolean
+          show_signature?: boolean
           source?: string
+          specific_symbol?: string | null
           status?: Database["public"]["Enums"]["document_status"]
           subtotal?: number
           supply_date?: string | null
+          tax_date?: string | null
+          tax_document?: boolean
           total?: number
+          tracking_number?: string | null
           type: Database["public"]["Enums"]["document_type"]
           updated_at?: string
+          variable_symbol?: string | null
           vat_mode?: Database["public"]["Enums"]["vat_mode"]
           vat_total?: number
+          vat_transfer?: boolean
+          weight_kg?: number | null
         }
         Update: {
+          accounting_date?: string | null
+          already_paid?: number
+          bank_account_id?: string | null
+          client_snapshot?: Json | null
+          constant_symbol?: string | null
           contact_id?: string | null
           created_at?: string
           created_by?: string | null
           currency?: string
+          delivery_city?: string | null
+          delivery_country?: string | null
+          delivery_method?: Database["public"]["Enums"]["delivery_method"] | null
+          delivery_name?: string | null
+          delivery_phone?: string | null
+          delivery_postal_code?: string | null
+          delivery_street?: string | null
+          deposit?: number
+          discount_pct?: number
           due_date?: string | null
           exchange_rate?: number
           footer_notes?: string | null
+          header_notes?: string | null
           id?: string
+          internal_notes?: string | null
           issue_date?: string | null
+          issued_by_email?: string | null
+          issued_by_name?: string | null
+          issued_by_phone?: string | null
           language?: string
           legal_notes?: string | null
           notes?: string | null
           number?: string | null
+          order_number?: string | null
           organization_id?: string
+          oss?: boolean
           paid_amount?: number
+          parcel_count?: number | null
           pdf_url?: string | null
+          pickup_point_id?: string | null
           related_document_id?: string | null
+          rounding?: Database["public"]["Enums"]["rounding_mode"]
           sequence_id?: string | null
+          show_prices?: boolean
+          show_qr_payment?: boolean
+          show_signature?: boolean
           source?: string
+          specific_symbol?: string | null
           status?: Database["public"]["Enums"]["document_status"]
           subtotal?: number
           supply_date?: string | null
+          tax_date?: string | null
+          tax_document?: boolean
           total?: number
+          tracking_number?: string | null
           type?: Database["public"]["Enums"]["document_type"]
           updated_at?: string
+          variable_symbol?: string | null
           vat_mode?: Database["public"]["Enums"]["vat_mode"]
           vat_total?: number
+          vat_transfer?: boolean
+          weight_kg?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "documents_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "documents_contact_id_fkey"
             columns: ["contact_id"]
@@ -1317,30 +1426,48 @@ export type Database = {
       payments: {
         Row: {
           amount: number
+          amount_home: number | null
           bank_transaction_id: string | null
           created_at: string
+          currency: string
           document_id: string
+          exchange_diff: number | null
+          exchange_rate: number
           id: string
           method: Database["public"]["Enums"]["payment_method"]
+          note: string | null
           paid_at: string
+          variable_symbol: string | null
         }
         Insert: {
           amount: number
+          amount_home?: number | null
           bank_transaction_id?: string | null
           created_at?: string
+          currency?: string
           document_id: string
+          exchange_diff?: number | null
+          exchange_rate?: number
           id?: string
           method?: Database["public"]["Enums"]["payment_method"]
+          note?: string | null
           paid_at?: string
+          variable_symbol?: string | null
         }
         Update: {
           amount?: number
+          amount_home?: number | null
           bank_transaction_id?: string | null
           created_at?: string
+          currency?: string
           document_id?: string
+          exchange_diff?: number | null
+          exchange_rate?: number
           id?: string
           method?: Database["public"]["Enums"]["payment_method"]
+          note?: string | null
           paid_at?: string
+          variable_symbol?: string | null
         }
         Relationships: [
           {
@@ -2184,6 +2311,12 @@ export type Database = {
       bank_match_status: "unmatched" | "matched" | "ignored"
       cash_flow_direction: "in" | "out"
       contact_type: "customer" | "supplier" | "both"
+      delivery_method:
+        | "courier"
+        | "mail"
+        | "personal"
+        | "pickup_point"
+        | "haulage"
       document_status:
         | "draft"
         | "issued"
@@ -2224,6 +2357,7 @@ export type Database = {
       recurring_cadence: "weekly" | "monthly" | "custom"
       recurring_send_method: "email" | "peppol" | "none"
       reminder_channel: "email" | "sms"
+      rounding_mode: "document" | "item" | "item_ext"
       stock_movement_type: "in" | "out" | "adjustment" | "return"
       taggable_type: "document" | "expense" | "contact"
       trip_purpose: "business" | "private"
@@ -2377,6 +2511,13 @@ export const Constants = {
       bank_match_status: ["unmatched", "matched", "ignored"],
       cash_flow_direction: ["in", "out"],
       contact_type: ["customer", "supplier", "both"],
+      delivery_method: [
+        "courier",
+        "mail",
+        "personal",
+        "pickup_point",
+        "haulage",
+      ],
       document_status: [
         "draft",
         "issued",
@@ -2421,6 +2562,7 @@ export const Constants = {
       recurring_cadence: ["weekly", "monthly", "custom"],
       recurring_send_method: ["email", "peppol", "none"],
       reminder_channel: ["email", "sms"],
+      rounding_mode: ["document", "item", "item_ext"],
       stock_movement_type: ["in", "out", "adjustment", "return"],
       taggable_type: ["document", "expense", "contact"],
       trip_purpose: ["business", "private"],
