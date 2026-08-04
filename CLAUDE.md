@@ -84,11 +84,13 @@ Voliteľné (feature sa aktivuje kľúčom): `OPENROUTER_API_KEY` (má prednosť
 - **Externé kľúče chýbajú** — AI/Stripe/Email/Upstash bežia graceful bez kľúča;
   produkcia potrebuje hosted Supabase + Vercel env.
 
-## Stav (posledné 📊 — 2026-07-05)
+## Stav (posledné 📊 — 2026-08-04)
 
 `typecheck` PASS · `lint` PASS · `test` 130/130 PASS · `build` PASS.
-Deploy-ready: **NIE** — blokátory: hosted Supabase env (akcia používateľa) +
-neoverená SK legislatíva. Detailný report v session logu.
+Nasadené na `synapsefaktura.vercel.app` (`ecbc8e5`). Verejné stránky bežia aj bez
+databázy (0× 5xx za 25 min). Blokátory: **uspatý Supabase projekt**
+`oukooqfpxeunhdzndsid` (čaká na restore — bez neho nefunguje login ani `/app`),
+GitHub secrets pre keep-alive, neoverená SK legislatíva.
 
 ## Session log
 
@@ -146,3 +148,29 @@ Nový plán (schválený): L1 právne minimum · L2 live deploy+Stripe · L3 kon
   RESEND/UPSTASH), hosted Supabase+deploy+doména, firemné údaje v `src/lib/site.ts`,
   právna kontrola, reálne screenshoty, `scripts/pentest.sh` po deployi. Potom „GO L2"
   = sprievodca nasadením (Supabase → Vercel → Stripe).
+
+### 2026-08-04: Produkčný výpadok — uspatá DB zhodila celý web (`ecbc8e5`)
+Symptóm: intermitentné 504 (~13 % requestov, aj na landingu). Príčina: free-tier
+Supabase `oukooqfpxeunhdzndsid` sa po ~7 dňoch nečinnosti uspal a **stratil DNS
+záznam** → middleware (matcher chytal *každú* cestu) retryoval `auth.getUser()`
+proti `ENOTFOUND` hostu až do 25 s limitu edge funkcie. Dôkazy: Vercel runtime
+errors (`getaddrinfo ENOTFOUND` ×67/24 h, `stopped … within 25s` ×9), logy
+(200:32 / 504:5 za 2 h), nezávislý `Resolve-DnsName` → *DNS name does not exist*.
+- **Oprava (jadro):** `src/middleware.ts` matcher zúžený na `/app/:path*`,
+  `/login`, `/register` — verejné, právne a SEO stránky sa DB **vôbec nedotknú**
+  (overené v `.next/server/middleware-manifest.json`). `/app` ostáva chránené,
+  `(shell)/layout.tsx:24` má vlastnú session kontrolu.
+- `supabase/middleware.ts`: `AbortSignal.timeout(2500)` na fetch + 3 s rozpočet
+  na celý refresh (`Promise.race`) → fail-open zaberie v sekundách, nie po 25 s.
+- `actions/auth.ts`: `withSupabase()` wrapper — nedostupná služba vráti čitateľnú
+  hlášku namiesto generického `global-error.tsx`. `redirect()` ostáva mimo `try`.
+- `.github/workflows/supabase-keepalive.yml` — denný `vat_rates` select proti
+  Postgresu (04:15 UTC), aby sa projekt už neuspával. **Potrebuje repo secrets
+  `SUPABASE_URL` + `SUPABASE_ANON_KEY`.**
+- Bonus: `ai/generate.ts` posielal `providerOptions.google` aj pod OpenRouterom
+  (od `51a0f25` má prednosť) → nový `aiBackend()` v `ai/provider.ts`.
+- Overené: 130/130, build PASS, lokálne bez DB `/` 0,2 s a `/app/*` → 307 login;
+  po deployi 72/72 produkčných requestov 200, **0× 5xx za 25 min** (DB stále mŕtva).
+- **OTVORENÉ:** prebudiť Supabase projekt (restore) + doplniť GitHub secrets.
+  Pozn.: keď je DB dole, `/app` a login zostávajú nefunkčné — to je zámer, appka
+  bez DB fungovať nemôže; ide o to, aby nepadal *verejný* web.
