@@ -71,7 +71,7 @@ export default async function InvoiceDetailPage({
             {contact?.name ?? L.noCustomer}
           </p>
         </div>
-        <DocumentActions id={doc.id} status={doc.status} />
+        <DocumentActions id={doc.id} status={doc.status} type={doc.type} />
       </div>
 
       <Card>

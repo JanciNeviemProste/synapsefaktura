@@ -2,16 +2,28 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Plus, Pencil, Trash2, Receipt, Sparkles } from "lucide-react"
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Receipt,
+  Sparkles,
+  Wallet,
+  Paperclip,
+  Loader2,
+} from "lucide-react"
 import { toast } from "sonner"
 import { useTranslations } from "next-intl"
 
 import type { Database } from "@/lib/supabase/database.types"
 import { formatMoney } from "@/lib/money"
-import { deleteExpense } from "@/app/actions/expenses"
+import type { ExpensePaymentStatus } from "@/lib/expenses/payment"
+import { deleteExpense, getAttachmentSignedUrl } from "@/app/actions/expenses"
 import { ExpenseForm } from "./expense-form"
+import { ExpensePaymentForm } from "./expense-payment-form"
 import { AiCaptureDialog } from "./ai-capture-dialog"
 
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Table,
@@ -50,6 +62,15 @@ function fmtDate(iso: string | null): string {
   return `${d}.${m}.${y}`
 }
 
+const PAYMENT_VARIANT: Record<
+  ExpensePaymentStatus,
+  "default" | "secondary" | "outline"
+> = {
+  unpaid: "outline",
+  partially_paid: "secondary",
+  paid: "default",
+}
+
 export function ExpensesView({
   expenses,
   suppliers,
@@ -64,12 +85,40 @@ export function ExpensesView({
   const [captureOpen, setCaptureOpen] = useState(false)
   const [editing, setEditing] = useState<Expense | null>(null)
   const [deleting, setDeleting] = useState<Expense | null>(null)
+  const [paying, setPaying] = useState<Expense | null>(null)
+  const [loadingAttachment, setLoadingAttachment] = useState<string | null>(
+    null,
+  )
   const [pending, startTransition] = useTransition()
 
   function handleDone() {
     setOpen(false)
     setEditing(null)
     router.refresh()
+  }
+  function handlePaid() {
+    setPaying(null)
+    router.refresh()
+  }
+  async function openAttachment(e: Expense) {
+    const path = e.attachment_url
+    if (!path) return
+    // Okno otvarame synchronne v ramci kliku — po `await` ho prehliadac blokuje.
+    const win = window.open("", "_blank")
+    setLoadingAttachment(e.id)
+    const url = await getAttachmentSignedUrl(path)
+    setLoadingAttachment(null)
+    if (!url) {
+      win?.close()
+      toast.error(t("attachmentFailed"))
+      return
+    }
+    if (win) {
+      win.opener = null
+      win.location.href = url
+    } else {
+      window.open(url, "_blank", "noopener,noreferrer")
+    }
   }
   function confirmDelete() {
     if (!deleting) return
@@ -130,7 +179,8 @@ export function ExpensesView({
                 <TableHead>{t("colNumber")}</TableHead>
                 <TableHead>{t("colCategory")}</TableHead>
                 <TableHead className="text-right">{t("colTotal")}</TableHead>
-                <TableHead className="w-24 text-right">
+                <TableHead>{t("colPaid")}</TableHead>
+                <TableHead className="w-36 text-right">
                   {t("colActions")}
                 </TableHead>
               </TableRow>
@@ -147,7 +197,40 @@ export function ExpensesView({
                   <TableCell className="text-right tabular-nums">
                     {formatMoney(e.total, e.currency)}
                   </TableCell>
+                  <TableCell>
+                    <Badge variant={PAYMENT_VARIANT[e.status] ?? "outline"}>
+                      {t(`status.${e.status}`)}
+                    </Badge>
+                    {e.status === "partially_paid" && (
+                      <span className="text-muted-foreground ml-2 text-xs tabular-nums">
+                        {formatMoney(e.paid_amount, e.currency)}
+                      </span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right">
+                    {e.attachment_url && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => openAttachment(e)}
+                        disabled={loadingAttachment === e.id}
+                        title={t("openAttachment")}
+                      >
+                        {loadingAttachment === e.id ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <Paperclip className="size-4" />
+                        )}
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => setPaying(e)}
+                      title={t("payTitle")}
+                    >
+                      <Wallet className="size-4" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon-sm"
@@ -188,6 +271,18 @@ export function ExpensesView({
             suppliers={suppliers}
             onDone={handleDone}
           />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!paying} onOpenChange={(o) => !o && setPaying(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("payTitle")}</DialogTitle>
+            <DialogDescription>{t("payDescription")}</DialogDescription>
+          </DialogHeader>
+          {paying && (
+            <ExpensePaymentForm expense={paying} onDone={handlePaid} />
+          )}
         </DialogContent>
       </Dialog>
 

@@ -10,7 +10,13 @@ import {
   isDuplicateTransaction,
   shouldAutoBook,
 } from "@/lib/bank/csv-import"
-import { matchTransaction, type MatchableDoc } from "@/lib/matching/match"
+import {
+  matchTransaction,
+  matchExpenseTransaction,
+  type MatchableDoc,
+  type MatchableExpense,
+} from "@/lib/matching/match"
+import { recordExpensePayment } from "@/app/actions/expenses"
 
 type PaymentMethod = "bank" | "card" | "cash" | "other"
 
@@ -70,8 +76,9 @@ export interface BankImportSummary {
 
 /**
  * Imports a bank-statement CSV: stores each transaction, auto-matches incoming
- * payments to open documents (VS = number, then amount), and records payments
- * only when the amount matches exactly. Already imported transactions are skipped.
+ * payments to open documents and outgoing payments to open expenses (VS =
+ * number, then amount), and records payments only when the amount matches
+ * exactly. Already imported transactions are skipped.
  */
 export async function importBankCsv(
   content: string,
@@ -94,6 +101,7 @@ export async function importBankCsv(
   const { data: openDocs } = await supabase
     .from("documents")
     .select("id, number, total, paid_amount")
+    .eq("organization_id", orgId)
     .in("status", ["issued", "sent", "partially_paid", "overdue"])
 
   const candidates: MatchableDoc[] = (openDocs ?? []).map((d) => ({
@@ -102,6 +110,22 @@ export async function importBankCsv(
     total: d.total,
     paidAmount: d.paid_amount,
   }))
+
+  // Odchodzie platby sa paruju s neuhradenymi nakladmi (zavazkami).
+  const { data: openExpenses } = await supabase
+    .from("expenses")
+    .select("id, document_number, total, paid_amount")
+    .eq("organization_id", orgId)
+    .in("status", ["unpaid", "partially_paid"])
+
+  const expenseCandidates: MatchableExpense[] = (openExpenses ?? []).map(
+    (e) => ({
+      id: e.id,
+      documentNumber: e.document_number,
+      total: e.total,
+      paidAmount: e.paid_amount,
+    }),
+  )
 
   // Kluce uz ulozenych pohybov — proti nim overujeme duplicity.
   const { data: existingRows } = await supabase
@@ -157,23 +181,54 @@ export async function importBankCsv(
       .single()
     imported++
 
-    const m = matchTransaction({ amount: tx.amount, vs: tx.vs }, candidates)
-    // Knihujeme len presnu zhodu sumy; zhoda len cez VS ostava nesparovana.
-    if (m.documentId && shouldAutoBook(m)) {
-      await recordPayment(m.documentId, tx.amount, {
-        paidAt: tx.bookedAt,
-        method: "bank",
-        bankTransactionId: txRow?.id ?? null,
+    let booked = false
+
+    if (tx.amount > 0) {
+      const m = matchTransaction({ amount: tx.amount, vs: tx.vs }, candidates)
+      // Knihujeme len presnu zhodu sumy; zhoda len cez VS ostava nesparovana.
+      if (m.documentId && shouldAutoBook(m)) {
+        await recordPayment(m.documentId, tx.amount, {
+          paidAt: tx.bookedAt,
+          method: "bank",
+          bankTransactionId: txRow?.id ?? null,
+        })
+        // Keep local candidates in sync so we don't double-match the same doc.
+        const c = candidates.find((x) => x.id === m.documentId)
+        if (c) c.paidAmount = round2(c.paidAmount + tx.amount)
+        booked = true
+      }
+    } else if (tx.amount < 0) {
+      const m = matchExpenseTransaction(
+        { amount: tx.amount, vs: tx.vs },
+        expenseCandidates,
+      )
+      // Rovnake pravidlo ako pri fakturach — `shouldAutoBook` pozna len tvar
+      // `MatchResult`, preto mu zhodu nakladu podame v jeho tvare.
+      const auto = shouldAutoBook({
+        documentId: m.expenseId,
+        confidence: m.confidence,
       })
+      if (m.expenseId && auto) {
+        const paid = round2(-tx.amount)
+        const res = await recordExpensePayment({
+          expenseId: m.expenseId,
+          amount: paid,
+        })
+        if (res.ok) {
+          const c = expenseCandidates.find((x) => x.id === m.expenseId)
+          if (c) c.paidAmount = round2(c.paidAmount + paid)
+          booked = true
+        }
+      }
+    }
+
+    if (booked) {
       if (txRow) {
         await supabase
           .from("bank_transactions")
           .update({ matched_status: "matched" })
           .eq("id", txRow.id)
       }
-      // Keep local candidates in sync so we don't double-match the same doc.
-      const c = candidates.find((x) => x.id === m.documentId)
-      if (c) c.paidAmount = round2(c.paidAmount + tx.amount)
       matched++
     } else {
       unmatched++
@@ -181,6 +236,7 @@ export async function importBankCsv(
   }
 
   revalidatePath("/app/invoices")
+  revalidatePath("/app/expenses")
   revalidatePath("/app/bank")
   return { ok: true, imported, matched, unmatched, skipped, errors }
 }

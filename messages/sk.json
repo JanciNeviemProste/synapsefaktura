@@ -95,7 +95,17 @@
     "colNumber": "Číslo",
     "colCategory": "Kategória",
     "colTotal": "Spolu",
+    "colPaid": "Úhrada",
     "colActions": "Akcie",
+    "status": {
+      "unpaid": "Neuhradené",
+      "partially_paid": "Čiastočne uhradené",
+      "paid": "Uhradené"
+    },
+    "payTitle": "Zapísať úhradu",
+    "payDescription": "Úhrada sa pripočíta k už uhradenej sume nákladu.",
+    "openAttachment": "Otvoriť prílohu",
+    "attachmentFailed": "Prílohu sa nepodarilo otvoriť.",
     "deleted": "Náklad zmazaný.",
     "deleteTitle": "Zmazať náklad?",
     "deleteDescription": "Náklad bude natrvalo odstránený."

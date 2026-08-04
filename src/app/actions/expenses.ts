@@ -5,6 +5,11 @@ import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
 import { expenseSchema, type ExpenseInput } from "@/lib/validation/expense"
+import {
+  expensePaymentSchema,
+  type ExpensePaymentInput,
+} from "@/lib/validation/expense-payment"
+import { addExpensePayment, expensePaymentStatus } from "@/lib/expenses/payment"
 import { round2 } from "@/lib/money"
 
 export type ExpenseActionResult =
@@ -72,10 +77,16 @@ export async function updateExpense(
     return { ok: false, error: parsed.error.issues[0].message }
   }
   const supabase = await createClient()
+  // Filtrujeme aj podla organizacie, nielen podla id. Samotna RLS nestaci:
+  // pusti VSETKY organizacie, ktorych je pouzivatel clenom, takze clen dvoch
+  // firiem by cez podvrhnute id upravil naklad tej druhej.
+  const orgId = await getCurrentOrgId(supabase)
+  if (!orgId) return { ok: false, error: "Chýba firma." }
   const { error } = await supabase
     .from("expenses")
     .update(toRow(parsed.data))
     .eq("id", id)
+    .eq("organization_id", orgId)
   if (error) return { ok: false, error: "Náklad sa nepodarilo uložiť." }
   revalidatePath("/app/expenses")
   return { ok: true, id }
@@ -83,9 +94,78 @@ export async function updateExpense(
 
 export async function deleteExpense(id: string): Promise<ExpenseActionResult> {
   const supabase = await createClient()
-  const { error } = await supabase.from("expenses").delete().eq("id", id)
+  const orgId = await getCurrentOrgId(supabase)
+  if (!orgId) return { ok: false, error: "Chýba firma." }
+  const { error } = await supabase
+    .from("expenses")
+    .delete()
+    .eq("id", id)
+    .eq("organization_id", orgId)
   if (error) return { ok: false, error: "Náklad sa nepodarilo zmazať." }
   revalidatePath("/app/expenses")
+  return { ok: true, id }
+}
+
+/**
+ * Records a payment against an expense: adds to `paid_amount` (there can be
+ * several payments) and recomputes `status`. Without this the expense side of
+ * the cash-flow in Prehlady stayed at zero, because nothing ever wrote it.
+ */
+export async function recordExpensePayment(
+  input: ExpensePaymentInput,
+): Promise<ExpenseActionResult> {
+  const parsed = expensePaymentSchema.safeParse(input)
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0].message }
+  }
+  const { expenseId, amount } = parsed.data
+
+  const supabase = await createClient()
+  const orgId = await getCurrentOrgId(supabase)
+  if (!orgId) return { ok: false, error: "Chýba firma." }
+
+  const { data: expense } = await supabase
+    .from("expenses")
+    .select("total, paid_amount")
+    .eq("id", expenseId)
+    .eq("organization_id", orgId)
+    .maybeSingle()
+  if (!expense) return { ok: false, error: "Náklad sa nenašiel." }
+
+  const paidAmount = addExpensePayment(expense.paid_amount, amount)
+  const { error } = await supabase
+    .from("expenses")
+    .update({
+      paid_amount: paidAmount,
+      status: expensePaymentStatus(paidAmount, expense.total),
+    })
+    .eq("id", expenseId)
+    .eq("organization_id", orgId)
+  if (error) return { ok: false, error: "Úhradu sa nepodarilo uložiť." }
+
+  revalidatePath("/app/expenses")
+  // Cash-flow v prehladoch cita `paid_amount`, takze sa musi prepocitat tiez.
+  revalidatePath("/app/reports")
+  return { ok: true, id: expenseId }
+}
+
+/** Zrusi zapisane uhrady nakladu (oprava omylu) — vrati ho na `unpaid`. */
+export async function clearExpensePayments(
+  id: string,
+): Promise<ExpenseActionResult> {
+  const supabase = await createClient()
+  const orgId = await getCurrentOrgId(supabase)
+  if (!orgId) return { ok: false, error: "Chýba firma." }
+
+  const { error } = await supabase
+    .from("expenses")
+    .update({ paid_amount: 0, status: "unpaid" })
+    .eq("id", id)
+    .eq("organization_id", orgId)
+  if (error) return { ok: false, error: "Úhradu sa nepodarilo zrušiť." }
+
+  revalidatePath("/app/expenses")
+  revalidatePath("/app/reports")
   return { ok: true, id }
 }
 

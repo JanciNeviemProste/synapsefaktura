@@ -113,21 +113,65 @@ export async function saveDocument(
 
   let documentId = opts.id
 
+  // Pri uprave sa polozky najprv mazu a az potom vkladaju nove. Bez kopie
+  // povodnych riadkov v pamati by zlyhany insert znamenal ich definitivnu
+  // stratu, preto si ich nacitame este pred akymkolvek zapisom.
+  const backup = opts.id
+    ? await supabase
+        .from("document_items")
+        .select("*")
+        .eq("document_id", opts.id)
+        .order("position")
+    : null
+  if (backup?.error) {
+    console.error("[saveDocument] nacitanie povodnych poloziek zlyhalo", {
+      documentId: opts.id,
+      phase: "items:backup",
+      error: backup.error.message,
+    })
+    return { ok: false, error: "Doklad sa nepodarilo uložiť." }
+  }
+  const previousItems = backup?.data ?? null
+
   if (documentId) {
     const { error } = await supabase
       .from("documents")
       .update(docRow)
       .eq("id", documentId)
-    if (error) return { ok: false, error: "Doklad sa nepodarilo uložiť." }
-    await supabase.from("document_items").delete().eq("document_id", documentId)
+    if (error) {
+      console.error("[saveDocument] update dokladu zlyhal", {
+        documentId,
+        phase: "documents:update",
+        error: error.message,
+      })
+      return { ok: false, error: "Doklad sa nepodarilo uložiť." }
+    }
+    const { error: delErr } = await supabase
+      .from("document_items")
+      .delete()
+      .eq("document_id", documentId)
+    if (delErr) {
+      console.error("[saveDocument] mazanie povodnych poloziek zlyhalo", {
+        documentId,
+        phase: "items:delete",
+        error: delErr.message,
+      })
+      return { ok: false, error: "Položky sa nepodarilo uložiť." }
+    }
   } else {
     const { data, error } = await supabase
       .from("documents")
       .insert(docRow)
       .select("id")
       .single()
-    if (error || !data)
+    if (error || !data) {
+      console.error("[saveDocument] vytvorenie dokladu zlyhalo", {
+        phase: "documents:insert",
+        number,
+        error: error?.message,
+      })
       return { ok: false, error: "Doklad sa nepodarilo vytvoriť." }
+    }
     documentId = data.id
   }
 
@@ -149,7 +193,69 @@ export async function saveDocument(
   const { error: itemsErr } = await supabase
     .from("document_items")
     .insert(itemRows)
-  if (itemsErr) return { ok: false, error: "Položky sa nepodarilo uložiť." }
+  if (itemsErr) {
+    console.error("[saveDocument] ulozenie poloziek zlyhalo", {
+      documentId,
+      phase: "items:insert",
+      mode: opts.id ? "update" : "create",
+      itemCount: itemRows.length,
+      error: itemsErr.message,
+    })
+
+    if (previousItems) {
+      // Uprava: vraciame povodne polozky spat (aj s povodnymi id), aby
+      // pouzivatel neprisiel o to, co uz mal ulozene.
+      if (previousItems.length) {
+        const { error: restoreErr } = await supabase
+          .from("document_items")
+          .insert(previousItems)
+        if (restoreErr) {
+          console.error(
+            "[saveDocument] obnova povodnych poloziek zlyhala — doklad ostal bez poloziek",
+            {
+              documentId,
+              phase: "items:restore",
+              itemCount: previousItems.length,
+              error: restoreErr.message,
+            },
+          )
+          return {
+            ok: false,
+            error:
+              "Položky sa nepodarilo uložiť a pôvodné sa nepodarilo obnoviť. Skontroluj doklad.",
+          }
+        }
+      }
+      return {
+        ok: false,
+        error: previousItems.length
+          ? "Položky sa nepodarilo uložiť. Pôvodné položky zostali zachované."
+          : "Položky sa nepodarilo uložiť.",
+      }
+    }
+
+    // Vytvaranie: mazeme prave vytvoreny riadok, aby neostal ocislovany doklad
+    // bez poloziek (document_items visia na ON DELETE CASCADE).
+    // POZN.: cislo pridelene cez `next_document_number` sa tymto NEVRACIA —
+    // citac len inkrementuje, takze v ciselnom rade vznikne diera. Skutocnu
+    // atomicitu (vratane vratenia cisla) vie zabezpecit az databazova funkcia.
+    const { error: cleanupErr } = await supabase
+      .from("documents")
+      .delete()
+      .eq("id", documentId!)
+    if (cleanupErr) {
+      console.error(
+        "[saveDocument] uklid rozrobeneho dokladu zlyhal — ostal ocislovany doklad bez poloziek",
+        {
+          documentId,
+          phase: "documents:cleanup",
+          number,
+          error: cleanupErr.message,
+        },
+      )
+    }
+    return { ok: false, error: "Doklad sa nepodarilo vytvoriť." }
+  }
 
   revalidatePath("/app/invoices")
   return { ok: true, id: documentId! }
