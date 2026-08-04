@@ -21,6 +21,24 @@ export const recurringTemplateSchema = z.object({
     .min(1, "Pridaj aspoň jednu položku."),
 })
 
+/**
+ * Ako sa ma vystavena pravidelna faktura dorucit. Zhodne s enumom
+ * `recurring_send_method` v DB.
+ *
+ * `none` je default zamerne: pri zapnutom odosielani odide doklad odberatelovi
+ * bez toho, aby ho niekto videl, takze to ma byt vedome rozhodnutie.
+ */
+export const recurringSendMethodSchema = z.enum(["none", "email", "peppol"])
+
+export type RecurringSendMethod = z.infer<typeof recurringSendMethodSchema>
+
+export const RECURRING_SEND_METHOD_LABELS: Record<RecurringSendMethod, string> =
+  {
+    none: "Len vystaviť (neodosielať)",
+    email: "Vystaviť a poslať e-mailom",
+    peppol: "Vystaviť a poslať cez Peppol",
+  }
+
 export const recurringSchema = z.object({
   name: z.string().trim().min(1, "Zadaj názov."),
   contactId: z.string().uuid().nullable().optional(),
@@ -28,6 +46,7 @@ export const recurringSchema = z.object({
   intervalDays: z.coerce.number().int().min(1).max(365).optional(),
   nextRunAt: z.string().min(1, "Zadaj dátum najbližšieho vystavenia."),
   active: z.boolean().default(true),
+  sendMethod: recurringSendMethodSchema.default("none"),
   template: recurringTemplateSchema,
 })
 

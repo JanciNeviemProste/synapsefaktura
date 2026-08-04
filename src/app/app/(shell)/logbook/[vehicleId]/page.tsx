@@ -4,7 +4,13 @@ import { ArrowLeft } from "lucide-react"
 
 import { createClient } from "@/lib/supabase/server"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
-import { deductibleBusinessFuel } from "@/lib/logbook/consumption"
+import {
+  deductibleBusinessFuel,
+  travelReimbursement,
+} from "@/lib/logbook/consumption"
+import { resolveTravelRate } from "@/lib/logbook/rates"
+import { listTravelRates } from "@/app/actions/travel-rates"
+import { formatMoney } from "@/lib/money"
 import {
   FUEL_TYPE_LABELS,
   VEHICLE_OWNERSHIP_LABELS,
@@ -143,6 +149,19 @@ export default async function VehicleLogbookPage({
     purchasedLitres,
   })
 
+  // Nahrada za km sa berie sadzbou platnou ku KONCU obdobia. Presnejsie by
+  // bolo ratat kazdu jazdu jej vlastnou sadzbou; to ma zmysel az vtedy, ked
+  // sa obdobie tiahne cez zmenu sadzby, a vtedy to tu aj priznavame.
+  const travelRates = await listTravelRates()
+  const rate = resolveTravelRate(travelRates, periodTo)
+  const rateAtStart = resolveTravelRate(travelRates, periodFrom)
+  const rateChangedInPeriod =
+    rate !== null && rateAtStart !== null && rate.rate_per_km !== rateAtStart.rate_per_km
+
+  const reimbursement = rate
+    ? travelReimbursement({ km: businessKm, ratePerKm: rate.rate_per_km })
+    : null
+
   return (
     <div className="mx-auto grid max-w-6xl gap-6">
       <div className="grid gap-2">
@@ -249,6 +268,56 @@ export default async function VehicleLogbookPage({
                 súkromne a z jednej nádrže sa jazdí oboje. Služobný podiel sa
                 preto určuje pomerom kilometrov, nie výberom tankovaní.
               </p>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Náhrada za služobné km</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3">
+          {reimbursement === null || rate === null ? (
+            <p className="text-muted-foreground text-sm">
+              Zatiaľ nie je zadaná žiadna sadzba cestovnej náhrady platná
+              k {periodTo}. Doplň ju v{" "}
+              <Link href="/app/settings" className="underline underline-offset-4">
+                nastaveniach
+              </Link>
+              . Sadzbu zámerne nedopĺňame za teba — je to zákonné číslo, ktoré
+              sa mení v čase.
+            </p>
+          ) : (
+            <>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Field
+                  label="Služobné kilometre"
+                  value={formatKm(fuel?.businessKm ?? businessKm)}
+                  note={`z ${formatKm(totalKm)} spolu`}
+                />
+                <Field
+                  label="Sadzba za km"
+                  value={formatMoney(rate.rate_per_km, rate.currency)}
+                  note={
+                    rate.organization_id
+                      ? "vlastná sadzba firmy"
+                      : "zákonná sadzba"
+                  }
+                />
+                <Field
+                  label="Náhrada spolu"
+                  value={formatMoney(reimbursement.total, rate.currency)}
+                  note={`platná od ${rate.valid_from}`}
+                />
+              </div>
+              {rateChangedInPeriod ? (
+                <p className="text-muted-foreground text-sm">
+                  Pozor: sadzba sa počas zvoleného obdobia menila. Celá náhrada
+                  je tu spočítaná sadzbou platnou k {periodTo}. Ak potrebuješ
+                  presné čísla, rozdeľ obdobie podľa dátumu zmeny.
+                </p>
+              ) : null}
             </>
           )}
         </CardContent>

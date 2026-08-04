@@ -10,6 +10,8 @@ import type { Database } from "@/lib/supabase/database.types"
 import {
   recurringSchema,
   CADENCE_LABELS,
+  RECURRING_SEND_METHOD_LABELS,
+  type RecurringSendMethod,
   type RecurringValues,
 } from "@/lib/validation/recurring"
 import { VAT_MODE_LABELS, type VatMode } from "@/lib/validation/org"
@@ -68,6 +70,7 @@ export function RecurringForm({
       intervalDays: recurring?.interval_days ?? undefined,
       nextRunAt: recurring?.next_run_at ?? today(),
       active: recurring?.active ?? true,
+      sendMethod: recurring?.send_method ?? "none",
       template: {
         vatMode: (tpl.vatMode as VatMode) ?? "payer",
         currency: tpl.currency ?? "EUR",
@@ -245,6 +248,43 @@ export function RecurringForm({
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="sendMethod"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Po vystavení</FormLabel>
+              <Select value={field.value} onValueChange={field.onChange}>
+                <FormControl>
+                  <SelectTrigger className="w-full">
+                    <SelectValue>
+                      {(v: RecurringSendMethod) =>
+                        RECURRING_SEND_METHOD_LABELS[v]
+                      }
+                    </SelectValue>
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {Object.entries(RECURRING_SEND_METHOD_LABELS).map(
+                    ([v, label]) => (
+                      <SelectItem key={v} value={v}>
+                        {label}
+                      </SelectItem>
+                    ),
+                  )}
+                </SelectContent>
+              </Select>
+              <p className="text-muted-foreground text-xs">
+                {field.value === "email"
+                  ? "Faktúra odíde odberateľovi automaticky aj s PDF prílohou. Musí mať vyplnený e-mail."
+                  : field.value === "peppol"
+                    ? "Peppol zatiaľ nie je v cron behu podporený — doklad sa vystaví a zostane na ručné odoslanie."
+                    : "Doklad sa len vystaví. Odoslať ho môžeš ručne z jeho detailu."}
+              </p>
+            </FormItem>
+          )}
+        />
 
         {/* Items */}
         <div className="grid gap-2">
