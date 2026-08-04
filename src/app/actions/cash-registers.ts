@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Database } from "@/lib/supabase/database.types"
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { writeOutcome } from "@/lib/supabase/affected"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
 import {
@@ -65,8 +66,93 @@ export async function createCashRegister(
     .select("id")
     .single()
   if (error) return { ok: false, error: "Pokladňu sa nepodarilo uložiť." }
+
+  await ensureCashSequences(supabase, orgId, data.id)
+
   revalidatePath(PATH)
   return { ok: true, id: data.id }
+}
+
+/**
+ * Zalozi pokladni prijmovy a vydavkovy ciselny rad, ak ich este nema, a
+ * naviaze ich cez `sequence_in_id` / `sequence_out_id`.
+ *
+ * Vola sa aj pri zapise dokladu, nielen pri vzniku pokladne: pokladne
+ * zalozene pred touto migraciou rady nemaju a bez doplnenia by ich doklady
+ * ostali bez cisla.
+ *
+ * Zlyhanie sa NEHLASI ako chyba akcie — pokladna je vytvorena a doklad sa da
+ * ocislovat rucne. Tichy nesulad je horsi nez chybajuce cislo, tak sa aspon
+ * zaloguje.
+ */
+async function ensureCashSequences(
+  supabase: SupabaseClient<Database>,
+  orgId: string,
+  registerId: string,
+): Promise<{ inId: string | null; outId: string | null }> {
+  const { data: register } = await supabase
+    .from("cash_registers")
+    .select("sequence_in_id, sequence_out_id")
+    .eq("id", registerId)
+    .eq("organization_id", orgId)
+    .maybeSingle()
+  if (!register) return { inId: null, outId: null }
+
+  const year = new Date().getFullYear()
+  const wanted: { kind: "cash_in" | "cash_out"; prefix: string }[] = [
+    // PPD = prijmovy pokladnicny doklad, VPD = vydavkovy. Bezne skratky, aby
+    // bolo z cisla vidiet, o ktory rad ide.
+    { kind: "cash_in", prefix: "PPD" },
+    { kind: "cash_out", prefix: "VPD" },
+  ]
+
+  const result: { inId: string | null; outId: string | null } = {
+    inId: register.sequence_in_id,
+    outId: register.sequence_out_id,
+  }
+
+  for (const w of wanted) {
+    const existing = w.kind === "cash_in" ? result.inId : result.outId
+    if (existing) continue
+
+    const { data: seq, error } = await supabase
+      .from("number_sequences")
+      .insert({
+        organization_id: orgId,
+        kind: w.kind,
+        cash_register_id: registerId,
+        doc_type: null,
+        year,
+        prefix: w.prefix,
+        format: "{prefix}{year}{seq}",
+        padding: 4,
+      })
+      .select("id")
+      .single()
+    if (error || !seq) {
+      console.error("[cash] ciselny rad sa nepodarilo zalozit", {
+        registerId,
+        kind: w.kind,
+        error: error?.message,
+      })
+      continue
+    }
+    if (w.kind === "cash_in") result.inId = seq.id
+    else result.outId = seq.id
+  }
+
+  if (
+    result.inId !== register.sequence_in_id ||
+    result.outId !== register.sequence_out_id
+  ) {
+    await supabase
+      .from("cash_registers")
+      .update({ sequence_in_id: result.inId, sequence_out_id: result.outId })
+      .eq("id", registerId)
+      .eq("organization_id", orgId)
+  }
+
+  return result
 }
 
 export async function updateCashRegister(
@@ -177,13 +263,42 @@ export async function createCashItem(
     if (!ok) return { ok: false, error: "Náklad sa nenašiel." }
   }
 
+  // Cislo z ciselneho radu, ked ho pouzivatel nezadal rucne. Pri pokladnicnej
+  // knihe je suvisly rad zakonna poziadavka, takze volny text nestaci.
+  //
+  // RPC sa vola service-role klientom: `next_sequence_number` je `security
+  // definer` a pravo na priame volanie cez PostgREST je odobrate, aby si nikto
+  // nemohol minat cisla z cudzieho radu. Prislusnost k firme uz overil
+  // `belongsToOrg` vyssie.
+  let number = v.number ?? null
+  if (!number) {
+    const seq = await ensureCashSequences(supabase, orgId, v.cashRegisterId)
+    const sequenceId = v.direction === "in" ? seq.inId : seq.outId
+    if (sequenceId) {
+      const year = Number(v.issuedOn.slice(0, 4)) || new Date().getFullYear()
+      const { data: allocated, error: seqError } = await createAdminClient().rpc(
+        "next_sequence_number",
+        { p_sequence_id: sequenceId, p_year: year },
+      )
+      if (seqError) {
+        console.error("[cash] cislo z radu sa nepodarilo pridelit", {
+          registerId: v.cashRegisterId,
+          direction: v.direction,
+          error: seqError.message,
+        })
+      } else {
+        number = allocated
+      }
+    }
+  }
+
   const { data, error } = await supabase
     .from("cash_register_items")
     .insert({
       organization_id: orgId,
       cash_register_id: v.cashRegisterId,
       direction: v.direction,
-      number: v.number ?? null,
+      number,
       issued_on: v.issuedOn,
       amount: v.amount,
       vat_amount: v.vatAmount,

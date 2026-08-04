@@ -18,6 +18,7 @@ export const metadata = { title: "Reporty — Synapse Faktúra" }
 
 const EXPORTS = [
   { type: "accounting-csv", label: "Účtovný export (CSV)" },
+  { type: "accounting-items-csv", label: "Účtovný export — položky (CSV)" },
   { type: "accounting-xml", label: "Účtovný export (XML)" },
   { type: "kontrolny-vykaz", label: "Kontrolný výkaz DPH (XML)" },
   { type: "suhrnny-vykaz", label: "Súhrnný výkaz (XML)" },

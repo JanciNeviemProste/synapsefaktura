@@ -96,6 +96,12 @@ export function InvoiceEditor({
       footerNotes: doc?.footer_notes ?? "",
       // `null` = "podla typu dokladu". Nie `false`, ani `true`.
       showPrices: doc?.show_prices ?? null,
+      // Uctovne clenenie je na polozkach; formular ho drzi na doklade, takze
+      // sa nacita z prvej polozky — vsetky ho maju rovnake.
+      accountCode: existingItems?.[0]?.account_code ?? "",
+      costCenter: existingItems?.[0]?.cost_center ?? "",
+      projectCode: existingItems?.[0]?.project_code ?? "",
+      activityCode: existingItems?.[0]?.activity_code ?? "",
       items:
         existingItems && existingItems.length
           ? existingItems.map((i) => ({
@@ -563,6 +569,45 @@ export function InvoiceEditor({
                 <span className="tabular-nums">
                   {formatMoney(totals.total, currency)}
                 </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Uctovne clenenie */}
+        <Card>
+          <CardContent className="grid gap-4 pt-6">
+            <div className="grid gap-1">
+              <Label>Účtovné členenie</Label>
+              <p className="text-muted-foreground text-xs">
+                Voliteľné. Zapíše sa na všetky položky dokladu a vstúpi do
+                exportu pre účtovníka.
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-4">
+              <div className="grid gap-2">
+                <Label htmlFor="account-code" className="text-xs">
+                  Účet
+                </Label>
+                <Input id="account-code" {...form.register("accountCode")} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="cost-center" className="text-xs">
+                  Stredisko
+                </Label>
+                <Input id="cost-center" {...form.register("costCenter")} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="project-code" className="text-xs">
+                  Zákazka
+                </Label>
+                <Input id="project-code" {...form.register("projectCode")} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="activity-code" className="text-xs">
+                  Činnosť
+                </Label>
+                <Input id="activity-code" {...form.register("activityCode")} />
               </div>
             </div>
           </CardContent>

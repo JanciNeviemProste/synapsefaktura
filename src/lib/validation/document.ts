@@ -43,6 +43,17 @@ export const documentSchema = z.object({
    * prirodzenemu spravaniu.
    */
   showPrices: z.boolean().nullable().optional(),
+  /**
+   * Účtovné členenie. V schéme sedí na položke (`document_items`), pretože
+   * jeden doklad môže niesť riadky z rôznych stredísk. Formulár ho zatiaľ
+   * vystavuje na úrovni dokladu a zapíše na všetky položky — tak to malé firmy
+   * v praxi používajú. Rozlíšenie po položkách je tým pádom pripravené, len
+   * zatiaľ neponúknuté.
+   */
+  accountCode: z.string().trim().optional().or(z.literal("")),
+  costCenter: z.string().trim().optional().or(z.literal("")),
+  projectCode: z.string().trim().optional().or(z.literal("")),
+  activityCode: z.string().trim().optional().or(z.literal("")),
   // Vazba na zdrojovy doklad (prevod, dobropis). Ked chyba, zapis sa jej
   // nedotkne — existujuca vazba tak prezije bezne ulozenie z editora.
   relatedDocumentId: z.string().uuid().nullable().optional(),

@@ -188,6 +188,13 @@ export async function saveDocument(
     line_vat: line.lineVat,
     line_total: line.lineTotal,
     product_id: v.items[idx].productId ?? null,
+    // Uctovne clenenie sa zadava na urovni dokladu a zapisuje na kazdu polozku.
+    // Prazdne pole ide ako `null`, nie ako prazdny retazec: export by inak
+    // uctovnikovi posielal stlpec, ktory vyzera vyplneny, ale nic nenesie.
+    account_code: v.accountCode || null,
+    cost_center: v.costCenter || null,
+    project_code: v.projectCode || null,
+    activity_code: v.activityCode || null,
   }))
 
   // Hlavicka aj polozky idu do DB jednym volanim, ktore je na strane Postgresu

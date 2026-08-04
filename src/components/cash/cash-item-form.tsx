@@ -173,8 +173,13 @@ export function CashItemForm({
               <FormItem>
                 <FormLabel>Číslo dokladu</FormLabel>
                 <FormControl>
-                  <Input placeholder="Napr. PD2026/001" {...field} />
+                  <Input placeholder="Pridelí sa automaticky" {...field} />
                 </FormControl>
+                <p className="text-muted-foreground text-xs">
+                  Nechaj prázdne a číslo sa pridelí z číselného radu pokladne
+                  (PPD/VPD). Pri pokladničnej knihe je súvislý rad zákonná
+                  požiadavka, takže vlastné číslo zadávaj len s dôvodom.
+                </p>
                 <FormMessage />
               </FormItem>
             )}

@@ -74,6 +74,91 @@ export function buildAccountingCsv(invoices: ExportInvoice[]): string {
   return "﻿" + lines.join("\r\n")
 }
 
+/**
+ * Riadok položkového exportu — účtovné členenie sedí na položke, nie na
+ * hlavičke, takže hlavičkový export ho nemá kam dať.
+ */
+export interface ExportInvoiceItem {
+  documentNumber: string | null
+  issueDate: string | null
+  supplyDate: string | null
+  contactName: string | null
+  contactIco: string | null
+  description: string
+  quantity: number
+  unit: string
+  unitPrice: number
+  vatRate: number
+  lineBase: number
+  lineVat: number
+  lineTotal: number
+  currency: string
+  accountCode: string | null
+  costCenter: string | null
+  projectCode: string | null
+  activityCode: string | null
+}
+
+/**
+ * Položkový export do účtovníctva (Pohoda, Omega a spol.).
+ *
+ * Hlavičkový export nesie sumy za celý doklad, takže účtovník z neho nevie,
+ * na aký účet, stredisko či zákazku riadok patrí. Tie stĺpce v `document_items`
+ * existovali, ale nikto ich nečítal — tento export je to miesto, kde sa
+ * uplatnia.
+ */
+export function buildAccountingItemsCsv(items: ExportInvoiceItem[]): string {
+  const header = [
+    "Číslo dokladu",
+    "Dátum vystavenia",
+    "Dátum dodania",
+    "Odberateľ",
+    "IČO",
+    "Popis položky",
+    "Množstvo",
+    "MJ",
+    "Cena/MJ",
+    "Sadzba DPH",
+    "Základ",
+    "DPH",
+    "Spolu",
+    "Mena",
+    "Účet",
+    "Stredisko",
+    "Zákazka",
+    "Činnosť",
+  ]
+  const lines = [header.join(";")]
+  for (const i of items) {
+    lines.push(
+      [
+        i.documentNumber,
+        i.issueDate,
+        i.supplyDate,
+        i.contactName,
+        i.contactIco,
+        i.description,
+        i.quantity,
+        i.unit,
+        i.unitPrice.toFixed(4),
+        i.vatRate,
+        i.lineBase.toFixed(2),
+        i.lineVat.toFixed(2),
+        i.lineTotal.toFixed(2),
+        i.currency,
+        i.accountCode,
+        i.costCenter,
+        i.projectCode,
+        i.activityCode,
+      ]
+        .map(csvCell)
+        .join(";"),
+    )
+  }
+  // BOM so Excel reads UTF-8 correctly.
+  return "﻿" + lines.join("\r\n")
+}
+
 export function buildAccountingXml(invoices: ExportInvoice[]): string {
   const items = invoices
     .map(

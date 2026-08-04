@@ -1212,10 +1212,12 @@ export type Database = {
       }
       number_sequences: {
         Row: {
+          cash_register_id: string | null
           created_at: string
-          doc_type: Database["public"]["Enums"]["document_type"]
+          doc_type: Database["public"]["Enums"]["document_type"] | null
           format: string
           id: string
+          kind: string
           next_number: number
           organization_id: string
           padding: number
@@ -1223,10 +1225,12 @@ export type Database = {
           year: number
         }
         Insert: {
+          cash_register_id?: string | null
           created_at?: string
-          doc_type: Database["public"]["Enums"]["document_type"]
+          doc_type?: Database["public"]["Enums"]["document_type"] | null
           format?: string
           id?: string
+          kind?: string
           next_number?: number
           organization_id: string
           padding?: number
@@ -1234,10 +1238,12 @@ export type Database = {
           year: number
         }
         Update: {
+          cash_register_id?: string | null
           created_at?: string
-          doc_type?: Database["public"]["Enums"]["document_type"]
+          doc_type?: Database["public"]["Enums"]["document_type"] | null
           format?: string
           id?: string
+          kind?: string
           next_number?: number
           organization_id?: string
           padding?: number
@@ -2304,6 +2310,10 @@ export type Database = {
           p_org: string
           p_year: number
         }
+        Returns: string
+      }
+      next_sequence_number: {
+        Args: { p_sequence_id: string; p_year: number }
         Returns: string
       }
       save_document_with_items: {
