@@ -41,3 +41,86 @@ jobs:
           # Real values are configured in the Vercel project, not in CI.
           NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+
+  # Applies every migration to an EMPTY database, in filename order — exactly
+  # what a fresh project would do. Migrations applied one-by-one to a live
+  # Supabase never prove this: the order there could differ, and a file that
+  # depends on something an earlier one dropped would still "work".
+  #
+  # This also guards the bookkeeping. Ten migrations were once recorded under
+  # timestamps that did not match their filenames (applied via Supabase MCP,
+  # which stamps its own), so `supabase db push` would have re-run them — and
+  # six of the six oldest are not idempotent. Nothing surfaced that until it
+  # was looked for. The uniqueness checks below keep the filename the single
+  # identity of a migration.
+  migrations:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          # No password anywhere: the container is throwaway and reachable only
+          # from this job. A hardcoded one would be a false positive the secret
+          # scanner flags on every run, which teaches people to ignore it.
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Migration filenames must stay unique
+        run: |
+          cd supabase/migrations
+          dupe_version=$(ls *.sql | cut -d_ -f1 | sort | uniq -d)
+          if [ -n "$dupe_version" ]; then
+            echo "Duplicate version prefix: $dupe_version"; exit 1
+          fi
+          # The name is the fallback identity when a version gets mis-stamped.
+          dupe_name=$(ls *.sql | sed -E 's/^[0-9]+_//; s/\.sql$//' | sort | uniq -d)
+          if [ -n "$dupe_name" ]; then
+            echo "Duplicate migration name: $dupe_name"; exit 1
+          fi
+          bad=$(ls *.sql | grep -vE '^[0-9]{14}_[a-z0-9_]+\.sql$' || true)
+          if [ -n "$bad" ]; then
+            echo "Filename is not <14-digit timestamp>_<snake_case>.sql: $bad"; exit 1
+          fi
+
+      - name: Apply every migration to an empty database
+        env:
+          # `drop … if exists` inside the migrations emits a NOTICE per object;
+          # on a clean database that is ~60 lines of noise that hides real output.
+          PGOPTIONS: -c client_min_messages=warning
+          PSQL: psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 --quiet
+        run: |
+          $PSQL -f supabase/ci/pg-stub.sql
+          for f in supabase/migrations/*.sql; do
+            echo "  $(basename "$f")"
+            $PSQL -f "$f"
+          done
+
+      - name: Report resulting schema
+        run: |
+          psql -h localhost -U postgres -d postgres -t -A -c "
+            select 'tables:   ' || count(*) from information_schema.tables where table_schema='public'
+            union all select 'enums:    ' || count(*) from pg_type t
+              join pg_namespace n on n.oid=t.typnamespace where n.nspname='public' and t.typtype='e'
+            union all select 'policies: ' || count(*) from pg_policies where schemaname='public'
+            union all select 'functions:' || count(*) from pg_proc p
+              join pg_namespace n on n.oid=p.pronamespace where n.nspname='public'
+            union all select 'no RLS:   ' || count(*) from pg_tables
+              where schemaname='public' and not rowsecurity
+          " | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Every public table must have RLS enabled
+        run: |
+          open=$(psql -h localhost -U postgres -d postgres -t -A -c "
+            select string_agg(tablename, ', ') from pg_tables
+             where schemaname='public' and not rowsecurity")
+          if [ -n "$open" ]; then
+            echo "Tables without RLS: $open"; exit 1
+          fi
