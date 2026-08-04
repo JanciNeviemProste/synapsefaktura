@@ -148,6 +148,11 @@ function makeDoc(over: Partial<DocumentRow> = {}): DocumentRow {
 
 function makeItem(over: Partial<DocumentItemRow> = {}): DocumentItemRow {
   return {
+    // Uctovne clenenie (export do uctovnictva) — na vypocty tu vplyv nema.
+    account_code: null,
+    activity_code: null,
+    cost_center: null,
+    project_code: null,
     created_at: "2026-03-01T00:00:00Z",
     description: "Konzultačné služby",
     discount_pct: 0,

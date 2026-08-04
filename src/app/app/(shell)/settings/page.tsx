@@ -3,11 +3,13 @@ import { getCurrentOrgId } from "@/lib/auth/current-org"
 import { OrgSettings } from "@/components/settings/org-settings"
 import { SequencesSettings } from "@/components/settings/sequences-settings"
 import { BankAccountsSettings } from "@/components/settings/bank-accounts-settings"
+import { TagsSettings } from "@/components/settings/tags-settings"
 import { EInvoiceSettings } from "@/components/settings/einvoice-settings"
 import { BillingSettings } from "@/components/settings/billing-settings"
 import { MembersSettings } from "@/components/settings/members-settings"
 import { getOrganizationProfile } from "@/app/actions/org"
 import { listBankAccounts } from "@/app/actions/bank-accounts"
+import { listTags } from "@/app/actions/tags"
 import { getEInvoiceSettings } from "@/app/actions/einvoice-settings"
 import { getBillingInfo } from "@/app/actions/billing"
 import { listMembers, listPendingInvites } from "@/app/actions/members"
@@ -22,6 +24,7 @@ export default async function SettingsPage() {
   const [
     { data: sequences },
     bankAccounts,
+    tags,
     orgProfile,
     einvoice,
     billing,
@@ -36,6 +39,7 @@ export default async function SettingsPage() {
       .order("year", { ascending: false })
       .order("doc_type"),
     listBankAccounts(),
+    listTags(),
     getOrganizationProfile(),
     getEInvoiceSettings(),
     getBillingInfo(),
@@ -85,6 +89,8 @@ export default async function SettingsPage() {
       />
 
       <BankAccountsSettings accounts={bankAccounts} />
+
+      <TagsSettings tags={tags} />
 
       <SequencesSettings sequences={sequences ?? []} />
       {einvoice ? <EInvoiceSettings initial={einvoice} /> : null}

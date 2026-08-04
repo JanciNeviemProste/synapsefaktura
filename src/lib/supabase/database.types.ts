@@ -311,6 +311,208 @@ export type Database = {
           },
         ]
       }
+      cash_register_items: {
+        Row: {
+          amount: number
+          cash_register_id: string
+          contact_id: string | null
+          created_at: string
+          description: string | null
+          direction: Database["public"]["Enums"]["cash_flow_direction"]
+          document_id: string | null
+          expense_id: string | null
+          id: string
+          issued_on: string
+          number: string | null
+          organization_id: string
+          vat_amount: number
+        }
+        Insert: {
+          amount: number
+          cash_register_id: string
+          contact_id?: string | null
+          created_at?: string
+          description?: string | null
+          direction: Database["public"]["Enums"]["cash_flow_direction"]
+          document_id?: string | null
+          expense_id?: string | null
+          id?: string
+          issued_on?: string
+          number?: string | null
+          organization_id: string
+          vat_amount?: number
+        }
+        Update: {
+          amount?: number
+          cash_register_id?: string
+          contact_id?: string | null
+          created_at?: string
+          description?: string | null
+          direction?: Database["public"]["Enums"]["cash_flow_direction"]
+          document_id?: string | null
+          expense_id?: string | null
+          id?: string
+          issued_on?: string
+          number?: string | null
+          organization_id?: string
+          vat_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_register_items_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_items_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_items_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_items_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_register_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_registers: {
+        Row: {
+          active: boolean
+          created_at: string
+          currency: string
+          description: string | null
+          id: string
+          name: string
+          organization_id: string
+          sequence_in_id: string | null
+          sequence_out_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          sequence_in_id?: string | null
+          sequence_out_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          sequence_in_id?: string | null
+          sequence_out_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_registers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_registers_sequence_in_id_fkey"
+            columns: ["sequence_in_id"]
+            isOneToOne: false
+            referencedRelation: "number_sequences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_registers_sequence_out_id_fkey"
+            columns: ["sequence_out_id"]
+            isOneToOne: false
+            referencedRelation: "number_sequences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contact_persons: {
+        Row: {
+          contact_id: string
+          created_at: string
+          email: string | null
+          id: string
+          is_primary: boolean
+          name: string
+          note: string | null
+          organization_id: string
+          phone: string | null
+          position: string | null
+          updated_at: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_primary?: boolean
+          name: string
+          note?: string | null
+          organization_id: string
+          phone?: string | null
+          position?: string | null
+          updated_at?: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_primary?: boolean
+          name?: string
+          note?: string | null
+          organization_id?: string
+          phone?: string | null
+          position?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_persons_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_persons_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contacts: {
         Row: {
           city: string | null
@@ -387,6 +589,9 @@ export type Database = {
       }
       document_items: {
         Row: {
+          account_code: string | null
+          activity_code: string | null
+          cost_center: string | null
           created_at: string
           description: string
           discount_pct: number
@@ -397,12 +602,16 @@ export type Database = {
           line_vat: number
           position: number
           product_id: string | null
+          project_code: string | null
           quantity: number
           unit: string
           unit_price: number
           vat_rate: number
         }
         Insert: {
+          account_code?: string | null
+          activity_code?: string | null
+          cost_center?: string | null
           created_at?: string
           description?: string
           discount_pct?: number
@@ -413,12 +622,16 @@ export type Database = {
           line_vat?: number
           position?: number
           product_id?: string | null
+          project_code?: string | null
           quantity?: number
           unit?: string
           unit_price?: number
           vat_rate?: number
         }
         Update: {
+          account_code?: string | null
+          activity_code?: string | null
+          cost_center?: string | null
           created_at?: string
           description?: string
           discount_pct?: number
@@ -429,6 +642,7 @@ export type Database = {
           line_vat?: number
           position?: number
           product_id?: string | null
+          project_code?: string | null
           quantity?: number
           unit?: string
           unit_price?: number
@@ -645,6 +859,119 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_items: {
+        Row: {
+          account_code: string | null
+          activity_code: string | null
+          cost_center: string | null
+          created_at: string
+          description: string
+          expense_id: string
+          id: string
+          line_base: number
+          line_total: number
+          line_vat: number
+          position: number
+          project_code: string | null
+          quantity: number
+          unit: string
+          unit_price: number
+          vat_rate: number
+        }
+        Insert: {
+          account_code?: string | null
+          activity_code?: string | null
+          cost_center?: string | null
+          created_at?: string
+          description?: string
+          expense_id: string
+          id?: string
+          line_base?: number
+          line_total?: number
+          line_vat?: number
+          position?: number
+          project_code?: string | null
+          quantity?: number
+          unit?: string
+          unit_price?: number
+          vat_rate?: number
+        }
+        Update: {
+          account_code?: string | null
+          activity_code?: string | null
+          cost_center?: string | null
+          created_at?: string
+          description?: string
+          expense_id?: string
+          id?: string
+          line_base?: number
+          line_total?: number
+          line_vat?: number
+          position?: number
+          project_code?: string | null
+          quantity?: number
+          unit?: string
+          unit_price?: number
+          vat_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_items_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_payments: {
+        Row: {
+          amount: number
+          bank_transaction_id: string | null
+          created_at: string
+          expense_id: string
+          id: string
+          method: Database["public"]["Enums"]["payment_method"]
+          note: string | null
+          paid_at: string
+        }
+        Insert: {
+          amount: number
+          bank_transaction_id?: string | null
+          created_at?: string
+          expense_id: string
+          id?: string
+          method?: Database["public"]["Enums"]["payment_method"]
+          note?: string | null
+          paid_at?: string
+        }
+        Update: {
+          amount?: number
+          bank_transaction_id?: string | null
+          created_at?: string
+          expense_id?: string
+          id?: string
+          method?: Database["public"]["Enums"]["payment_method"]
+          note?: string | null
+          paid_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_payments_bank_transaction_id_fkey"
+            columns: ["bank_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "bank_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_payments_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
             referencedColumns: ["id"]
           },
         ]
@@ -1229,6 +1556,144 @@ export type Database = {
           },
         ]
       }
+      stock_movements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          document_id: string | null
+          expense_id: string | null
+          id: string
+          moved_at: string
+          note: string | null
+          organization_id: string
+          product_id: string
+          quantity: number
+          type: Database["public"]["Enums"]["stock_movement_type"]
+          unit_cost: number | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          document_id?: string | null
+          expense_id?: string | null
+          id?: string
+          moved_at?: string
+          note?: string | null
+          organization_id: string
+          product_id: string
+          quantity: number
+          type: Database["public"]["Enums"]["stock_movement_type"]
+          unit_cost?: number | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          document_id?: string | null
+          expense_id?: string | null
+          id?: string
+          moved_at?: string
+          note?: string | null
+          organization_id?: string
+          product_id?: string
+          quantity?: number
+          type?: Database["public"]["Enums"]["stock_movement_type"]
+          unit_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      taggings: {
+        Row: {
+          created_at: string
+          id: string
+          tag_id: string
+          taggable_id: string
+          taggable_type: Database["public"]["Enums"]["taggable_type"]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          tag_id: string
+          taggable_id: string
+          taggable_type: Database["public"]["Enums"]["taggable_type"]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          tag_id?: string
+          taggable_id?: string
+          taggable_type?: Database["public"]["Enums"]["taggable_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "taggings_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tags: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          name: string
+          organization_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          organization_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tags_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vat_rates: {
         Row: {
           category_note: string | null
@@ -1331,6 +1796,7 @@ export type Database = {
     }
     Enums: {
       bank_match_status: "unmatched" | "matched" | "ignored"
+      cash_flow_direction: "in" | "out"
       contact_type: "customer" | "supplier" | "both"
       document_status:
         | "draft"
@@ -1371,6 +1837,8 @@ export type Database = {
       recurring_cadence: "weekly" | "monthly" | "custom"
       recurring_send_method: "email" | "peppol" | "none"
       reminder_channel: "email" | "sms"
+      stock_movement_type: "in" | "out" | "adjustment" | "return"
+      taggable_type: "document" | "expense" | "contact"
       vat_mode:
         | "payer"
         | "non_payer"
@@ -1510,6 +1978,7 @@ export const Constants = {
   public: {
     Enums: {
       bank_match_status: ["unmatched", "matched", "ignored"],
+      cash_flow_direction: ["in", "out"],
       contact_type: ["customer", "supplier", "both"],
       document_status: [
         "draft",
@@ -1554,6 +2023,8 @@ export const Constants = {
       recurring_cadence: ["weekly", "monthly", "custom"],
       recurring_send_method: ["email", "peppol", "none"],
       reminder_channel: ["email", "sms"],
+      stock_movement_type: ["in", "out", "adjustment", "return"],
+      taggable_type: ["document", "expense", "contact"],
       vat_mode: [
         "payer",
         "non_payer",

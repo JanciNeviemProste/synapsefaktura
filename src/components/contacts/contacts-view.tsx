@@ -2,13 +2,14 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Plus, Pencil, Trash2, Users } from "lucide-react"
+import { Plus, Pencil, Trash2, UserRound, Users } from "lucide-react"
 import { toast } from "sonner"
 
 import type { Database } from "@/lib/supabase/database.types"
 import { CONTACT_TYPE_LABELS } from "@/lib/validation/contact"
 import { deleteContact } from "@/app/actions/contacts"
 import { ContactForm } from "./contact-form"
+import { ContactPersonsPanel } from "./contact-persons-panel"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -45,6 +46,10 @@ export function ContactsView({ contacts }: { contacts: Contact[] }) {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Contact | null>(null)
   const [deleting, setDeleting] = useState<Contact | null>(null)
+  // Kontaktne osoby maju vlastny dialog, nie sekciu vo formulari klienta:
+  // ukladaju sa okamzite (formular klienta ma neulozeny stav) a novy klient
+  // este nema id, na ktore by sa dali naviazat.
+  const [persons, setPersons] = useState<Contact | null>(null)
   const [pending, startTransition] = useTransition()
 
   function openNew() {
@@ -114,7 +119,7 @@ export function ContactsView({ contacts }: { contacts: Contact[] }) {
                 <TableHead>IČO</TableHead>
                 <TableHead>IČ DPH</TableHead>
                 <TableHead>E-mail</TableHead>
-                <TableHead className="w-24 text-right">Akcie</TableHead>
+                <TableHead className="w-32 text-right">Akcie</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -132,6 +137,14 @@ export function ContactsView({ contacts }: { contacts: Contact[] }) {
                   <TableCell>{c.ic_dph ?? "—"}</TableCell>
                   <TableCell>{c.email ?? "—"}</TableCell>
                   <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => setPersons(c)}
+                      title="Kontaktné osoby"
+                    >
+                      <UserRound className="size-4" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon-sm"
@@ -167,6 +180,18 @@ export function ContactsView({ contacts }: { contacts: Contact[] }) {
             </DialogDescription>
           </DialogHeader>
           <ContactForm contact={editing} onDone={handleDone} />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!persons} onOpenChange={(o) => !o && setPersons(null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Kontaktné osoby</DialogTitle>
+            <DialogDescription>
+              Klient „{persons?.name}" — pridaj toľko osôb, koľko treba.
+            </DialogDescription>
+          </DialogHeader>
+          {persons && <ContactPersonsPanel contactId={persons.id} />}
         </DialogContent>
       </Dialog>
 

@@ -125,6 +125,11 @@ function makeDocument(overrides: Partial<DocumentRow> = {}): DocumentRow {
 
 function makeItem(overrides: Partial<DocumentItemRow> = {}): DocumentItemRow {
   return {
+    // Uctovne clenenie (export do uctovnictva) — do UBL nevstupuje.
+    account_code: null,
+    activity_code: null,
+    cost_center: null,
+    project_code: null,
     created_at: "2026-01-01T00:00:00Z",
     description: "Položka",
     discount_pct: 0,
