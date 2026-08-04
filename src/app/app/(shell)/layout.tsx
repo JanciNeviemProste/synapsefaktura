@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
-import { Sidebar } from "@/components/app/sidebar"
+import { Sidebar, MobileNav } from "@/components/app/sidebar"
 import { UserMenu } from "@/components/app/user-menu"
 import { OrgSwitcher } from "@/components/app/org-switcher"
 import { ThemeToggle } from "@/components/app/theme-toggle"
@@ -49,7 +49,10 @@ export default async function ShellLayout({
         <Sidebar />
         <div className="flex flex-1 flex-col">
           <header className="bg-background flex h-14 items-center justify-between gap-2 border-b px-4">
-            <OrgSwitcher orgs={orgs} activeId={activeOrgId} />
+            <div className="flex min-w-0 items-center gap-1">
+              <MobileNav />
+              <OrgSwitcher orgs={orgs} activeId={activeOrgId} />
+            </div>
             <div className="flex items-center gap-1">
               <LocaleSwitcher />
               <ThemeToggle />

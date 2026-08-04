@@ -1,9 +1,13 @@
 import { createClient } from "@/lib/supabase/server"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
+import { OrgSettings } from "@/components/settings/org-settings"
 import { SequencesSettings } from "@/components/settings/sequences-settings"
+import { BankAccountsSettings } from "@/components/settings/bank-accounts-settings"
 import { EInvoiceSettings } from "@/components/settings/einvoice-settings"
 import { BillingSettings } from "@/components/settings/billing-settings"
 import { MembersSettings } from "@/components/settings/members-settings"
+import { getOrganizationProfile } from "@/app/actions/org"
+import { listBankAccounts } from "@/app/actions/bank-accounts"
 import { getEInvoiceSettings } from "@/app/actions/einvoice-settings"
 import { getBillingInfo } from "@/app/actions/billing"
 import { listMembers, listPendingInvites } from "@/app/actions/members"
@@ -17,6 +21,8 @@ export default async function SettingsPage() {
 
   const [
     { data: sequences },
+    bankAccounts,
+    orgProfile,
     einvoice,
     billing,
     members,
@@ -29,6 +35,8 @@ export default async function SettingsPage() {
       .select("*")
       .order("year", { ascending: false })
       .order("doc_type"),
+    listBankAccounts(),
+    getOrganizationProfile(),
     getEInvoiceSettings(),
     getBillingInfo(),
     listMembers(),
@@ -58,9 +66,13 @@ export default async function SettingsPage() {
       <div>
         <h1 className="text-2xl font-semibold">Nastavenia</h1>
         <p className="text-muted-foreground text-sm">
-          Predplatné, tím, číselné rady a e-fakturácia.
+          Firemné údaje, predplatné, tím, číselné rady a e-fakturácia.
         </p>
       </div>
+
+      {orgProfile ? (
+        <OrgSettings initial={orgProfile} canManage={canManage} />
+      ) : null}
 
       {billing ? <BillingSettings initial={billing} /> : null}
 
@@ -71,6 +83,8 @@ export default async function SettingsPage() {
         multiUserEnabled={multiUserEnabled}
         appUrl={appBaseUrl()}
       />
+
+      <BankAccountsSettings accounts={bankAccounts} />
 
       <SequencesSettings sequences={sequences ?? []} />
       {einvoice ? <EInvoiceSettings initial={einvoice} /> : null}

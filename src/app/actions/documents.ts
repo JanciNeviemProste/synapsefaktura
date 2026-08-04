@@ -309,7 +309,11 @@ export async function markAsSent(
 ): Promise<{ ok: boolean; error?: string; delivered?: boolean }> {
   const supabase = await createClient()
 
-  const rendered = await renderInvoicePdf(supabase, id)
+  // Organizaciu posielame aj tu: RLS pusti vsetky organizacie pouzivatela,
+  // takze bez nej by odberatel mohol dostat fakturu s hlavickou a IBAN-om
+  // druhej firmy, ktorej je odosielatel clenom.
+  const orgId = await getCurrentOrgId(supabase)
+  const rendered = await renderInvoicePdf(supabase, id, orgId ?? undefined)
   if (!rendered) return { ok: false, error: "Doklad sa nenašiel." }
   const { buffer, doc, contact, org } = rendered
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense } from "react"
+import { Suspense, useState } from "react"
 import Link from "next/link"
 import { usePathname, useSearchParams } from "next/navigation"
 import { useTranslations } from "next-intl"
@@ -19,8 +19,11 @@ import {
   Bot,
   Settings,
   Sparkles,
+  Menu,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 
 type NavItem = {
   href: string
@@ -81,8 +84,48 @@ export function Sidebar() {
   )
 }
 
+/**
+ * Mobilna navigacia. Pod `md` je `Sidebar` skryty, takze bez tohto tlacidla sa
+ * pouzivatel na telefone nedostal z aktualnej stranky prec. Panel renderuje ten
+ * isty NAV zoznam (jeden zdroj pravdy) a Dialog riesi focus trap aj Escape.
+ */
+export function MobileNav() {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label="Otvoriť menu"
+        aria-expanded={open}
+        onClick={() => setOpen(true)}
+        className="md:hidden"
+      >
+        <Menu />
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="data-open:slide-in-from-left data-closed:slide-out-to-left top-0 left-0 flex h-full w-72 max-w-[85%] translate-x-0 translate-y-0 flex-col gap-0 rounded-none p-0 sm:max-w-[85%]">
+          <DialogTitle className="flex h-14 shrink-0 items-center gap-2 border-b px-4 font-semibold">
+            <Sparkles className="text-primary size-5" />
+            Synapse Faktúra
+          </DialogTitle>
+          <div className="flex flex-1 flex-col overflow-y-auto">
+            <Suspense
+              fallback={<nav className="flex flex-1 flex-col gap-1 p-2" />}
+            >
+              <SidebarNav onNavigate={() => setOpen(false)} />
+            </Suspense>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}
+
 // Vlastny komponent kvoli useSearchParams — potrebuje Suspense nad sebou.
-function SidebarNav() {
+// `onNavigate` pouziva iba mobilny panel, aby sa po kliku zavrel.
+function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const t = useTranslations("nav")
@@ -118,6 +161,7 @@ function SidebarNav() {
           <Link
             key={item.href}
             href={item.href}
+            onClick={onNavigate}
             className={cn(
               "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
               active

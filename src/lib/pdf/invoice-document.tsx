@@ -11,7 +11,10 @@ import type { Database } from "@/lib/supabase/database.types"
 import { formatMoney, round2 } from "@/lib/money"
 import { type DocumentType } from "@/lib/documents/labels"
 import { docLabels } from "@/lib/documents/doc-labels"
-import { documentPresentation } from "@/lib/documents/presentation"
+import {
+  documentPresentation,
+  type DocumentPresentation,
+} from "@/lib/documents/presentation"
 
 type DocRow = Database["public"]["Tables"]["documents"]["Row"]
 type ItemRow = Database["public"]["Tables"]["document_items"]["Row"]
@@ -72,6 +75,31 @@ const styles = StyleSheet.create({
     fontFamily: "Helvetica-Bold",
   },
   qr: { width: 110, height: 110 },
+  // Sirku obrazkov dopocita renderer z pomeru stran - staci zadat vysku a
+  // strop, aby velke logo neroztlacilo hlavicku.
+  logo: { height: 34, maxWidth: 150, marginBottom: 4 },
+  supplierMark: {
+    marginTop: 24,
+    alignSelf: "flex-end",
+    width: "45%",
+    alignItems: "center",
+  },
+  supplierMarkImages: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "center",
+    gap: 8,
+    marginBottom: 2,
+  },
+  supplierStamp: { height: 58, maxWidth: 100 },
+  supplierSignature: { height: 42, maxWidth: 130 },
+  supplierMarkCaption: {
+    width: "100%",
+    borderTopWidth: 0.5,
+    borderTopColor: "#333",
+    paddingTop: 3,
+    textAlign: "center",
+  },
   signatures: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -86,6 +114,18 @@ const styles = StyleSheet.create({
   legal: { marginTop: 10, fontStyle: "italic", color: "#444" },
   footer: { marginTop: 20, color: "#666", fontSize: 8 },
 })
+
+/**
+ * Ma doklad zniest podpis a peciatku dodavatela?
+ *
+ * Dodaci list uz ma vlastny blok na podpis prevzatia (`signatureArea`), takze
+ * podpis dodavatela by sa s nim bil - tam ho vynechavame. Zvysok dokladov, ktore
+ * nieco tvrdia o cene (faktura, ponuka, objednavka, dobropis), ho unesie.
+ * Exportovane, aby render.tsx zbytocne nestahoval obrazky, ktore sa nevykreslia.
+ */
+export function showsSupplierMark(p: DocumentPresentation): boolean {
+  return p.showPrices && !p.signatureArea
+}
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "—"
@@ -142,6 +182,9 @@ export function InvoiceDocument({
   contact,
   bank,
   qrDataUrl,
+  logoDataUrl = null,
+  signatureDataUrl = null,
+  stampDataUrl = null,
 }: {
   document: DocRow
   items: ItemRow[]
@@ -149,6 +192,11 @@ export function InvoiceDocument({
   contact: Contact | null
   bank: Bank | null
   qrDataUrl: string | null
+  /** Firemne obrazky ako data URI - render.tsx ich stiahne vopred, aby
+   *  nedostupny Supabase Storage nezhodil generovanie PDF. */
+  logoDataUrl?: string | null
+  signatureDataUrl?: string | null
+  stampDataUrl?: string | null
 }) {
   const currency = doc.currency
   const L = docLabels(doc.language)
@@ -169,6 +217,8 @@ export function InvoiceDocument({
   const title = L.documentTypes[doc.type as DocumentType] ?? L.document
   const isPaid = doc.status === "paid"
   const showQr = p.showQr && !isPaid
+  const supplierMark =
+    showsSupplierMark(p) && (signatureDataUrl || stampDataUrl)
 
   return (
     <Document>
@@ -186,6 +236,11 @@ export function InvoiceDocument({
             ) : null}
           </View>
           <View style={{ alignItems: "flex-end" }}>
+            {/* Bez loga ostava hlavicka presne taka, aka bola. */}
+            {logoDataUrl ? (
+              // eslint-disable-next-line jsx-a11y/alt-text
+              <Image src={logoDataUrl} style={styles.logo} />
+            ) : null}
             <Text style={styles.bold}>{org.name}</Text>
           </View>
         </View>
@@ -324,6 +379,28 @@ export function InvoiceDocument({
                 <Text style={styles.muted}>{L.payByQr}</Text>
               </View>
             ) : null}
+          </View>
+        ) : null}
+
+        {/* Podpis a peciatka dodavatela - nie na doklade s blokom prevzatia. */}
+        {supplierMark ? (
+          <View style={styles.supplierMark}>
+            <View style={styles.supplierMarkImages}>
+              {stampDataUrl ? (
+                // eslint-disable-next-line jsx-a11y/alt-text
+                <Image src={stampDataUrl} style={styles.supplierStamp} />
+              ) : null}
+              {signatureDataUrl ? (
+                // eslint-disable-next-line jsx-a11y/alt-text
+                <Image
+                  src={signatureDataUrl}
+                  style={styles.supplierSignature}
+                />
+              ) : null}
+            </View>
+            <Text style={[styles.muted, styles.supplierMarkCaption]}>
+              {L.signature}
+            </Text>
           </View>
         ) : null}
 
