@@ -86,8 +86,8 @@ Voliteľné (feature sa aktivuje kľúčom): `OPENROUTER_API_KEY` (má prednosť
 
 ## Stav (posledné 📊 — 2026-08-04)
 
-`main`: `typecheck` PASS · `lint` PASS · `test` 130/130 PASS · `build` PASS.
-Nasadené na `synapsefaktura.vercel.app` (`c45d0ed`). Supabase
+`main`: `typecheck` PASS · `lint` PASS · `test` 171/171 PASS (po merge PR #1).
+Nasadené na `synapsefaktura.vercel.app` (`bc1b421`). Supabase
 `oukooqfpxeunhdzndsid` je `ACTIVE_HEALTHY` — **36 tabuliek, 23 enumov,
 81 policies, 10 migrácií** (schéma je pred kódom: fázy 3 a 4 z PR #6/#7 sú
 aplikované, kód ešte nie je zmergovaný); keep-alive workflow beží (HTTP 200).
