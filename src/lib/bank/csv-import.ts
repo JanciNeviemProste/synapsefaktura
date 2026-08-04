@@ -2,7 +2,12 @@
  * Tolerant bank-statement CSV parser. Slovak banks export different layouts, so
  * we detect the delimiter and map columns by header keywords (diacritics-insensitive)
  * rather than fixed positions. Amounts accept SK formatting ("1 234,56").
+ *
+ * Obsahuje aj ciste rozhodovacie funkcie importu: ci je transakcia duplicitna a
+ * ci sa smie automaticky zaknihovat (viz csv-import.test.ts).
  */
+
+import type { MatchResult } from "@/lib/matching/match"
 
 export interface ParsedTransaction {
   bookedAt: string | null // YYYY-MM-DD
@@ -188,4 +193,49 @@ export function parseBankCsv(content: string): CsvParseResult {
   }
 
   return { transactions, errors }
+}
+
+/**
+ * Identita transakcie pre detekciu duplicit. Opatovny import toho isteho vypisu
+ * prinesie riadky s rovnakou kombinaciou (datum, suma, VS, protistrana) —
+ * v ramci jednej firmy ich povazujeme za ten isty pohyb.
+ */
+export interface TransactionIdentity {
+  bookedAt: string | null
+  amount: number
+  vs: string | null
+  counterparty: string | null
+}
+
+function keyPart(v: string | null): string {
+  return (v ?? "").trim().replace(/\s+/g, " ").toLowerCase()
+}
+
+/** Normalizovany kluc transakcie (suma na 2 desatinne miesta ako v DB). */
+export function transactionKey(tx: TransactionIdentity): string {
+  const amount = Number.isFinite(tx.amount) ? tx.amount.toFixed(2) : "nan"
+  return [
+    keyPart(tx.bookedAt),
+    amount,
+    keyPart(tx.vs),
+    keyPart(tx.counterparty),
+  ].join("|")
+}
+
+/** Uz taku transakciu mame? `seen` su kluce uz existujucich riadkov. */
+export function isDuplicateTransaction(
+  tx: TransactionIdentity,
+  seen: ReadonlySet<string>,
+): boolean {
+  return seen.has(transactionKey(tx))
+}
+
+/**
+ * Automaticky knihujeme LEN pri presnej zhode sumy. Zhoda samotneho VS s inou
+ * sumou (preplatok/podplatok) sa necha nesparovana na rucne potvrdenie, inak by
+ * preplatok pretlacil paid_amount nad total a doklad by skocil na "paid".
+ */
+export function shouldAutoBook(match: MatchResult): boolean {
+  if (!match.documentId) return false
+  return match.confidence === "vs_amount" || match.confidence === "amount"
 }

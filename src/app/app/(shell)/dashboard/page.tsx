@@ -2,6 +2,7 @@ import Link from "next/link"
 import { FileText, Plus, Sparkles, Settings, Bot, ArrowRight } from "lucide-react"
 import { getTranslations } from "next-intl/server"
 import { createClient } from "@/lib/supabase/server"
+import { getCurrentOrgId } from "@/lib/auth/current-org"
 import { round2, formatMoney } from "@/lib/money"
 import { Button } from "@/components/ui/button"
 import { ForecastWidget } from "@/components/dashboard/forecast-widget"
@@ -35,14 +36,19 @@ const SK_MONTHS_SHORT = [
 export default async function DashboardPage() {
   const t = await getTranslations("dashboard")
   const supabase = await createClient()
+  const orgId = await getCurrentOrgId(supabase)
   const today = new Date()
   const todayIso = today.toISOString().slice(0, 10)
   const monthStart = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-01`
 
-  const { data: docs } = await supabase
-    .from("documents")
-    .select("type, status, total, paid_amount, issue_date, due_date")
-    .eq("type", "invoice")
+  // Bez aktivnej organizacie nemame co zobrazit - necha sa vykreslit prazdny stav.
+  const { data: docs } = orgId
+    ? await supabase
+        .from("documents")
+        .select("type, status, total, paid_amount, issue_date, due_date")
+        .eq("organization_id", orgId)
+        .eq("type", "invoice")
+    : { data: null }
 
   const invoices = docs ?? []
 

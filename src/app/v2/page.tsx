@@ -35,13 +35,13 @@ const COMMANDS = [
     note: "Fakturácia vetou — AI rozumie po slovensky.",
   },
   {
-    cmd: "vyťaž bloček.jpg",
+    cmd: "nahraj fotku bločka z pumpy",
     out: [
       "✓ Slovnaft · 21. 7. 2026 · nafta",
       "✓ základ 54,47 € · DPH 23 % · spolu 67,00 €",
-      "✓ zaradené do nákladov",
+      "→ náklad pripravený na potvrdenie",
     ],
-    note: "Odfoť bloček alebo faktúru — AI prepíše všetko za teba.",
+    note: "Nahráš fotku alebo PDF — AI vyplní údaje, ty ich potvrdíš.",
   },
   {
     cmd: "kto mi ešte nezaplatil?",
@@ -49,7 +49,7 @@ const COMMANDS = [
       "! Novastav s.r.o. · 934,80 € · 12 dní po splatnosti",
       "→ upomienka pripravená na odoslanie",
     ],
-    note: "Asistent pozná tvoje čísla a upomienky pošle za teba.",
+    note: "Asistent pozná tvoje čísla. Upomienky posiela systém automaticky.",
   },
 ]
 
@@ -106,7 +106,8 @@ export default function V2Page() {
         </h1>
         <p className="mt-5 max-w-xl leading-relaxed" style={{ color: MUTED }}>
           Žiadne klikanie cez desať formulárov. Povieš, čo fakturuješ — Synapse
-          doklad vystaví, skontroluje DPH a pošle. Bločky vyťaží z fotky.
+          pripraví koncept dokladu, skontroluje náležitosti a DPH a ty ho
+          jedným klikom vystavíš a odošleš. Bločky vyťaží z fotky.
         </p>
 
         {/* Terminal window */}
@@ -133,11 +134,11 @@ export default function V2Page() {
                 style={{ backgroundColor: AMBER }}
               />
             </p>
-            <p style={{ color: MUTED }}>✓ faktúra 2026-0042 vystavená · Ján Novák</p>
+            <p style={{ color: MUTED }}>✓ koncept faktúry 2026-0042 · Ján Novák</p>
             <p style={{ color: MUTED }}>✓ 3 × konzultácia à 50,00 € · DPH 23 % = 34,50 €</p>
             <p style={{ color: MUTED }}>
               ✓ spolu <span style={{ color: TEXT }}>184,50 €</span> · QR platba · PDF
-              odoslané
+              pripravené na odoslanie
             </p>
           </div>
         </div>

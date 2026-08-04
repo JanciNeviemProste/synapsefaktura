@@ -6,19 +6,13 @@ import { saveDocument } from "@/app/actions/documents"
 import type { DocumentInput } from "@/lib/validation/document"
 import { createClient } from "@/lib/supabase/server"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
+import { matchContactByName } from "@/lib/contacts/match-name"
+import { isZeroVatMode } from "@/lib/vat/engine"
+import type { VatMode } from "@/lib/validation/org"
 
 export type DraftInvoiceResult =
   | { ok: true; id: string }
   | { ok: false; degraded: boolean; error: string }
-
-/** Diacritics + case insensitive normalization for fuzzy contact matching. */
-function normalize(s: string): string {
-  return s
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim()
-}
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10)
@@ -36,16 +30,42 @@ export async function draftInvoiceFromText(
     return { ok: false, degraded: false, error: "Zadaj text faktúry." }
   }
 
+  const supabase = await createClient()
+  const orgId = await getCurrentOrgId(supabase)
+
+  // Bez údajov firmy by neplatiteľ DPH dostal koncept s 23 % a režimom platiteľa.
+  const { data: org } = orgId
+    ? await supabase
+        .from("organizations")
+        .select("is_vat_payer, vat_mode_default")
+        .eq("id", orgId)
+        .maybeSingle()
+    : { data: null }
+
+  // Keď sa organizácia nedá načítať, ostáva pôvodné správanie — koncept aj tak
+  // neuloží saveDocument, ktorý organizáciu vyžaduje.
+  const isVatPayer = org?.is_vat_payer ?? true
+  const orgVatMode = (org?.vat_mode_default as VatMode | undefined) ?? null
+  // Neplatiteľ nemôže fakturovať v režime platiteľa (ani v OSS).
+  const defaultVatMode: VatMode = isVatPayer
+    ? (orgVatMode ?? "payer")
+    : orgVatMode && isZeroVatMode(orgVatMode)
+      ? orgVatMode
+      : "non_payer"
+  const defaultVatRate = isVatPayer ? 23 : 0
+
   const today = todayIso()
   const system = [
     "Si asistent, ktorý z jednej slovenskej vety vytvorí podklad pre faktúru.",
     `Dnešný dátum je ${today} (formát YYYY-MM-DD). Relatívne dátumy (napr. „dnes“, „zajtra“) prepočítaj voči nemu.`,
     "Dátumy vždy vráť vo formáte YYYY-MM-DD, alebo null, ak ich používateľ neuviedol.",
-    "Ak je uvedené „+ DPH“ alebo „s DPH“, použi sadzbu DPH 23 %. Ak je cena „bez DPH“ alebo nie je o DPH zmienka, ponechaj sadzbu 23 % ako predvolenú.",
+    isVatPayer
+      ? "Firma je platiteľ DPH. Ak je uvedené „+ DPH“ alebo „s DPH“, použi sadzbu DPH 23 %. Ak je cena „bez DPH“ alebo nie je o DPH zmienka, ponechaj sadzbu 23 % ako predvolenú."
+      : "Firma NIE JE platiteľ DPH. Do každej položky daj sadzbu DPH 0 % a DPH nikdy nepripočítavaj — ani keď veta spomína „+ DPH“ alebo „s DPH“.",
     "Pri „splatnosť N dní“ nastav dueDate = issueDate + N dní. Ak issueDate chýba, počítaj od dnešného dátumu.",
     "Sumy ber ako cenu za jednotku (unitPrice) bez DPH, ak nie je uvedené inak.",
     "Mena je predvolene EUR. Položky (items) vyplň podľa popisu služby alebo tovaru z vety.",
-    "vatMode nastav na 'payer', ak nie je zjavné inak.",
+    `vatMode nastav na '${defaultVatMode}', ak nie je zjavné inak.`,
   ].join(" ")
 
   const ai = await generateStructured({
@@ -61,23 +81,16 @@ export async function draftInvoiceFromText(
 
   const draft = ai.data
 
-  // Resolve contact name → contactId via fuzzy match over the org's contacts.
+  // Názov kontaktu → contactId cez skórovanie zhody. Pod prahom nepárujeme
+  // vôbec — prázdny kontakt je lepší než cudzia firma na faktúre.
   let contactId: string | null = null
-  if (draft.contactName) {
-    const supabase = await createClient()
-    const orgId = await getCurrentOrgId(supabase)
-    if (orgId) {
-      const { data: contacts } = await supabase
-        .from("contacts")
-        .select("id, name")
-        .eq("organization_id", orgId)
-      const needle = normalize(draft.contactName)
-      const match = (contacts ?? []).find((c) => {
-        const hay = normalize(c.name)
-        return hay.includes(needle) || needle.includes(hay)
-      })
-      contactId = match?.id ?? null
-    }
+  if (draft.contactName && orgId) {
+    const { data: contacts } = await supabase
+      .from("contacts")
+      .select("id, name")
+      .eq("organization_id", orgId)
+    const match = matchContactByName(contacts ?? [], draft.contactName)
+    contactId = match?.id ?? null
   }
 
   const issueDate = draft.issueDate || today
@@ -88,7 +101,8 @@ export async function draftInvoiceFromText(
           quantity: i.quantity,
           unit: i.unit,
           unitPrice: i.unitPrice,
-          vatRate: i.vatRate,
+          // Neplatiteľ DPH nesmie dostať nenulovú sadzbu, nech AI vráti čokoľvek.
+          vatRate: isVatPayer ? i.vatRate : 0,
           discountPct: 0,
         }))
       : [
@@ -97,7 +111,7 @@ export async function draftInvoiceFromText(
             quantity: 1,
             unit: "ks",
             unitPrice: 0,
-            vatRate: 23,
+            vatRate: defaultVatRate,
             discountPct: 0,
           },
         ]
@@ -110,7 +124,7 @@ export async function draftInvoiceFromText(
     currency: draft.currency || "EUR",
     exchangeRate: 1,
     language: "sk",
-    vatMode: draft.vatMode,
+    vatMode: isVatPayer ? draft.vatMode : defaultVatMode,
     items,
   }
 

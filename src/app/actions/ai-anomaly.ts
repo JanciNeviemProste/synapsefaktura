@@ -2,6 +2,8 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
+import { gateFeature } from "@/lib/billing/gate"
+import type { PlanTier } from "@/lib/billing/plans"
 import {
   detectAnomalies,
   type Anomaly,
@@ -12,14 +14,24 @@ import {
 /** How many recent rows to scan per entity. Enough for stats, bounded for perf. */
 const SCAN_LIMIT = 200
 
+export type ListAnomaliesResult =
+  | { ok: true; anomalies: Anomaly[] }
+  | { ok: false; error: string; upgrade?: PlanTier }
+
 /**
  * Load recent invoices + expenses for the active org and run the pure anomaly
- * detector. Returns [] when there's no org or on any failure (graceful).
+ * detector. Detektor nevola AI, takze sa nikdy nedostane cez gate v
+ * `lib/ai/generate.ts` — platenu funkciu preto gatujeme rovno tu.
  */
-export async function listAnomalies(): Promise<Anomaly[]> {
+export async function listAnomalies(): Promise<ListAnomaliesResult> {
   const supabase = await createClient()
   const orgId = await getCurrentOrgId(supabase)
-  if (!orgId) return []
+  if (!orgId) return { ok: false, error: "Chýba firma." }
+
+  const gate = await gateFeature(supabase, orgId, "anomaly")
+  if (!gate.allowed) {
+    return { ok: false, error: gate.reason, upgrade: gate.requiredTier }
+  }
 
   const [invoiceRes, expenseRes] = await Promise.all([
     supabase
@@ -38,7 +50,9 @@ export async function listAnomalies(): Promise<Anomaly[]> {
       .limit(SCAN_LIMIT),
   ])
 
-  if (invoiceRes.error || expenseRes.error) return []
+  if (invoiceRes.error || expenseRes.error) {
+    return { ok: false, error: "Údaje sa nepodarilo načítať." }
+  }
 
   const invoices: InvoiceLike[] = (invoiceRes.data ?? []).map((d) => ({
     id: d.id,
@@ -63,7 +77,7 @@ export async function listAnomalies(): Promise<Anomaly[]> {
     supplier_name: relatedName(e.contacts),
   }))
 
-  return detectAnomalies({ invoices, expenses })
+  return { ok: true, anomalies: detectAnomalies({ invoices, expenses }) }
 }
 
 /** Supabase returns embedded relations as object or array depending on cardinality. */

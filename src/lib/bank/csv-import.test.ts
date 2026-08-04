@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest"
-import { parseBankCsv, parseAmount, parseDate } from "./csv-import"
+import {
+  parseBankCsv,
+  parseAmount,
+  parseDate,
+  transactionKey,
+  isDuplicateTransaction,
+  shouldAutoBook,
+} from "./csv-import"
 
 describe("parseAmount", () => {
   it("parses SK and intl formats", () => {
@@ -53,5 +60,85 @@ describe("parseBankCsv", () => {
   it("reports a missing amount column", () => {
     const { errors } = parseBankCsv("dátum;poznámka\n08.07.2026;test")
     expect(errors.length).toBeGreaterThan(0)
+  })
+})
+
+const tx = {
+  bookedAt: "2026-07-08",
+  amount: 246,
+  vs: "20260001",
+  counterparty: "Tibor Ozančin s.r.o.",
+}
+
+describe("transactionKey", () => {
+  it("normalizes the amount to two decimals", () => {
+    expect(transactionKey({ ...tx, amount: 246 })).toBe(
+      transactionKey({ ...tx, amount: 246.0 }),
+    )
+  })
+
+  it("ignores case and extra whitespace in text parts", () => {
+    expect(
+      transactionKey({ ...tx, counterparty: "  TIBOR  ozančin s.r.o. " }),
+    ).toBe(transactionKey({ ...tx, counterparty: "Tibor Ozančin s.r.o." }))
+  })
+
+  it("treats null and empty string the same", () => {
+    expect(transactionKey({ ...tx, vs: null })).toBe(
+      transactionKey({ ...tx, vs: "  " }),
+    )
+  })
+
+  it("differs when any part of the combination differs", () => {
+    const base = transactionKey(tx)
+    expect(transactionKey({ ...tx, amount: 246.5 })).not.toBe(base)
+    expect(transactionKey({ ...tx, bookedAt: "2026-07-09" })).not.toBe(base)
+    expect(transactionKey({ ...tx, vs: "20260002" })).not.toBe(base)
+    expect(transactionKey({ ...tx, counterparty: "Iná firma" })).not.toBe(base)
+  })
+})
+
+describe("isDuplicateTransaction", () => {
+  const seen = new Set([transactionKey(tx)])
+
+  it("detects a re-imported row", () => {
+    expect(isDuplicateTransaction({ ...tx }, seen)).toBe(true)
+  })
+
+  it("lets a different amount through", () => {
+    expect(isDuplicateTransaction({ ...tx, amount: 100 }, seen)).toBe(false)
+  })
+
+  it("lets a different date through", () => {
+    expect(isDuplicateTransaction({ ...tx, bookedAt: "2026-07-09" }, seen)).toBe(
+      false,
+    )
+  })
+
+  it("returns false against an empty set", () => {
+    expect(isDuplicateTransaction(tx, new Set())).toBe(false)
+  })
+})
+
+describe("shouldAutoBook", () => {
+  it("books an exact VS + amount match", () => {
+    expect(shouldAutoBook({ documentId: "a", confidence: "vs_amount" })).toBe(
+      true,
+    )
+  })
+
+  it("books a unique exact amount match", () => {
+    expect(shouldAutoBook({ documentId: "a", confidence: "amount" })).toBe(true)
+  })
+
+  it("does NOT book a VS match with a different amount", () => {
+    expect(shouldAutoBook({ documentId: "a", confidence: "vs" })).toBe(false)
+  })
+
+  it("does not book without a document", () => {
+    expect(shouldAutoBook({ documentId: null, confidence: "none" })).toBe(false)
+    expect(shouldAutoBook({ documentId: null, confidence: "vs_amount" })).toBe(
+      false,
+    )
   })
 })

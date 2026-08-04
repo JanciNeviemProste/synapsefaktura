@@ -3,6 +3,28 @@
 Architektúrne rozhodnutia, ADR štýl: čo · prečo · zamietnuté alternatívy.
 Novšie hore.
 
+## 2026-08-04 · AI poskytovateľ: Gemini 2.5 Flash (`@ai-sdk/google`), OpenRouter ako alternatíva
+**Čo:** Jediný LLM backend je Google Gemini 2.5 Flash cez `@ai-sdk/google`
+(`GOOGLE_GENERATIVE_AI_API_KEY`, default model `gemini-2.5-flash`). Ak je nastavený
+`OPENROUTER_API_KEY`, má prednosť a ide sa cez `@openrouter/ai-sdk-provider`
+(default `google/gemini-2.5-flash`); voliteľný `AI_MODEL` prepíše model v tvare
+aktívneho backendu. Rozhoduje `aiBackend()` / `aiModel()` v `src/lib/ai/provider.ts`,
+`hasAiKey()` drží graceful degradation. Platí pre všetky AI funkcie — capture/OCR,
+faktúra vetou, asistent aj zhrnutie kontroly náležitostí.
+**Prečo:** Gemini 2.5 Flash je lacný a natívne multimodálny, takže OCR bločkov aj
+textové funkcie obslúži jeden model — bez druhého kľúča, druhého SDK a druhej
+cenotvorby. OpenRouter dáva prepnutie modelu bez zmeny kódu a jeden účet pre
+prípadné ďalšie modely. **Pozn.: `SYNAPSE_FAKTURA_MASTER_PROMPT.md` (§4, §7.2, §7.5,
+§7.6) predpisuje Anthropic Claude (`claude-sonnet-4-6`) na reasoning/chat a
+Gemini len na OCR. Kód sa od špecifikácie vedome odchýlil; tento záznam je zdroj
+pravdy, master prompt je v tomto bode neaktuálny.**
+**Zamietnuté:** (1) Claude podľa master promptu — druhý poskytovateľ, druhý kľúč a
+vyššia cena za funkcie, kde kvalita Flashu stačí; navyše by OCR aj tak zostalo na
+Gemini, teda dva backendy namiesto jedného. (2) Dual-provider routing (Claude na
+reasoning, Gemini na OCR) — réžia navyše pre solo-dev bez zmeraného prínosu.
+(3) Iba OpenRouter — zbytočný sprostredkovateľ a jediný bod zlyhania, keď väčšina
+inštalácií beží priamo na Google kľúči.
+
 ## 2026-07-05 · SK compliance overenie (§5)
 **Čo:** Overenie `TODO: verify` miest proti oficiálnym/autoritatívnym zdrojom.
 Výsledok:
