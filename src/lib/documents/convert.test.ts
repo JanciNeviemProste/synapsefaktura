@@ -3,10 +3,24 @@ import { DOCUMENT_TYPE_LABELS, type DocumentType } from "./labels"
 import {
   canConvertDocument,
   checkConversion,
+  conversionQuantitySign,
   conversionTargets,
 } from "./convert"
 
 const ALL_TYPES = Object.keys(DOCUMENT_TYPE_LABELS) as DocumentType[]
+
+describe("conversionQuantitySign", () => {
+  it("dobropis dostane opačné znamienko", () => {
+    // Dobropis znižuje základ dane — kladné sumy by tvrdili presný opak.
+    expect(conversionQuantitySign("credit_note")).toBe(-1)
+  })
+
+  it("každý iný typ si znamienko zachová", () => {
+    for (const t of ALL_TYPES.filter((x) => x !== "credit_note")) {
+      expect(conversionQuantitySign(t)).toBe(1)
+    }
+  })
+})
 
 describe("conversionTargets", () => {
   it("covers every document type", () => {

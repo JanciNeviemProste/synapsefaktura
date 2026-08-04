@@ -1,10 +1,89 @@
 import { describe, it, expect } from "vitest"
 
 import {
+  deductibleBusinessFuel,
   deductibleFuel,
   normedFuelLitres,
   travelReimbursement,
 } from "./consumption"
+
+describe("deductibleBusinessFuel", () => {
+  it("rozdelí strop pomerom služobných km — nie naopak", () => {
+    // 6 l/100 km, 1000 km služobne + 1000 súkromne, natankovaných 70 l.
+    // Fyzika: 2000 km si vyžiada 120 l, doložených je len 70 → strop 70 l.
+    // Daň: služobná je polovica jázd → uznateľných 35 l.
+    const res = deductibleBusinessFuel({
+      totalKm: 2000,
+      businessKm: 1000,
+      consumption: 6,
+      purchasedLitres: 70,
+    })
+    expect(res?.normedLitres).toBe(120)
+    expect(res?.eligibleLitres).toBe(70)
+    expect(res?.businessShare).toBe(0.5)
+    expect(res?.litres).toBe(35)
+    // Rozhoduje nedostatok dokladov, nie normovaná spotreba.
+    expect(res?.basis).toBe("purchased")
+  })
+
+  it("bez súkromných jázd sa strop nedelí", () => {
+    const res = deductibleBusinessFuel({
+      totalKm: 2400,
+      businessKm: 2400,
+      consumption: 5.8,
+      purchasedLitres: 90,
+    })
+    expect(res?.normedLitres).toBe(139.2)
+    expect(res?.businessShare).toBe(1)
+    expect(res?.litres).toBe(90)
+  })
+
+  it("keď rozhoduje normovaná spotreba, delí sa tá", () => {
+    // 1000 km spolu (800 služobne), 5 l/100 = 50 l normovane, natankovaných 80.
+    const res = deductibleBusinessFuel({
+      totalKm: 1000,
+      businessKm: 800,
+      consumption: 5,
+      purchasedLitres: 80,
+    })
+    expect(res?.basis).toBe("normed")
+    expect(res?.eligibleLitres).toBe(50)
+    expect(res?.litres).toBe(40)
+  })
+
+  it("žiadne jazdy → nulový podiel, nie delenie nulou", () => {
+    const res = deductibleBusinessFuel({
+      totalKm: 0,
+      businessKm: 0,
+      consumption: 6,
+      purchasedLitres: 40,
+    })
+    expect(res?.businessShare).toBe(0)
+    expect(res?.litres).toBe(0)
+  })
+
+  it("služobné km nad rámec celkových sa orežú — odpočet sa nenafúkne", () => {
+    const res = deductibleBusinessFuel({
+      totalKm: 100,
+      businessKm: 500,
+      consumption: 6,
+      purchasedLitres: 10,
+    })
+    expect(res?.businessShare).toBe(1)
+    expect(res?.litres).toBe(res?.eligibleLitres)
+  })
+
+  it("chýbajúca spotreba vráti null aj tu", () => {
+    expect(
+      deductibleBusinessFuel({
+        totalKm: 1000,
+        businessKm: 500,
+        consumption: null,
+        purchasedLitres: 60,
+      }),
+    ).toBeNull()
+  })
+})
 
 describe("normedFuelLitres", () => {
   it("počíta normovanú spotrebu z km a spotreby na 100 km", () => {

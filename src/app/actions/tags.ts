@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 import { createClient } from "@/lib/supabase/server"
+import { writeOutcome } from "@/lib/supabase/affected"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
 import type { Database } from "@/lib/supabase/database.types"
 import {
@@ -225,12 +226,34 @@ export async function deleteTag(id: string): Promise<TagActionResult> {
   const orgId = await getCurrentOrgId(supabase)
   if (!orgId) return { ok: false, error: "Chýba firma." }
 
-  const { error } = await supabase
+  // `.select("id")` je nutné: politika `tags_delete_admin` pustí len
+  // owner/admin, ale PostgREST pri odfiltrovanom riadku vráti 204 bez chyby —
+  // člen bez oprávnenia by inak dostal „Štítok zmazaný" a štítok by ostal.
+  const { data, error } = await supabase
     .from("tags")
     .delete()
     .eq("id", id)
     .eq("organization_id", orgId)
-  if (error) return { ok: false, error: "Štítok sa nepodarilo zmazať." }
+    .select("id")
+
+  const outcome = writeOutcome(error, data)
+  if (outcome.kind === "failed") {
+    return { ok: false, error: "Štítok sa nepodarilo zmazať." }
+  }
+  if (outcome.kind === "noRows") {
+    const { data: visible } = await supabase
+      .from("tags")
+      .select("id")
+      .eq("id", id)
+      .eq("organization_id", orgId)
+      .maybeSingle()
+    return {
+      ok: false,
+      error: visible
+        ? "Štítok môže zmazať len majiteľ alebo správca firmy."
+        : "Štítok sa nenašiel.",
+    }
+  }
 
   revalidatePath("/app/settings")
   return { ok: true, id }

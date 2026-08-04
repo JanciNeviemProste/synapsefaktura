@@ -93,6 +93,66 @@ export function deductibleFuel(input: {
   }
 }
 
+export type DeductibleBusinessFuel = DeductibleFuel & {
+  /** Normovana spotreba za VSETKY km (sluzobne aj sukromne). */
+  totalKm: number
+  /** Kilometre, ktore zakladaju narok na odpocet. */
+  businessKm: number
+  /** Podiel sluzobnych jazd, 0..1. */
+  businessShare: number
+  /** Strop pred rozdelenim: min(normovana za vsetky km, nakupene). */
+  eligibleLitres: number
+}
+
+/**
+ * Danovo uznatelne palivo rozdelene na sluzobny podiel.
+ *
+ * PRECO SAMOSTATNA FUNKCIA: `deductibleFuel` porovnava normovanu spotrebu proti
+ * nakupenemu palivu — to je fyzikalna otazka a odpoved na nu musi ratat VSETKY
+ * kilometre. Danova otazka je az druha: ake percento z toho paliva sa smie
+ * uplatnit.
+ *
+ * Zamienat tie dve veci znamena podat sluzobne km spolu s CELYM nakupenym
+ * palivom — strop z nakupenej strany je potom umelo vysoky a odpocet vyjde
+ * nadhodnoteny. Priklad: 6 l/100 km, 1000 km sluzobne + 1000 sukromne,
+ * natankovanych 70 l. Nespravne: min(60, 70) = 60 l. Spravne:
+ * min(120, 70) = 70 l stropu, z toho polovica sluzobne = 35 l.
+ *
+ * Tankovania nemaju priznak sluzobne/sukromne (a ani ho mat nemozu — z jednej
+ * nadrze sa jazdi oboje), takze rozdelenie sa robi pomerom kilometrov.
+ */
+export function deductibleBusinessFuel(input: {
+  totalKm: number
+  businessKm: number
+  consumption: number | null | undefined
+  purchasedLitres: number
+}): DeductibleBusinessFuel | null {
+  if (!isNonNegative(input.totalKm)) return null
+  if (!isNonNegative(input.businessKm)) return null
+
+  const base = deductibleFuel({
+    km: input.totalKm,
+    consumption: input.consumption,
+    purchasedLitres: input.purchasedLitres,
+  })
+  if (base === null) return null
+
+  // Bez najazdenych kilometrov niet co delit; sluzobny podiel je nula, nie 1/0.
+  // Sluzobne km nad ramec celkovych su nezmysel zo vstupu — orezeme na 1, nech
+  // sa odpocet nikdy nenafukne nad strop.
+  const businessShare =
+    input.totalKm === 0 ? 0 : Math.min(input.businessKm / input.totalKm, 1)
+
+  return {
+    ...base,
+    litres: round(base.litres * businessShare, 2),
+    eligibleLitres: base.litres,
+    totalKm: round(input.totalKm, 2),
+    businessKm: round(input.businessKm, 2),
+    businessShare: round(businessShare, 4),
+  }
+}
+
 /**
  * Cestovna nahrada za jazdu: zakladna sadzba za km plus nahrada za palivo.
  * Vrati `null` pri nezmyselnych vstupoch (zaporne km alebo sadzba).

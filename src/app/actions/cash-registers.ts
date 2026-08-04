@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Database } from "@/lib/supabase/database.types"
 import { createClient } from "@/lib/supabase/server"
+import { writeOutcome } from "@/lib/supabase/affected"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
 import {
   cashRegisterSchema,
@@ -80,12 +81,20 @@ export async function updateCashRegister(
   const orgId = await getCurrentOrgId(supabase)
   if (!orgId) return { ok: false, error: "Chýba firma." }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("cash_registers")
     .update(registerRow(parsed.data))
     .eq("id", id)
     .eq("organization_id", orgId)
-  if (error) return { ok: false, error: "Pokladňu sa nepodarilo uložiť." }
+    .select("id")
+
+  const outcome = writeOutcome(error, data)
+  if (outcome.kind === "failed") {
+    return { ok: false, error: "Pokladňu sa nepodarilo uložiť." }
+  }
+  if (outcome.kind === "noRows") {
+    return { ok: false, error: "Pokladňa sa nenašla." }
+  }
   revalidatePath(PATH)
   return { ok: true, id }
 }
@@ -98,12 +107,38 @@ export async function deleteCashRegister(
   const orgId = await getCurrentOrgId(supabase)
   if (!orgId) return { ok: false, error: "Chýba firma." }
 
-  const { error } = await supabase
+  // `.select("id")` je nutne: politika `cash_registers_delete_admin` pusti len
+  // owner/admin, ale PostgREST pri odfiltrovanom riadku vrati 204 bez chyby.
+  // Bez tohto by clen bez opravnenia dostal „Pokladna zmazana“ a pokladna by
+  // ostala.
+  const { data, error } = await supabase
     .from("cash_registers")
     .delete()
     .eq("id", id)
     .eq("organization_id", orgId)
-  if (error) return { ok: false, error: "Pokladňu sa nepodarilo zmazať." }
+    .select("id")
+
+  const outcome = writeOutcome(error, data)
+  if (outcome.kind === "failed") {
+    return { ok: false, error: "Pokladňu sa nepodarilo zmazať." }
+  }
+  if (outcome.kind === "noRows") {
+    // Riadok je cez SELECT vidno, ale DELETE ho nezasiahol → chyba opravnenie.
+    // `select` pusti kazdeho clena, `delete` len owner/admin, takze rozlisenie
+    // je zmysluplne a pouzivatel sa dozvie, co ma robit.
+    const { data: visible } = await supabase
+      .from("cash_registers")
+      .select("id")
+      .eq("id", id)
+      .eq("organization_id", orgId)
+      .maybeSingle()
+    return {
+      ok: false,
+      error: visible
+        ? "Pokladňu môže zmazať len majiteľ alebo správca firmy."
+        : "Pokladňa sa nenašla.",
+    }
+  }
   revalidatePath(PATH)
   return { ok: true, id }
 }
@@ -169,12 +204,31 @@ export async function deleteCashItem(id: string): Promise<CashActionResult> {
   const orgId = await getCurrentOrgId(supabase)
   if (!orgId) return { ok: false, error: "Chýba firma." }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("cash_register_items")
     .delete()
     .eq("id", id)
     .eq("organization_id", orgId)
-  if (error) return { ok: false, error: "Doklad sa nepodarilo zmazať." }
+    .select("id")
+
+  const outcome = writeOutcome(error, data)
+  if (outcome.kind === "failed") {
+    return { ok: false, error: "Doklad sa nepodarilo zmazať." }
+  }
+  if (outcome.kind === "noRows") {
+    const { data: visible } = await supabase
+      .from("cash_register_items")
+      .select("id")
+      .eq("id", id)
+      .eq("organization_id", orgId)
+      .maybeSingle()
+    return {
+      ok: false,
+      error: visible
+        ? "Doklad môže zmazať len majiteľ alebo správca firmy."
+        : "Doklad sa nenašiel.",
+    }
+  }
   revalidatePath(PATH)
   return { ok: true, id }
 }

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 import { createClient } from "@/lib/supabase/server"
+import { writeOutcome } from "@/lib/supabase/affected"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
 import type { Database } from "@/lib/supabase/database.types"
 import {
@@ -201,14 +202,32 @@ export async function deleteContactPerson(
   const orgId = await getCurrentOrgId(supabase)
   if (!orgId) return { ok: false, error: "Chýba firma." }
 
-  const { error } = await supabase
+  // Rovnaký dôvod ako pri štítkoch: `contact_persons_delete_admin` pustí len
+  // owner/admin a PostgREST pri odfiltrovanom riadku chybu nevráti.
+  const { data, error } = await supabase
     .from("contact_persons")
     .delete()
     .eq("id", id)
     .eq("organization_id", orgId)
+    .select("id")
 
-  if (error) {
+  const outcome = writeOutcome(error, data)
+  if (outcome.kind === "failed") {
     return { ok: false, error: "Kontaktnú osobu sa nepodarilo zmazať." }
+  }
+  if (outcome.kind === "noRows") {
+    const { data: visible } = await supabase
+      .from("contact_persons")
+      .select("id")
+      .eq("id", id)
+      .eq("organization_id", orgId)
+      .maybeSingle()
+    return {
+      ok: false,
+      error: visible
+        ? "Kontaktnú osobu môže zmazať len majiteľ alebo správca firmy."
+        : "Kontaktná osoba sa nenašla.",
+    }
   }
   revalidatePath("/app/contacts")
   return { ok: true, id }

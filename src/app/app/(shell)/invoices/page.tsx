@@ -36,7 +36,12 @@ function fmtDate(iso: string | null): string {
 // Neznamy alebo chybajuci parameter znamena "vsetky doklady"
 function parseType(value: string | string[] | undefined): DocumentType | null {
   if (typeof value !== "string") return null
-  return value in DOCUMENT_TYPE_LABELS ? (value as DocumentType) : null
+  // `in` prehlada aj prototyp, takze ?type=toString alebo ?type=constructor by
+  // presli ako platny typ dokladu. Dotaz by potom spadol na neplatnej hodnote
+  // enumu a stranka by vypisala "Ziadne doklady typu function toString()...".
+  return Object.hasOwn(DOCUMENT_TYPE_LABELS, value)
+    ? (value as DocumentType)
+    : null
 }
 
 export default async function InvoicesPage({

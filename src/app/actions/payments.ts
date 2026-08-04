@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
-import { round2 } from "@/lib/money"
+import { formatMoney, round2 } from "@/lib/money"
 import {
   parseBankCsv,
   transactionKey,
@@ -224,7 +224,7 @@ export async function importBankCsv(
       const m = matchTransaction({ amount: tx.amount, vs: tx.vs }, candidates)
       // Knihujeme len presnu zhodu sumy; zhoda len cez VS ostava nesparovana.
       if (m.documentId && shouldAutoBook(m)) {
-        await recordPayment(m.documentId, tx.amount, {
+        const res = await recordPayment(m.documentId, tx.amount, {
           paidAt: tx.bookedAt,
           method: "bank",
           bankTransactionId: txRow?.id ?? null,
@@ -234,23 +234,38 @@ export async function importBankCsv(
           variableSymbol: tx.vs,
           orgId,
         })
-        // Keep local candidates in sync so we don't double-match the same doc.
-        const c = candidates.find((x) => x.id === m.documentId)
-        if (c) c.paidAmount = round2(c.paidAmount + tx.amount)
-        booked = true
+        // Bez tejto kontroly by sa transakcia oznacila ako `matched`, hoci
+        // platba v databaze nie je — a pri opatovnom importe by ju dedup
+        // preskocil, takze by sa uz nikdy nezaknihovala.
+        if (res.ok) {
+          // Keep local candidates in sync so we don't double-match the same doc.
+          const c = candidates.find((x) => x.id === m.documentId)
+          if (c) c.paidAmount = round2(c.paidAmount + tx.amount)
+          booked = true
+        } else {
+          console.error("[bank] zapis uhrady zlyhal", m.documentId, res.error)
+          errors.push(
+            `Platba ${formatMoney(tx.amount, tx.currency)} sa nepodarila zaknihovať: ${res.error}`,
+          )
+        }
       }
     } else if (tx.amount < 0) {
       const m = matchExpenseTransaction(
         { amount: tx.amount, vs: tx.vs },
         expenseCandidates,
       )
-      // Rovnake pravidlo ako pri fakturach — `shouldAutoBook` pozna len tvar
-      // `MatchResult`, preto mu zhodu nakladu podame v jeho tvare.
-      const auto = shouldAutoBook({
-        documentId: m.expenseId,
-        confidence: m.confidence,
-      })
-      if (m.expenseId && auto) {
+      // PRISNEJSIE NEZ PRI FAKTURACH, a zamerne.
+      //
+      // Na kredite vypisu su takmer vylucne platby od odberatelov, takze zhoda
+      // samotnej sumy je tam obhajitelna. Na debete su aj mzdy, odvody, DPH,
+      // najom, poplatky banky a prevody na vlastny ucet — staci, aby ktorakolvek
+      // z nich mala sumu presne rovnu zostatku jedneho otvoreneho nakladu, a
+      // faktura dodavatela by sa ticho oznacila za uhradenu. Pri mesacnych
+      // pausaloch (12,00 / 29,90) je taka zhoda skoro ista.
+      //
+      // Vyzadujeme preto zhodu VS AJ sumy; samotna zhoda sumy ostava na rucne
+      // potvrdenie.
+      if (m.expenseId && m.confidence === "vs_amount") {
         const paid = round2(-tx.amount)
         const res = await recordExpensePayment({
           expenseId: m.expenseId,
@@ -260,6 +275,11 @@ export async function importBankCsv(
           const c = expenseCandidates.find((x) => x.id === m.expenseId)
           if (c) c.paidAmount = round2(c.paidAmount + paid)
           booked = true
+        } else {
+          console.error("[bank] zapis uhrady nakladu zlyhal", m.expenseId, res.error)
+          errors.push(
+            `Úhradu nákladu ${formatMoney(paid, tx.currency)} sa nepodarilo zapísať: ${res.error}`,
+          )
         }
       }
     }

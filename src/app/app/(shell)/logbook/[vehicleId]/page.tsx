@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react"
 
 import { createClient } from "@/lib/supabase/server"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
-import { deductibleFuel } from "@/lib/logbook/consumption"
+import { deductibleBusinessFuel } from "@/lib/logbook/consumption"
 import {
   FUEL_TYPE_LABELS,
   VEHICLE_OWNERSHIP_LABELS,
@@ -101,7 +101,14 @@ export default async function VehicleLogbookPage({
   const tripRows = trips ?? []
   const refuelingRows = refuelings ?? []
 
-  // Do danovo uznatelnych nakladov vstupuju IBA sluzobne jazdy.
+  // Normovana spotreba musi ratat VSETKY jazdy — auto spali palivo aj na
+  // sukromnej ceste a z jednej nadrze sa jazdi oboje. Az uznatelny PODIEL sa
+  // urci pomerom sluzobnych kilometrov.
+  //
+  // Podat sem sluzobne km spolu s celym nakupenym palivom by strop z nakupenej
+  // strany umelo nadvihlo a odpocet by vysiel nadhodnoteny — pri 1000 km
+  // sluzobne + 1000 sukromne a 70 doloziek litroch by to dalo 60 l namiesto 35.
+  const totalKm = tripRows.reduce((sum, t) => sum + t.distance_km, 0)
   const businessKm = tripRows
     .filter((t) => t.purpose === "business")
     .reduce((sum, t) => sum + t.distance_km, 0)
@@ -109,8 +116,9 @@ export default async function VehicleLogbookPage({
 
   // Pri kontrole sa uzna len to NIZSIE z dvojice (normovana spotreba, realne
   // nakupene palivo) — preto ukazujeme obidve strany, nie jedno cislo.
-  const fuel = deductibleFuel({
-    km: businessKm,
+  const fuel = deductibleBusinessFuel({
+    totalKm,
+    businessKm,
     consumption: vehicle.consumption_l_100km,
     purchasedLitres,
   })
@@ -160,7 +168,7 @@ export default async function VehicleLogbookPage({
                 <Field
                   label="Normovaná spotreba"
                   value={formatLitres(fuel.normedLitres)}
-                  note={`${formatKm(businessKm)} služobne × ${
+                  note={`${formatKm(fuel.totalKm)} spolu × ${
                     vehicle.consumption_l_100km ?? 0
                   } l/100 km`}
                 />
@@ -170,21 +178,28 @@ export default async function VehicleLogbookPage({
                   note={`${refuelingRows.length} tankovaní`}
                 />
                 <Field
-                  label="Uznateľné"
+                  label="Uznateľné služobne"
                   value={formatLitres(fuel.litres)}
-                  note={
-                    fuel.basis === "equal"
-                      ? "Obe strany sedia"
-                      : fuel.basis === "normed"
-                        ? "Rozhoduje normovaná spotreba"
-                        : "Rozhoduje nakúpené palivo"
-                  }
+                  note={`${formatKm(fuel.businessKm)} z ${formatKm(
+                    fuel.totalKm,
+                  )} služobne`}
                 />
               </div>
               <p className="text-muted-foreground text-sm">
-                Uznať sa dá len to nižšie z dvojice; rozdiel{" "}
-                {formatLitres(fuel.difference)} je neuznaná časť. Súkromné jazdy
-                sa do výpočtu nezapočítavajú.
+                Strop je to nižšie z dvojice — {formatLitres(fuel.eligibleLitres)}
+                {fuel.basis === "equal"
+                  ? " (obe strany sedia)"
+                  : fuel.basis === "normed"
+                    ? " podľa normovanej spotreby"
+                    : " podľa doložených dokladov o palive"}
+                . Z toho sa uplatní služobný podiel{" "}
+                {Math.round(fuel.businessShare * 100)} %, teda{" "}
+                {formatLitres(fuel.litres)}.
+              </p>
+              <p className="text-muted-foreground text-sm">
+                Normovaná spotreba ráta všetky jazdy — auto spáli palivo aj
+                súkromne a z jednej nádrže sa jazdí oboje. Služobný podiel sa
+                preto určuje pomerom kilometrov, nie výberom tankovaní.
               </p>
             </>
           )}

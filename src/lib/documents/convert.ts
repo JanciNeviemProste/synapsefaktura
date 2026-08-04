@@ -38,6 +38,21 @@ export function canConvertDocument(
   return CONVERSIONS[from].includes(to)
 }
 
+/**
+ * Znamienko, ktorým sa pri prevode násobí množstvo položiek.
+ *
+ * Dobropis znižuje základ dane, takže musí mať opačné znamienko než doklad,
+ * ktorý opravuje. Bez toho by z faktúry na 1 200 € vznikol dobropis na
+ * +1 200 € — doklad tvrdiaci presný opak toho, na čo slúži, a v banke by sa
+ * navyše pároval ako pohľadávka (`credit_note` má `showVariableSymbol`).
+ *
+ * Neguje sa množstvo, nie jednotková cena: cena zostane čitateľná a
+ * `computeInvoice` prenásobením dostane záporný základ aj DPH.
+ */
+export function conversionQuantitySign(to: DocumentType): 1 | -1 {
+  return to === "credit_note" ? -1 : 1
+}
+
 /** Same check as `canConvertDocument`, with a message ready for the user. */
 export function checkConversion(
   from: DocumentType,

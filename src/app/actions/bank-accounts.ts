@@ -33,6 +33,33 @@ function toRow(v: BankAccountValues) {
  * nastavenim noveho predvoleneho — poradie "najprv zhod vsetky, potom nastav
  * jeden" drzi invariant (max. jeden predvoleny) aj pri suboznych volaniach.
  */
+/**
+ * Bankový účet smie meniť len majiteľ alebo správca.
+ *
+ * V projekte inak rolu nevynucuje žiadna server action — členstvo stačí všade
+ * a RLS na `bank_accounts` používa `is_org_member`. Tu je to však iné: zmena
+ * IBAN mení, kam odberatelia posielajú peniaze, a prejaví sa okamžite na
+ * každej ďalšej faktúre aj v QR kóde. Kým sa rolový model nedorieši plošne,
+ * je toto miesto jeho najostrejším dôsledkom a guard sem patrí.
+ *
+ * RLS to sama nedoženie, preto kontrola v akcii.
+ */
+async function requireManagerRole(
+  db: Db,
+  orgId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { data } = await db
+    .from("organization_members")
+    .select("role")
+    .eq("organization_id", orgId)
+    .maybeSingle()
+  if (data?.role === "owner" || data?.role === "admin") return { ok: true }
+  return {
+    ok: false,
+    error: "Bankové účty môže meniť len majiteľ alebo správca firmy.",
+  }
+}
+
 async function clearDefault(db: Db, orgId: string) {
   return db
     .from("bank_accounts")
@@ -91,6 +118,9 @@ export async function createBankAccount(
   const orgId = await getCurrentOrgId(supabase)
   if (!orgId) return { ok: false, error: "Chýba firma." }
 
+  const role = await requireManagerRole(supabase, orgId)
+  if (!role.ok) return { ok: false, error: role.error }
+
   // Prvy ucet je vzdy predvoleny — inak by faktura nemala z coho brat platobne udaje.
   const { count } = await supabase
     .from("bank_accounts")
@@ -130,6 +160,9 @@ export async function updateBankAccount(
   const supabase = await createClient()
   const orgId = await getCurrentOrgId(supabase)
   if (!orgId) return { ok: false, error: "Chýba firma." }
+
+  const role = await requireManagerRole(supabase, orgId)
+  if (!role.ok) return { ok: false, error: role.error }
 
   const { data: current } = await supabase
     .from("bank_accounts")
@@ -179,6 +212,9 @@ export async function setDefaultBankAccount(
   const orgId = await getCurrentOrgId(supabase)
   if (!orgId) return { ok: false, error: "Chýba firma." }
 
+  const role = await requireManagerRole(supabase, orgId)
+  if (!role.ok) return { ok: false, error: role.error }
+
   const { data: current } = await supabase
     .from("bank_accounts")
     .select("id")
@@ -211,6 +247,9 @@ export async function deleteBankAccount(
   const supabase = await createClient()
   const orgId = await getCurrentOrgId(supabase)
   if (!orgId) return { ok: false, error: "Chýba firma." }
+
+  const role = await requireManagerRole(supabase, orgId)
+  if (!role.ok) return { ok: false, error: role.error }
 
   const { data: current } = await supabase
     .from("bank_accounts")

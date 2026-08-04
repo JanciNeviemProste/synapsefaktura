@@ -2,9 +2,13 @@
 
 import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
 import { documentSchema, type DocumentInput } from "@/lib/validation/document"
-import { checkConversion } from "@/lib/documents/convert"
+import {
+  checkConversion,
+  conversionQuantitySign,
+} from "@/lib/documents/convert"
 import { variableSymbolFromNumber } from "@/lib/documents/variable-symbol"
 import {
   buildClientSnapshot,
@@ -189,7 +193,17 @@ export async function saveDocument(
   // (citac sa inkrementuje vo vlastnej transakcii uz predtym), takze v ciselnom
   // rade moze vzniknut diera. To je zamer: precislovavanie uz vystavenych
   // dokladov by bolo horsie ako medzera.
-  const { data: savedId, error: saveErr } = await supabase.rpc(
+  // Service-role klient je tu NUTNY, nie pohodlnost: funkcia je odobrata
+  // beznym pouzivatelom (20260805090000_lock_save_document_rpc.sql), lebo je
+  // `security definer` a doveruje zoznamu stlpcov od volajuceho — cez PostgREST
+  // by si klient nastavil `total`, `paid_amount` aj `status` sam.
+  //
+  // Org scoping tym netrpi: `docRow.organization_id` je `orgId` z overeneho
+  // `getCurrentOrgId`, nie z requestu, a funkcia pri UPDATE filtruje
+  // `where d.id = ... and d.organization_id = ...`, takze cudzi doklad
+  // nezasiahne. Klientovy vstup sa sem dostane az po prepocte cez `computeInvoice`.
+  const admin = createAdminClient()
+  const { data: savedId, error: saveErr } = await admin.rpc(
     "save_document_with_items",
     {
       p_document: docRow,
@@ -421,6 +435,8 @@ export async function convertDocument(
   // v editore — prenasat ich zo zdroja by dalo faktúre splatnost ponuky.
   const today = new Date().toISOString().slice(0, 10)
 
+  const sign = conversionQuantitySign(targetType)
+
   return saveDocument({
     type: targetType,
     contactId: src.contact_id,
@@ -434,7 +450,7 @@ export async function convertDocument(
     relatedDocumentId: sourceId,
     items: srcItems.map((it) => ({
       description: it.description,
-      quantity: it.quantity,
+      quantity: sign * it.quantity,
       unit: it.unit,
       unitPrice: it.unit_price,
       vatRate: it.vat_rate,

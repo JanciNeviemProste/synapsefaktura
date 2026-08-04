@@ -101,10 +101,16 @@ export async function renderInvoicePdf(
 ): Promise<RenderedInvoice | null> {
   const orgQuery = db.from("organizations").select("*")
   const bankQuery = db.from("bank_accounts").select("*")
+  const docQuery = db.from("documents").select("*").eq("id", id)
 
   const [{ data: doc }, { data: items }, { data: org }, { data: bank }] =
     await Promise.all([
-      db.from("documents").select("*").eq("id", id).maybeSingle(),
+      // Doklad MUSI byt filtrovany na tu istu organizaciu ako hlavicka a banka.
+      // Bez toho si clen dvoch firiem cez /app/invoices/<id-z-firmy-B>/pdf
+      // vytiahol doklad firmy B vysadzany s hlavickou a IBAN-om firmy A —
+      // vratane QR kodu, ktory vyzyva na uhradu cudzej sumy na vlastny ucet.
+      // RLS to nezachyti: pusti vsetky organizacie, ktorych je pouzivatel clenom.
+      (orgId ? docQuery.eq("organization_id", orgId) : docQuery).maybeSingle(),
       db
         .from("document_items")
         .select("*")

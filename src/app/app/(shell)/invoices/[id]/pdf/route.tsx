@@ -17,7 +17,14 @@ export async function GET(
   // organizations/bank_accounts by clenovi dvoch firiem vedel dat do PDF cudziu
   // hlavicku a cudzi IBAN.
   const orgId = await getCurrentOrgId(supabase)
-  const rendered = await renderInvoicePdf(supabase, id, orgId ?? undefined)
+  // Bez znamej organizacie sa PDF nevykresluje. `orgId ?? undefined` by
+  // `renderInvoicePdf` vratilo k spravaniu bez filtra — teda presne k tomu,
+  // pred cim komentar vyssie varuje.
+  if (!orgId) {
+    return new Response("Chýba firma.", { status: 404 })
+  }
+
+  const rendered = await renderInvoicePdf(supabase, id, orgId)
   if (!rendered) {
     return new Response("Doklad sa nenašiel.", { status: 404 })
   }

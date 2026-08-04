@@ -3,8 +3,9 @@ name: CI
 on:
   push:
     branches: [main]
+  # No `branches` filter: that filters on the PR's *base*, so a stacked PR
+  # (one targeting another feature branch rather than main) never got checked.
   pull_request:
-    branches: [main]
 
 jobs:
   verify:
