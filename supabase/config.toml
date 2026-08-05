@@ -151,11 +151,27 @@ max_indexes = 5
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
+# Toto je hodnota pre LOKÁLNY beh. Nasadený projekt sa ňou neriadi — ten má
+# vlastnú v Supabase Dashboard → Authentication → URL Configuration, a tá sa
+# musí nastaviť ručne (alebo `supabase config push`).
+#
+# ⚠️ Overené na produkcii 2026-08-05: tam bola stále `http://localhost:3000`.
+# Dôsledok: odkaz z potvrdzovacieho e-mailu poslal používateľa na localhost,
+# takže registráciu nešlo dokončiť, hoci účet vznikol. To isté by zhodilo
+# obnovu hesla aj prihlásenie cez Google. Postup nápravy: `docs/AUTH-SETUP.md`.
 site_url = "http://localhost:3000"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["http://localhost:3000", "http://localhost:3000/auth/callback"]
+# Musí obsahovať PRESNÚ adresu callbacku nasadenej appky, inak ju GoTrue
+# odmietne a presmeruje na `site_url`. Platí pre potvrdenie e-mailu, obnovu
+# hesla aj prihlásenie cez Google.
+additional_redirect_urls = [
+  "http://localhost:3000",
+  "http://localhost:3000/auth/callback",
+  "https://synapsefaktura.vercel.app",
+  "https://synapsefaktura.vercel.app/auth/callback",
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
