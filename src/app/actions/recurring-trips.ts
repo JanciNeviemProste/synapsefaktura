@@ -45,6 +45,7 @@ function toRow(v: ReturnType<typeof recurringTripSchema.parse>) {
     contact_id: v.contactId ?? null,
     distance_km: v.distanceKm,
     round_trip: v.roundTrip,
+    with_trailer: v.withTrailer,
     purpose: v.purpose,
     purpose_note: v.purposeNote ?? null,
     next_run_on: v.nextRunOn,
@@ -256,6 +257,7 @@ export async function generateDueTrips(
       contact_id: t.contact_id,
       distance_km: t.distance_km,
       round_trip: t.round_trip,
+      with_trailer: t.with_trailer,
       purpose: t.purpose,
       purpose_note: t.purpose_note,
     }))

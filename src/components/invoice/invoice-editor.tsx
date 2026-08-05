@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useTransition } from "react"
+import { useMemo, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { useForm, useFieldArray, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -62,6 +62,54 @@ function addDays(iso: string, days: number) {
   return d.toISOString().slice(0, 10)
 }
 
+/** Polia uctovneho clenenia. Jedno miesto, aby sa hromadne vyplnenie a riadok
+ *  polozky nemohli rozist. */
+const ACCOUNTING_FIELDS = [
+  { name: "accountCode", label: "Účet" },
+  { name: "costCenter", label: "Stredisko" },
+  { name: "projectCode", label: "Zákazka" },
+  { name: "activityCode", label: "Činnosť" },
+] as const
+
+type AccountingValues = Record<(typeof ACCOUNTING_FIELDS)[number]["name"], string>
+
+const ACCOUNTING_PLACEHOLDERS: AccountingValues = {
+  accountCode: "napr. 602",
+  costCenter: "napr. BA",
+  projectCode: "napr. P-2026-01",
+  activityCode: "napr. SLU",
+}
+
+function accountingPlaceholder(name: keyof AccountingValues): string {
+  return ACCOUNTING_PLACEHOLDERS[name]
+}
+
+/** Kratke zhrnutie do zabaleneho riadku, aby bolo vidiet vyplnene clenenie
+ *  bez rozbalovania kazdej polozky. */
+function itemAccountingSummary(
+  item?: Partial<AccountingValues> | null,
+): string {
+  if (!item) return ""
+  const filled = ACCOUNTING_FIELDS.map((f) => item[f.name]?.trim()).filter(
+    (v): v is string => Boolean(v),
+  )
+  return filled.length > 0 ? ` — ${filled.join(" · ")}` : ""
+}
+
+/** Predvyplni hromadne pole z PRVEJ polozky — pri doklade s jednotnym clenenim
+ *  (co je bezny pripad) tak pouzivatel vidi to, co uz plati. */
+function firstItemAccounting(
+  items?: { account_code: string | null; cost_center: string | null; project_code: string | null; activity_code: string | null }[] | null,
+): AccountingValues {
+  const first = items?.[0]
+  return {
+    accountCode: first?.account_code ?? "",
+    costCenter: first?.cost_center ?? "",
+    projectCode: first?.project_code ?? "",
+    activityCode: first?.activity_code ?? "",
+  }
+}
+
 export function InvoiceEditor({
   contacts,
   products,
@@ -96,12 +144,6 @@ export function InvoiceEditor({
       footerNotes: doc?.footer_notes ?? "",
       // `null` = "podla typu dokladu". Nie `false`, ani `true`.
       showPrices: doc?.show_prices ?? null,
-      // Uctovne clenenie je na polozkach; formular ho drzi na doklade, takze
-      // sa nacita z prvej polozky — vsetky ho maju rovnake.
-      accountCode: existingItems?.[0]?.account_code ?? "",
-      costCenter: existingItems?.[0]?.cost_center ?? "",
-      projectCode: existingItems?.[0]?.project_code ?? "",
-      activityCode: existingItems?.[0]?.activity_code ?? "",
       items:
         existingItems && existingItems.length
           ? existingItems.map((i) => ({
@@ -112,6 +154,10 @@ export function InvoiceEditor({
               vatRate: i.vat_rate,
               discountPct: i.discount_pct,
               productId: i.product_id,
+              accountCode: i.account_code ?? "",
+              costCenter: i.cost_center ?? "",
+              projectCode: i.project_code ?? "",
+              activityCode: i.activity_code ?? "",
             }))
           : [
               {
@@ -157,6 +203,29 @@ export function InvoiceEditor({
       (t) => !HIDDEN_DOCUMENT_TYPES.includes(t) || t === doc?.type,
     )
   }, [doc?.type])
+
+  // Uctovne clenenie sedi na polozke. Tento stav je len HROMADNE VYPLNENIE —
+  // do formulara sa dostane az kliknutim, aby sa nestalo, ze pisanie hore
+  // ticho prepise clenenie, ktore si niekto nastavil po riadkoch.
+  const [bulkAccounting, setBulkAccounting] = useState<AccountingValues>(() =>
+    firstItemAccounting(existingItems),
+  )
+
+  function applyAccountingToAll() {
+    const count = form.getValues("items").length
+    for (let i = 0; i < count; i++) {
+      for (const f of ACCOUNTING_FIELDS) {
+        form.setValue(`items.${i}.${f.name}`, bulkAccounting[f.name], {
+          shouldDirty: true,
+        })
+      }
+    }
+    toast.success(
+      count === 1
+        ? "Členenie použité na položku."
+        : `Členenie použité na ${count} položiek.`,
+    )
+  }
 
   const showPrices = useWatch({ control: form.control, name: "showPrices" })
   const docType = (type as DocumentType) ?? "invoice"
@@ -449,8 +518,8 @@ export function InvoiceEditor({
             {fields.map((f, idx) => {
               const line = totals.lines[idx]
               return (
+                <div key={f.id} className="grid gap-2">
                 <div
-                  key={f.id}
                   className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_70px_60px_90px_80px_70px_100px_32px] sm:items-center"
                 >
                   <Input
@@ -496,6 +565,34 @@ export function InvoiceEditor({
                   >
                     <Trash2 className="size-4" />
                   </Button>
+                </div>
+
+                {/* Uctovne clenenie tejto polozky. Zabalene, aby riadok
+                    ostal citatelny — vacsina dokladov ho nepotrebuje po
+                    riadkoch a vyplni ho hromadne vyssie. */}
+                <details className="text-sm">
+                  <summary className="text-muted-foreground hover:text-foreground w-fit cursor-pointer text-xs select-none">
+                    Účtovné členenie položky
+                    {itemAccountingSummary(watchedItems?.[idx])}
+                  </summary>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-4">
+                    {ACCOUNTING_FIELDS.map((af) => (
+                      <div key={af.name} className="grid gap-1">
+                        <Label
+                          htmlFor={`item-${idx}-${af.name}`}
+                          className="text-muted-foreground text-xs"
+                        >
+                          {af.label}
+                        </Label>
+                        <Input
+                          id={`item-${idx}-${af.name}`}
+                          placeholder={accountingPlaceholder(af.name)}
+                          {...form.register(`items.${idx}.${af.name}`)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </details>
                 </div>
               )
             })}
@@ -574,41 +671,47 @@ export function InvoiceEditor({
           </CardContent>
         </Card>
 
-        {/* Uctovne clenenie */}
+        {/* Uctovne clenenie — hromadne vyplnenie */}
         <Card>
           <CardContent className="grid gap-4 pt-6">
             <div className="grid gap-1">
               <Label>Účtovné členenie</Label>
               <p className="text-muted-foreground text-xs">
-                Voliteľné. Zapíše sa na všetky položky dokladu a vstúpi do
-                exportu pre účtovníka.
+                Voliteľné, vstupuje do položkového exportu pre účtovníka.
+                Členenie sedí na <strong>položke</strong> — tu ho vyplníš raz
+                a tlačidlom prepíšeš do všetkých. Jednotlivé riadky sa dajú
+                zmeniť nižšie pri položkách.
               </p>
             </div>
             <div className="grid gap-4 sm:grid-cols-4">
-              <div className="grid gap-2">
-                <Label htmlFor="account-code" className="text-xs">
-                  Účet
-                </Label>
-                <Input id="account-code" {...form.register("accountCode")} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="cost-center" className="text-xs">
-                  Stredisko
-                </Label>
-                <Input id="cost-center" {...form.register("costCenter")} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="project-code" className="text-xs">
-                  Zákazka
-                </Label>
-                <Input id="project-code" {...form.register("projectCode")} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="activity-code" className="text-xs">
-                  Činnosť
-                </Label>
-                <Input id="activity-code" {...form.register("activityCode")} />
-              </div>
+              {ACCOUNTING_FIELDS.map((f) => (
+                <div key={f.name} className="grid gap-2">
+                  <Label htmlFor={`bulk-${f.name}`} className="text-xs">
+                    {f.label}
+                  </Label>
+                  <Input
+                    id={`bulk-${f.name}`}
+                    value={bulkAccounting[f.name]}
+                    onChange={(e) =>
+                      setBulkAccounting((prev) => ({
+                        ...prev,
+                        [f.name]: e.target.value,
+                      }))
+                    }
+                    placeholder={accountingPlaceholder(f.name)}
+                  />
+                </div>
+              ))}
+            </div>
+            <div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={applyAccountingToAll}
+              >
+                Použiť na všetky položky
+              </Button>
             </div>
           </CardContent>
         </Card>

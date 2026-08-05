@@ -14,8 +14,19 @@ export const documentTypeSchema = z.enum([
   "draft",
 ])
 
+/**
+ * Uctovne clenenie. Sedi na POLOZKE, lebo jeden doklad moze niest riadky
+ * z roznych stredisk alebo zakaziek. Editor ponuka aj hromadne vyplnenie na
+ * urovni dokladu, ale zdrojom pravdy je polozka.
+ */
+const accountingField = z.string().trim().optional().or(z.literal(""))
+
 export const documentItemSchema = z.object({
   description: z.string().trim().default(""),
+  accountCode: accountingField,
+  costCenter: accountingField,
+  projectCode: accountingField,
+  activityCode: accountingField,
   quantity: z.coerce.number().default(1),
   unit: z.string().trim().default("ks"),
   unitPrice: z.coerce.number().default(0),
@@ -43,17 +54,6 @@ export const documentSchema = z.object({
    * prirodzenemu spravaniu.
    */
   showPrices: z.boolean().nullable().optional(),
-  /**
-   * Účtovné členenie. V schéme sedí na položke (`document_items`), pretože
-   * jeden doklad môže niesť riadky z rôznych stredísk. Formulár ho zatiaľ
-   * vystavuje na úrovni dokladu a zapíše na všetky položky — tak to malé firmy
-   * v praxi používajú. Rozlíšenie po položkách je tým pádom pripravené, len
-   * zatiaľ neponúknuté.
-   */
-  accountCode: z.string().trim().optional().or(z.literal("")),
-  costCenter: z.string().trim().optional().or(z.literal("")),
-  projectCode: z.string().trim().optional().or(z.literal("")),
-  activityCode: z.string().trim().optional().or(z.literal("")),
   // Vazba na zdrojovy doklad (prevod, dobropis). Ked chyba, zapis sa jej
   // nedotkne — existujuca vazba tak prezije bezne ulozenie z editora.
   relatedDocumentId: z.string().uuid().nullable().optional(),

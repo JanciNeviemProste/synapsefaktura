@@ -22,6 +22,11 @@ export interface ExpenseItemInput {
   unit: string
   unitPrice: number
   vatRate: number
+  /** Uctovne clenenie — do exportu pre uctovnika. */
+  accountCode?: string | null
+  costCenter?: string | null
+  projectCode?: string | null
+  activityCode?: string | null
 }
 
 export interface ExpenseItemRow {
@@ -34,6 +39,10 @@ export interface ExpenseItemRow {
   line_base: number
   line_vat: number
   line_total: number
+  account_code: string | null
+  cost_center: string | null
+  project_code: string | null
+  activity_code: string | null
 }
 
 export interface ExpenseAmounts {
@@ -77,6 +86,12 @@ export function computeExpenseItems(
       line_base: line.lineBase,
       line_vat: line.lineVat,
       line_total: line.lineTotal,
+      // Prazdne pole ide ako `null`, nie ako prazdny retazec — export by inak
+      // posielal stlpec, ktory vyzera vyplneny, ale nic nenesie.
+      account_code: items[idx].accountCode || null,
+      cost_center: items[idx].costCenter || null,
+      project_code: items[idx].projectCode || null,
+      activity_code: items[idx].activityCode || null,
     })),
   }
 }

@@ -55,6 +55,7 @@ function toRow(v: ReturnType<typeof tripSchema.parse>) {
     contact_id: v.contactId ?? null,
     distance_km: v.distanceKm,
     round_trip: v.roundTrip,
+    with_trailer: v.withTrailer,
     purpose: v.purpose,
     purpose_note: v.purposeNote ?? null,
     driver_name: v.driverName ?? null,

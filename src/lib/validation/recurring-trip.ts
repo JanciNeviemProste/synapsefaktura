@@ -45,6 +45,7 @@ export const recurringTripSchema = z
       .min(0, "Dĺžka jazdy nesmie byť záporná.")
       .default(0),
     roundTrip: z.boolean().default(true),
+    withTrailer: z.boolean().default(false),
     purpose: z.enum(TRIP_PURPOSES).default("business"),
     purposeNote: optionalString,
     nextRunOn: z

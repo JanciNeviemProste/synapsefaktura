@@ -71,6 +71,11 @@ export const tripSchema = z
       .default(0),
     /** Tam aj spat. */
     roundTrip: z.boolean().default(true),
+    /**
+     * Jazda s privesom. Zaklada narok na +15 % k zakladnej nahrade, ale LEN
+     * pri osobnom vozidle a stvorkolke (zakon c. 283/2002 Z. z.).
+     */
+    withTrailer: z.boolean().default(false),
     purpose: z
       .enum(TRIP_PURPOSES, {
         required_error: "Vyber typ jazdy.",

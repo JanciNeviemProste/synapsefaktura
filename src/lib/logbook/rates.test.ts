@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest"
-import { resolveTravelRate, type TravelRate } from "@/lib/logbook/rates"
+import {
+  resolveTravelRate,
+  trailerEligible,
+  type TravelRate,
+} from "@/lib/logbook/rates"
 
 function rate(p: Partial<TravelRate>): TravelRate {
   return {
@@ -110,6 +114,17 @@ describe("resolveTravelRate — kategoria vozidla", () => {
     expect(resolveTravelRate(vlastna, "2026-03-15", "motorcycle")?.rate_per_km).toBe(0.4)
   })
 
+  it("stvorkolka pouzije sadzbu motocykla", () => {
+    // Oznamenia ich zoskupuju ("dvojkolesove, trojkolesove vozidla
+    // a stvorkolky: 0,090 eura"), takze vlastny riadok nema.
+    expect(resolveTravelRate(STATUTORY, "2026-03-15", "quad")?.rate_per_km).toBe(
+      0.09,
+    )
+    expect(resolveTravelRate(STATUTORY, "2025-04-15", "quad")?.rate_per_km).toBe(
+      0.08,
+    )
+  })
+
   it("presna kategoria vyhrava nad sadzbou bez kategorie", () => {
     const bezKategorie = rate({ organization_id: "org-1", vehicle_category: null, rate_per_km: 0.4 })
     const preMotorku = rate({ organization_id: "org-1", vehicle_category: "motorcycle", rate_per_km: 0.12 })
@@ -141,5 +156,25 @@ describe("resolveTravelRate — nepotvrdena sadzba", () => {
   it("samotna nepotvrdena sadzba znamena ziadnu sadzbu", () => {
     const navrhnuta = [rate({ confirmed_at: null })]
     expect(resolveTravelRate(navrhnuta, "2026-03-15")).toBeNull()
+  })
+})
+
+describe("trailerEligible", () => {
+  it("osobne auto a stvorkolka maju na priplatok narok", () => {
+    // Zakon c. 283/2002 Z. z.: prives k STVORKOLKE alebo k OSOBNEMU vozidlu.
+    expect(trailerEligible("passenger")).toBe(true)
+    expect(trailerEligible("quad")).toBe(true)
+  })
+
+  it("motocykel a trojkolka nie", () => {
+    expect(trailerEligible("motorcycle")).toBe(false)
+  })
+
+  it("stvorkolka ma sadzbu motocykla, ale narok na prives ako auto", () => {
+    // Presne preto nemoze byt `quad` zluceny s `motorcycle`.
+    expect(resolveTravelRate(STATUTORY, "2026-03-15", "quad")?.rate_per_km).toBe(
+      resolveTravelRate(STATUTORY, "2026-03-15", "motorcycle")?.rate_per_km,
+    )
+    expect(trailerEligible("quad")).not.toBe(trailerEligible("motorcycle"))
   })
 })

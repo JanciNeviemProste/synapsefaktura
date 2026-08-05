@@ -90,6 +90,10 @@ export function ExpenseForm({
               unit: i.unit,
               unitPrice: i.unit_price,
               vatRate: i.vat_rate,
+              accountCode: i.account_code ?? "",
+              costCenter: i.cost_center ?? "",
+              projectCode: i.project_code ?? "",
+              activityCode: i.activity_code ?? "",
             }))
           : undefined,
     },
@@ -118,6 +122,10 @@ export function ExpenseForm({
           unit: i.unit ?? "ks",
           unitPrice: Number(i.unitPrice) || 0,
           vatRate: Number(i.vatRate) || 0,
+          accountCode: i.accountCode,
+          costCenter: i.costCenter,
+          projectCode: i.projectCode,
+          activityCode: i.activityCode,
         })),
       )
     : null
@@ -448,6 +456,31 @@ export function ExpenseForm({
                       <Trash2 className="size-4" />
                     </Button>
                   </div>
+
+                  {/* Uctovne clenenie — zabalene, aby riadok ostal citatelny. */}
+                  <details className="col-span-2 sm:col-span-12">
+                    <summary className="text-muted-foreground hover:text-foreground w-fit cursor-pointer text-xs select-none">
+                      Účtovné členenie položky
+                    </summary>
+                    <div className="mt-2 grid gap-2 sm:grid-cols-4">
+                      <Input
+                        placeholder="Účet"
+                        {...form.register(`items.${i}.accountCode`)}
+                      />
+                      <Input
+                        placeholder="Stredisko"
+                        {...form.register(`items.${i}.costCenter`)}
+                      />
+                      <Input
+                        placeholder="Zákazka"
+                        {...form.register(`items.${i}.projectCode`)}
+                      />
+                      <Input
+                        placeholder="Činnosť"
+                        {...form.register(`items.${i}.activityCode`)}
+                      />
+                    </div>
+                  </details>
                 </div>
               ))}
 

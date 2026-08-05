@@ -30,13 +30,24 @@ export type DeductibleFuel = {
 }
 
 export type TravelReimbursement = {
-  /** Zakladna nahrada za km: km x sadzba. */
+  /** Zakladna nahrada za km: km x sadzba, vratane priplatku za prives. */
   basicAmount: number
   /** Nahrada za spotrebovane palivo. */
   fuelAmount: number
   /** Spolu na vyplatenie. */
   total: number
+  /** Kolko z `basicAmount` tvori priplatok za prives (0, ked sa neuplatnil). */
+  trailerSurcharge: number
 }
+
+/**
+ * O kolko sa zvysuje zakladna nahrada pri pouziti privesu.
+ *
+ * Zakon c. 283/2002 Z. z. o cestovnych nahradach: pri pouziti privesu
+ * k STVORKOLKE alebo k OSOBNEMU vozidlu sa suma zakladnej nahrady zvysi
+ * o 15 %. Pre dvojkolesove a trojkolesove vozidla to neplati.
+ */
+export const TRAILER_SURCHARGE_PCT = 15
 
 /** Kladne konecne cislo (0 je v poriadku, zaporne km ani spotreba nie su). */
 function isNonNegative(value: number | null | undefined): value is number {
@@ -154,22 +165,49 @@ export function deductibleBusinessFuel(input: {
 }
 
 /**
- * Cestovna nahrada za jazdu: zakladna sadzba za km plus nahrada za palivo.
+ * Cestovna nahrada za jazdy: zakladna sadzba za km plus nahrada za palivo.
+ *
+ * Kilometre sa podavaju v DVOCH vedrach, lebo jazdy s privesom maju o 15 %
+ * vyssiu zakladnu nahradu. Jeden sucet vynasobeny jednou sadzbou by nesedel
+ * hned, ako by bola cast jazd s vlekom a cast bez neho.
+ *
+ * `trailerAllowed` rozhoduje, ci sa priplatok vobec uplatni. Pri motocykli
+ * a trojkolke ho zakon nepriznava, takze sa kilometre s privesom pocitaju
+ * zakladnou sadzbou — priplatok by bol nadhodnotenim danoveho podkladu.
+ *
  * Vrati `null` pri nezmyselnych vstupoch (zaporne km alebo sadzba).
  */
 export function travelReimbursement(input: {
+  /** Kilometre BEZ privesu. */
   km: number
+  /** Kilometre s privesom. Vynechane = ziadne. */
+  kmWithTrailer?: number | null
   ratePerKm: number
+  /** Ma vozidlo na priplatok narok? (osobne auto, stvorkolka) */
+  trailerAllowed?: boolean
   fuelCost?: number | null
 }): TravelReimbursement | null {
   if (!isNonNegative(input.km)) return null
   if (!isNonNegative(input.ratePerKm)) return null
 
+  const trailerKm = isNonNegative(input.kmWithTrailer) ? input.kmWithTrailer : 0
+  if (input.kmWithTrailer != null && !isNonNegative(input.kmWithTrailer)) {
+    return null
+  }
+
+  const plainAmount = round2(input.km * input.ratePerKm)
+  const trailerBase = round2(trailerKm * input.ratePerKm)
+  const trailerSurcharge = input.trailerAllowed
+    ? round2((trailerBase * TRAILER_SURCHARGE_PCT) / 100)
+    : 0
+
   const fuelAmount = isNonNegative(input.fuelCost) ? round2(input.fuelCost) : 0
-  const basicAmount = round2(input.km * input.ratePerKm)
+  const basicAmount = round2(plainAmount + trailerBase + trailerSurcharge)
+
   return {
     basicAmount,
     fuelAmount,
     total: round2(basicAmount + fuelAmount),
+    trailerSurcharge,
   }
 }

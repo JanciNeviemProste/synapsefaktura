@@ -54,12 +54,19 @@ export const VEHICLE_OWNERSHIP_LABELS: Record<VehicleOwnership, string> = {
  * zakonna sadzba za km sa uplatni — od 1. 1. 2026 je to 0,313 €/km pre osobne
  * auto a 0,090 €/km pre motocykel, teda 3,5-nasobny rozdiel.
  */
-export const VEHICLE_CATEGORIES = ["passenger", "motorcycle"] as const
+export const VEHICLE_CATEGORIES = [
+  "passenger",
+  "motorcycle",
+  "quad",
+] as const
 export type VehicleCategory = (typeof VEHICLE_CATEGORIES)[number]
 
 export const VEHICLE_CATEGORY_LABELS: Record<VehicleCategory, string> = {
   passenger: "Osobné auto",
-  motorcycle: "Motocykel / štvorkolka",
+  motorcycle: "Motocykel / trojkolka",
+  // Stvorkolka ma sadzbu ako motocykel, ale narok na priplatok za prives
+  // ako osobne auto — preto vlastna kategoria.
+  quad: "Štvorkolka",
 }
 
 /**

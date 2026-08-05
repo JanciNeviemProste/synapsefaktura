@@ -57,9 +57,12 @@ export function TripsView({
   vehicleId,
   trips,
   contacts,
+  trailerAllowed = true,
 }: {
   vehicleId: string
   trips: Trip[]
+  /** Ma vozidlo narok na +15 % pri privese (osobne auto, stvorkolka)? */
+  trailerAllowed?: boolean
   contacts: ContactOption[]
 }) {
   const router = useRouter()
@@ -160,6 +163,13 @@ export function TripsView({
                       {t.origin || "—"} {t.round_trip ? "↔" : "→"}{" "}
                       {t.destination || "—"}
                     </span>
+                    {t.with_trailer ? (
+                      <span className="text-muted-foreground block text-xs">
+                        {trailerAllowed
+                          ? "S prívesom (+15 %)"
+                          : "S prívesom — bez nároku na príplatok"}
+                      </span>
+                    ) : null}
                     {t.driver_name ? (
                       <span className="text-muted-foreground block text-xs">
                         Vodič: {t.driver_name}
@@ -234,6 +244,7 @@ export function TripsView({
             vehicleId={vehicleId}
             trip={editing}
             contacts={contacts}
+            trailerAllowed={trailerAllowed}
             onDone={handleDone}
           />
         </DialogContent>

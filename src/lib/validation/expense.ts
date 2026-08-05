@@ -6,8 +6,15 @@ const optionalString = z
   .optional()
   .transform((v) => (v === "" ? undefined : v))
 
+/** Uctovne clenenie polozky nakladu — rovnake stlpce ako pri dokladoch. */
+const accountingField = z.string().trim().optional().or(z.literal(""))
+
 export const expenseItemSchema = z.object({
   description: z.string().trim().default(""),
+  accountCode: accountingField,
+  costCenter: accountingField,
+  projectCode: accountingField,
+  activityCode: accountingField,
   quantity: z.coerce.number().finite("Zadaj množstvo ako číslo.").default(1),
   unit: z.string().trim().default("ks"),
   unitPrice: z.coerce

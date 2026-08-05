@@ -1647,6 +1647,7 @@ export type Database = {
           purpose: Database["public"]["Enums"]["trip_purpose"]
           purpose_note: string | null
           round_trip: boolean
+          with_trailer: boolean
           updated_at: string
           vehicle_id: string
         }
@@ -1664,6 +1665,7 @@ export type Database = {
           purpose?: Database["public"]["Enums"]["trip_purpose"]
           purpose_note?: string | null
           round_trip?: boolean
+          with_trailer?: boolean
           updated_at?: string
           vehicle_id: string
         }
@@ -1681,6 +1683,7 @@ export type Database = {
           purpose?: Database["public"]["Enums"]["trip_purpose"]
           purpose_note?: string | null
           round_trip?: boolean
+          with_trailer?: boolean
           updated_at?: string
           vehicle_id?: string
         }
@@ -2042,6 +2045,7 @@ export type Database = {
           purpose: Database["public"]["Enums"]["trip_purpose"]
           purpose_note: string | null
           round_trip: boolean
+          with_trailer: boolean
           trip_date: string
           updated_at: string
           vehicle_id: string
@@ -2060,6 +2064,7 @@ export type Database = {
           purpose?: Database["public"]["Enums"]["trip_purpose"]
           purpose_note?: string | null
           round_trip?: boolean
+          with_trailer?: boolean
           trip_date: string
           updated_at?: string
           vehicle_id: string
@@ -2078,6 +2083,7 @@ export type Database = {
           purpose?: Database["public"]["Enums"]["trip_purpose"]
           purpose_note?: string | null
           round_trip?: boolean
+          with_trailer?: boolean
           trip_date?: string
           updated_at?: string
           vehicle_id?: string
@@ -2413,7 +2419,7 @@ export type Database = {
         | "tyres"
         | "fine"
         | "other"
-      vehicle_category: "passenger" | "motorcycle"
+      vehicle_category: "passenger" | "motorcycle" | "quad"
       vehicle_ownership: "company" | "private" | "leased"
     }
     CompositeTypes: {
@@ -2621,7 +2627,7 @@ export const Constants = {
         "fine",
         "other",
       ],
-      vehicle_category: ["passenger", "motorcycle"],
+      vehicle_category: ["passenger", "motorcycle", "quad"],
       vehicle_ownership: ["company", "private", "leased"],
     },
   },

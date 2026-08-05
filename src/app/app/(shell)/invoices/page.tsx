@@ -20,10 +20,18 @@ import {
 
 export const metadata = { title: "Faktúry — Synapse Faktúra" }
 
-// Prepinac nad tabulkou - najbeznejsie typy dokladov. Filter zvlada kazdu
-// hodnotu enumu, ostatne typy sa daju otvorit priamym odkazom ?type=<hodnota>.
+// Prepinac nad tabulkou. Filter zvlada kazdu hodnotu enumu; tu su tie, ktore
+// zivnostnik realne pouziva.
+//
+// `proforma` a `tax_doc_payment` tu chybali, hoci su plne postavene — zalohova
+// faktura je pritom bezna vec a pouzivatel sa k jej zoznamu dostal len rucne
+// napisanym `?type=proforma`. Zvysne typy (`advance`, `order_issued`,
+// `order_received`, `draft`) zamerne v prepinaci nie su, aby sa z neho nestal
+// zoznam desiatich tlacidiel — otvoria sa priamym odkazom.
 const FILTER_TYPES: DocumentType[] = [
   "invoice",
+  "proforma",
+  "tax_doc_payment",
   "quote",
   "delivery_note",
   "credit_note",

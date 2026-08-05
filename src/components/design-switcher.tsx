@@ -7,6 +7,12 @@ import { usePathname } from "next/navigation"
  * Floating switcher between landing design studies (V0 = current landing "/",
  * V1–V6 = /v1…/v6). Renders only on those routes; neutral dark pill so it
  * works on light and dark variants alike.
+ *
+ * VYVOJOVY NASTROJ — v produkcii sa NEVYKRESLUJE.
+ *
+ * Doteraz guard nemal, takze na nasadenej stranke svietila navstevnikovi
+ * pilulka "V0 V1 … V6" a odkazy na `/v1`–`/v6`. Posobilo to ako rozostavane
+ * stavenisko a bola to prva vec, ktoru bolo na produkcii vidiet.
  */
 const VERSIONS = [
   { label: "V0", href: "/" },
@@ -20,6 +26,9 @@ const VERSIONS = [
 
 export function DesignSwitcher() {
   const pathname = usePathname()
+  // `NODE_ENV` je pri builde konstanta, takze sa cely komponent aj so zoznamom
+  // verzii z produkcneho bundlu odstrani — nie je to len skrytie cez CSS.
+  if (process.env.NODE_ENV === "production") return null
   if (!VERSIONS.some((v) => v.href === pathname)) return null
 
   return (

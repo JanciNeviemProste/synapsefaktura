@@ -42,6 +42,10 @@ describe("computeExpenseItems", () => {
         line_base: 30,
         line_vat: 6.9,
         line_total: 36.9,
+        account_code: null,
+        cost_center: null,
+        project_code: null,
+        activity_code: null,
       },
     ])
   })
@@ -54,6 +58,51 @@ describe("computeExpenseItems", () => {
     expect(r.vat_total).toBe(0)
     expect(r.total).toBe(80)
     expect(r.vat_rate_breakdown).toEqual([{ rate: 0, base: 80, vat: 0 }])
+  })
+
+  it("kazda polozka si drzi VLASTNE uctovne clenenie", () => {
+    // Cely zmysel clenenia po polozkach: jeden doklad, dve strediska.
+    const r = computeExpenseItems([
+      {
+        description: "Materiál BA",
+        quantity: 1,
+        unit: "ks",
+        unitPrice: 100,
+        vatRate: 23,
+        accountCode: "501",
+        costCenter: "BA",
+      },
+      {
+        description: "Materiál KE",
+        quantity: 1,
+        unit: "ks",
+        unitPrice: 200,
+        vatRate: 23,
+        accountCode: "501",
+        costCenter: "KE",
+        projectCode: "P-7",
+      },
+    ])
+    expect(r.items[0]).toMatchObject({
+      account_code: "501",
+      cost_center: "BA",
+      project_code: null,
+      activity_code: null,
+    })
+    expect(r.items[1]).toMatchObject({
+      account_code: "501",
+      cost_center: "KE",
+      project_code: "P-7",
+    })
+  })
+
+  it("nevyplnene clenenie je null, nie prazdny retazec", () => {
+    // Export by inak uctovnikovi poslal stlpec, ktory vyzera vyplneny.
+    const r = computeExpenseItems([
+      { description: "A", quantity: 1, unit: "ks", unitPrice: 10, vatRate: 23, costCenter: "" },
+    ])
+    expect(r.items[0].cost_center).toBeNull()
+    expect(r.items[0].account_code).toBeNull()
   })
 
   it("prazdny zoznam da nuly, nie NaN", () => {

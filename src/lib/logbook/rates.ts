@@ -11,7 +11,30 @@
  */
 
 /** Zhodné s enumom `public.vehicle_category`. */
-export type VehicleCategory = "passenger" | "motorcycle"
+export type VehicleCategory = "passenger" | "motorcycle" | "quad"
+
+/**
+ * Ktorej sadzbe kategória podlieha.
+ *
+ * Oznámenia ministerstva zlučujú štvorkolky s dvoj- a trojkolesovými
+ * vozidlami („dvojkolesové, trojkolesové vozidlá a štvorkolky: 0,090 eura"),
+ * takže `quad` používa sadzby `motorcycle`. Vlastný riadok v tabuľke by bol
+ * druhá kópia toho istého čísla — a teda druhé miesto, ktoré sa dá rozísť.
+ */
+function rateCategory(category: VehicleCategory): "passenger" | "motorcycle" {
+  return category === "passenger" ? "passenger" : "motorcycle"
+}
+
+/**
+ * Má vozidlo nárok na +15 % pri použití prívesu?
+ *
+ * Zákon č. 283/2002 Z. z.: príplatok patrí prívesu k ŠTVORKOLKE alebo
+ * k OSOBNÉMU vozidlu. Dvoj- a trojkolesové vozidlá ho nemajú — a práve preto
+ * `quad` nemôže byť zlúčená s `motorcycle`, hoci sadzbu majú rovnakú.
+ */
+export function trailerEligible(category: VehicleCategory): boolean {
+  return category === "passenger" || category === "quad"
+}
 
 export interface TravelRate {
   /** `null` = zákonná sadzba platná pre všetkých. */
@@ -77,7 +100,10 @@ export function resolveTravelRate(
 
   // Presná kategória vyhráva. Sadzba bez kategórie je záloha pre vlastné
   // sadzby firmy, ktoré medzi vozidlami zvyčajne nerozlišujú.
-  const exact = valid.filter((r) => r.vehicle_category === category)
+  //
+  // Štvorkolka sa hľadá pod sadzbou motocykla — tak ju zoskupujú oznámenia.
+  const wanted = rateCategory(category)
+  const exact = valid.filter((r) => r.vehicle_category === wanted)
   const byCategory =
     exact.length > 0 ? exact : valid.filter((r) => r.vehicle_category === null)
   if (byCategory.length === 0) return null
