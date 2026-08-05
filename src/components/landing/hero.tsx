@@ -71,23 +71,25 @@ export function Hero() {
      */
     <section className="relative z-1 flex h-screen flex-col justify-end overflow-hidden px-5 pb-28 sm:px-8 md:justify-center md:px-10 md:pb-0">
       <div className="relative z-10 max-w-xl">
-        <p
-          className="mb-5 text-black select-none sm:mb-6"
+        {/*
+          Toto je JEDINÝ `h1` na stránke a je to zámer.
+          Rozmazanie je vizuálna hra z návrhu, nie skrytie: text je v HTML,
+          číta ho čítačka obrazovky aj vyhľadávač. Predtým tu bol `p`
+          s `aria-hidden` a zdvojený `sr-only` text — stránka tak nemala ani
+          jeden nadpis prvej úrovne, čo je oproti pôvodnému landingu krok späť.
+        */}
+        <h1
+          className="font-heading mb-5 font-normal text-black select-none sm:mb-6"
           style={{
             fontSize: "clamp(18px, 4vw, 26px)",
             lineHeight: 1.3,
             filter: "blur(4px)",
           }}
-          aria-hidden="true"
         >
           {INTRO_1}
           <br />
           {INTRO_2}
-        </p>
-        {/* Rozmazaný text je dekorácia. Čítačke obrazovky sa podá čitateľne. */}
-        <span className="sr-only">
-          {INTRO_1} {INTRO_2}
-        </span>
+        </h1>
 
         <p
           className="mb-5 text-black sm:mb-6"
@@ -97,7 +99,14 @@ export function Hero() {
             minHeight: 54,
           }}
         >
-          {shown}
+          {/*
+            Písaný text sa objaví až na klientovi. Aby stránka nebola bez neho
+            prázdna (vyhľadávač bez JS, pomalé načítanie), leží tu aj ako
+            neviditeľná kópia — po dopísaní je to presne ten istý text, takže
+            sa nič nezdvojuje navonok.
+          */}
+          {!done && <span className="sr-only">{TYPED}</span>}
+          <span aria-live="off">{shown}</span>
           {!done && (
             <span
               aria-hidden="true"
