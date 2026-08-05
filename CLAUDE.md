@@ -88,19 +88,49 @@ Voliteľné (feature sa aktivuje kľúčom): `OPENROUTER_API_KEY` (má prednosť
 
 ## Stav (posledné 📊 — 2026-08-05)
 
-`main`: `typecheck` PASS · `lint` PASS · `test` **538/538** PASS · `build` PASS.
-**21 migrácií** sa aplikuje načisto na PostgreSQL 17 — 36 tabuliek, 26 enumov,
-81 policies, 10 funkcií, 0 tabuliek bez RLS. To isté overuje CI job `migrations`.
+`main`: `typecheck` PASS · `lint` PASS · `test` **539/539** PASS · `build` PASS.
+`pnpm audit --prod` — **bez nálezu** (Next 15.5.22; zostáva 7 v ESLint nástrojoch).
+**20 migrácií** sa aplikuje načisto na PostgreSQL 17 — 36 tabuliek, 0 tabuliek
+bez RLS. To isté overuje CI job `migrations`.
 
 Nasadené na `synapsefaktura.vercel.app`. Supabase `oukooqfpxeunhdzndsid` je
-`ACTIVE_HEALTHY`; evidencia migrácií sedí s repom 1:1. Keep-alive workflow beží
-(HTTP 200). ⚠️ **Posledné dve migrácie (`20260805150000`, branding nepotrebuje
-migráciu) ešte nie sú nasadené na produkciu** — nasadiť po merge, so zálohou
-`pg_dump` predtým.
+`ACTIVE_HEALTHY`. Keep-alive workflow beží (HTTP 200).
+**Evidencia migrácií sedí s repom 1:1 — 20/20, nič nečaká na nasadenie**
+(overené 2026-08-05, vrátane `20260805160000_trip_trailer`).
+⚠️ V úložisku je zatiaľ **0 bucketov a 0 objektov**, 0 firiem s logom,
+0 nákladov, 0 AI vyťažení — nahrávanie ani OCR tam ešte nikdy nebežalo.
 Verejné stránky bežia aj bez databázy. Blokátory: Stripe/e-mail/analytics kľúče,
 firemné údaje, neoverená SK legislatíva.
 
 ## Session log
+
+### 2026-08-05: Bezpečnostný patch závislostí
+
+Vyšlo pri kontrole `pnpm audit` po pridaní čítača XLSX — ten je bez nálezu,
+na rozdiel od zvyšku.
+
+- **Next 15.5.19 mal osem otvorených advisories** a štyri mieria priamo na
+  Server Actions, na ktorých stojí celá appka: HIGH *DoS in App Router using
+  Server Actions*, HIGH *SSRF in rewrites*, MODERATE *Unauthenticated
+  disclosure of internal Server Function endpoints*, MODERATE *cache
+  confusion*. Opravené v 15.5.21 — vnútri už deklarovaného `^15.5.0`, teda
+  patch. Nainštalované 15.5.22.
+- **`shadcn` bol v `dependencies`**, hoci je to CLI a v kóde sa nikde
+  neimportuje. Ťahal do PRODUKČNÉHO stromu 13 nálezov cez
+  `@modelcontextprotocol/sdk` → `hono`. Presunutý do `devDependencies`.
+- **`postcss` a `sharp` pretlačené cez `pnpm.overrides`.** Next piní postcss na
+  8.4.31 so štyrmi advisories. `sharp` je voliteľná závislosť pre Image
+  Optimization API a **appka `next/image` nepoužíva ani raz**, takže riziko
+  nehrozilo — nula sa však číta lepšie než vysvetlivka.
+
+Výsledok: **`pnpm audit --prod` bez nálezu.** Zostáva 7 v dev nástrojoch
+(`brace-expansion`, `js-yaml` cez ESLint); tie bežia len nad naším vlastným
+kódom a pretlačenie `js-yaml` vnútri `@eslint/eslintrc` by mohlo zhodiť
+načítanie konfigurácie — väčšie riziko než úžitok, ponechané zámerne.
+
+**Pri tom overené na produkcii (len čítanie):** 20/20 migrácií nasadených,
+36 tabuliek, 0 bez RLS. Poznámka v tomto súbore, že dve migrácie čakajú na
+nasadenie, bola zastaraná.
 
 ### 2026-08-05: XLSX import, nahrávanie veľkých súborov a OCR bločka
 
