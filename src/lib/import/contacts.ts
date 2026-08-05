@@ -79,8 +79,26 @@ function optional(value: string): string | undefined {
   return value === "" ? undefined : value
 }
 
+/** CSV — obal nad `contactsFromRows`. */
 export function parseContactsTable(content: string): ContactImportResult {
   const { header, rows } = parseTable(content)
+  return contactsFromRows(header, rows)
+}
+
+/**
+ * Jadro importu nad uz rozparsovanymi riadkami.
+ *
+ * Zdielane medzi CSV a XLSX zamerne: mapovanie stlpcov, preklad typu, kontrola
+ * e-mailu aj hlasenie chyb musia byt v OBOCH cestach rovnake. Dve kopie by sa
+ * skor ci neskor rozisli a pouzivatel by dostal iny vysledok podla toho, ci
+ * ulozil tabulku ako CSV alebo XLSX.
+ *
+ * `header` sa ocakava uz normalizovany (`normalizeHeader`).
+ */
+export function contactsFromRows(
+  header: string[],
+  rows: string[][],
+): ContactImportResult {
   if (header.length === 0) {
     return { contacts: [], errors: ["Súbor je prázdny."], ignoredColumns: [] }
   }

@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
-import { parseContactsTable } from "@/lib/import/contacts"
+import {
+  parseContactsTable,
+  contactsFromRows,
+} from "@/lib/import/contacts"
+import { xlsxToTable, looksLikeXlsx } from "@/lib/import/xlsx"
+import { MAX_IMPORT_BYTES, tooLargeMessage } from "@/lib/upload/limits"
 import { contactSchema, type ContactInput } from "@/lib/validation/contact"
 
 export type ContactActionResult =
@@ -94,13 +99,38 @@ export type ContactImportOutcome =
  * Zhoda sa hľadá najprv podľa IČO (to je jednoznačné), až potom podľa názvu.
  */
 export async function importContacts(
-  content: string,
+  formData: FormData,
 ): Promise<ContactImportOutcome> {
   const supabase = await createClient()
   const orgId = await getCurrentOrgId(supabase)
   if (!orgId) return { ok: false, error: "Chýba firma." }
 
-  const parsed = parseContactsTable(content)
+  const file = formData.get("file")
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, error: "Žiadny súbor." }
+  }
+  if (file.size > MAX_IMPORT_BYTES) {
+    return { ok: false, error: tooLargeMessage(file.size, MAX_IMPORT_BYTES) }
+  }
+
+  const bytes = new Uint8Array(await file.arrayBuffer())
+
+  // Formát sa rozpoznáva z OBSAHU, nie z prípony. Premenovaný súbor je bežná
+  // vec a používateľ by inak dostal hlášku, ktorá s príčinou nesúvisí.
+  let parsed
+  if (looksLikeXlsx(bytes)) {
+    try {
+      const { header, rows } = await xlsxToTable(Buffer.from(bytes))
+      parsed = contactsFromRows(header, rows)
+    } catch {
+      return {
+        ok: false,
+        error: "Zošit sa nepodarilo prečítať. Skús ho uložiť znova ako .xlsx alebo CSV.",
+      }
+    }
+  } else {
+    parsed = parseContactsTable(new TextDecoder("utf-8").decode(bytes))
+  }
   if (parsed.contacts.length === 0) {
     return {
       ok: false,

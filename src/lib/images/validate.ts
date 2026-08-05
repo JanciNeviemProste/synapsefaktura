@@ -7,8 +7,12 @@
  * Čo prejde uploadom, sa musí zaručene vykresliť.
  */
 
-/** Nad túto veľkosť obrázok do hlavičky faktúry nepatrí. */
-export const MAX_IMAGE_BYTES = 2 * 1024 * 1024
+// Limit zije v `lib/upload/limits.ts` spolu s ostatnymi — aby sa nedal zmenit
+// na jednom mieste a zabudnut na druhom. Reexport, aby volajuci nemuseli
+// vediet, odkial pochadza.
+import { MAX_IMAGE_BYTES as IMAGE_LIMIT } from "@/lib/upload/limits"
+
+export { MAX_IMAGE_BYTES } from "@/lib/upload/limits"
 
 export type ImageMime = "image/png" | "image/jpeg"
 
@@ -53,11 +57,11 @@ export function checkImage(bytes: Uint8Array): ImageCheck {
   if (bytes.length === 0) {
     return { ok: false, error: "Súbor je prázdny." }
   }
-  if (bytes.length > MAX_IMAGE_BYTES) {
+  if (bytes.length > IMAGE_LIMIT) {
     const mb = (bytes.length / (1024 * 1024)).toFixed(1)
     return {
       ok: false,
-      error: `Obrázok má ${mb} MB, povolené sú najviac 2 MB. Zmenši ho a skús znova.`,
+      error: `Obrázok má ${mb} MB, povolených je najviac ${Math.round(IMAGE_LIMIT / (1024 * 1024))} MB. Zmenši ho a skús znova.`,
     }
   }
   const mime = imageMime(bytes)

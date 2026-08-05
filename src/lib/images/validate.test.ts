@@ -44,14 +44,16 @@ describe("checkImage", () => {
     expect(res.error).toContain("prázdny")
   })
 
-  it("odmietne prilis velky obrazok a povie kolko ma", () => {
+  it("odmietne prilis velky obrazok a povie kolko ma aj kolko smie", () => {
     const big = new Uint8Array(MAX_IMAGE_BYTES + 1)
     big.set(PNG)
     const res = checkImage(big)
     expect(res.ok).toBe(false)
     if (res.ok) return
-    expect(res.error).toContain("2 MB")
-    expect(res.error).toMatch(/2[.,]0 MB/)
+    const limitMb = Math.round(MAX_IMAGE_BYTES / (1024 * 1024))
+    // Hlaska musi drzat krok s limitom — inak by po jeho zmene klamala.
+    expect(res.error).toContain(`najviac ${limitMb} MB`)
+    expect(res.error).toMatch(/\d+[.,]\d MB/)
   })
 
   it("presne na hranici este prejde", () => {

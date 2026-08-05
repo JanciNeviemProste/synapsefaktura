@@ -13,10 +13,6 @@ import {
 import { addExpensePayment, expensePaymentStatus } from "@/lib/expenses/payment"
 import { computeExpenseItems } from "@/lib/expenses/items"
 import { round2 } from "@/lib/money"
-import {
-  MAX_ATTACHMENT_BYTES,
-  tooLargeMessage,
-} from "@/lib/upload/limits"
 import type { Database } from "@/lib/supabase/database.types"
 
 export type ExpenseActionResult =
@@ -464,39 +460,6 @@ export async function clearExpensePayments(
   return { ok: true, id }
 }
 
-/**
- * Uploads a receipt to the private `attachments` bucket under "{orgId}/expenses/…"
- * using the service role (lazily creating the bucket). Returns the storage path.
- */
-export async function uploadAttachment(
-  formData: FormData,
-): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
-  const file = formData.get("file")
-  if (!(file instanceof File) || file.size === 0) {
-    return { ok: false, error: "Žiadny súbor." }
-  }
-  // Klientska kontrola sa da obist — server musi mat vlastnu.
-  if (file.size > MAX_ATTACHMENT_BYTES) {
-    return { ok: false, error: tooLargeMessage(file.size, MAX_ATTACHMENT_BYTES) }
-  }
-  const supabase = await createClient()
-  const orgId = await getCurrentOrgId(supabase)
-  if (!orgId) return { ok: false, error: "Chýba firma." }
-
-  const admin = createAdminClient()
-  const { data: buckets } = await admin.storage.listBuckets()
-  if (!buckets?.some((b) => b.name === BUCKET)) {
-    await admin.storage.createBucket(BUCKET, { public: false })
-  }
-
-  const safeName = file.name.replace(/[^\w.\-]+/g, "_")
-  const path = `${orgId}/expenses/${Date.now()}-${safeName}`
-  const { error } = await admin.storage
-    .from(BUCKET)
-    .upload(path, file, { contentType: file.type || undefined, upsert: false })
-  if (error) return { ok: false, error: "Súbor sa nepodarilo nahrať." }
-  return { ok: true, path }
-}
 
 /** Signed URL for viewing a stored attachment (org membership enforced by RLS on the expense row). */
 export async function getAttachmentSignedUrl(

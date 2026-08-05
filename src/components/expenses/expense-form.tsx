@@ -19,10 +19,10 @@ import {
   MAX_ATTACHMENT_BYTES,
   tooLargeMessage,
 } from "@/lib/upload/limits"
+import { uploadDirect } from "@/lib/upload/direct"
 import {
   createExpense,
   updateExpense,
-  uploadAttachment,
 } from "@/app/actions/expenses"
 
 import { Button } from "@/components/ui/button"
@@ -150,11 +150,11 @@ export function ExpenseForm({
       return
     }
 
-    const fd = new FormData()
-    fd.set("file", file)
     startUpload(async () => {
       try {
-        const res = await uploadAttachment(fd)
+        // Priamo do uloziska — fotka blocka z mobilu (2-5 MB) by cez server
+        // action neprelezla, Vercel ma strop 4,5 MB na telo poziadavky.
+        const res = await uploadDirect("attachment", file)
         if (!res.ok) {
           toast.error(res.error)
           return

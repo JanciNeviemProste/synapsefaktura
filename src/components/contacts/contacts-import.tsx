@@ -21,12 +21,12 @@ import {
 /**
  * Import klientov z tabuľky.
  *
- * Podporuje CSV — teda to, čo Excel aj Tabuľky Google vedia uložiť („Uložiť
- * ako → CSV"). Vzorová tabuľka sa dá stiahnuť rovno tu a je generovaná
- * z tých istých konštánt, ktoré import očakáva, takže sa s ním nemôže rozísť.
+ * Podporuje zošit Excelu (.xlsx) aj CSV. Formát sa rozpoznáva z OBSAHU, nie
+ * z prípony — premenovaný súbor je bežná vec a používateľ by inak dostal
+ * hlášku, ktorá s príčinou nesúvisí.
  *
- * Súbor s príponou `.xlsx` sa odmietne HNEĎ a zrozumiteľne. Poslať ho na
- * server by skončilo hláškou „súbor je prázdny" — XLSX je ZIP, nie text.
+ * Vzorová tabuľka sa dá stiahnuť rovno tu a je generovaná z tých istých
+ * konštánt, ktoré import očakáva, takže sa s ním nemôže rozísť.
  */
 export function ContactsImport() {
   const router = useRouter()
@@ -39,12 +39,6 @@ export function ContactsImport() {
     e.target.value = ""
     if (!file) return
 
-    if (/\.xlsx?$/i.test(file.name)) {
-      toast.error(
-        "Zošit Excelu zatiaľ nevieme čítať priamo. V Exceli daj „Uložiť ako“ → CSV (oddelené bodkočiarkou) a nahraj ten súbor.",
-      )
-      return
-    }
     if (file.size > MAX_IMPORT_BYTES) {
       toast.error(tooLargeMessage(file.size, MAX_IMPORT_BYTES))
       return
@@ -53,8 +47,9 @@ export function ContactsImport() {
     setReport(null)
     startTransition(async () => {
       try {
-        const content = await file.text()
-        const res = await importContacts(content)
+        const fd = new FormData()
+        fd.set("file", file)
+        const res = await importContacts(fd)
         if (!res.ok) {
           toast.error(res.error)
           return
@@ -90,7 +85,8 @@ export function ContactsImport() {
           <DialogHeader>
             <DialogTitle>Import klientov z tabuľky</DialogTitle>
             <DialogDescription>
-              Povinný je jediný stĺpec — <strong>Názov</strong>. Ostatné sú
+              Zošit Excelu (.xlsx) aj CSV. Povinný je jediný stĺpec —{" "}
+              <strong>Názov</strong>. Ostatné sú
               voliteľné a poradie stĺpcov nerozhoduje, hľadajú sa podľa názvu
               hlavičky.
             </DialogDescription>
@@ -107,7 +103,7 @@ export function ContactsImport() {
             <div className="grid gap-2">
               <Input
                 type="file"
-                accept=".csv,text/csv"
+                accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 onChange={handleFile}
                 disabled={busy}
               />

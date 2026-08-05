@@ -8,20 +8,19 @@ const nextConfig: NextConfig = {
 
   experimental: {
     serverActions: {
-      // Predvolený strop Server Actions je 1 MB. Cez server action chodia
-      // VŠETKY nahrávané súbory: logo a podpis firmy, príloha nákladu, fotka
-      // bločku pre AI a bankový výpis.
+      // Predvolený strop Server Actions je 1 MB — pod ním padal aj bankový
+      // výpis a tabuľka klientov, a to bez hlášky (server action pri
+      // prekročení VYHODÍ výnimku namiesto výsledku).
       //
-      // S 1 MB to znamenalo, že bežná fotka z mobilu (2–5 MB) skončila na
-      // HTTP 413 ešte predtým, než sa dostala k akejkoľvek našej kontrole.
-      // Server action vtedy VYHODÍ výnimku namiesto výsledku, takže sa
-      // nezobrazila ani hláška — používateľ videl chybovú obrazovku alebo nič.
+      // Vyššie než 4,5 MB ísť nemá zmysel: toľko je TVRDÝ strop serverovej
+      // funkcie na Verceli (`FUNCTION_PAYLOAD_TOO_LARGE`) a nastavením sa
+      // prekonať nedá. 4 MB je pod ním s rezervou na réžiu multipartu, takže
+      // sa používateľ dozvie našu zrozumiteľnú hlášku a nie 413.
       //
-      // 8 MB pokrýva fotku z mobilu aj ročný bankový výpis. Vlastné limity
-      // ostávajú prísnejšie a kontrolujú sa aj na klientovi, aby používateľ
-      // dostal zrozumiteľnú hlášku a nie 413: obrázky 2 MB
-      // (`lib/images/validate.ts`), prílohy 8 MB.
-      bodySizeLimit: "8mb",
+      // Veľké súbory (fotka bločka, logo) sem preto vôbec nechodia — idú
+      // z prehliadača PRIAMO do úložiska (`lib/upload/direct.ts`) a strop
+      // serverovej funkcie sa ich netýka.
+      bodySizeLimit: "4mb",
     },
   },
 }

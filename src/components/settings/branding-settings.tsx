@@ -5,6 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { MAX_IMAGE_BYTES } from "@/lib/upload/limits"
 import { BrandingImageField } from "./branding-image"
 
 export type OrgBranding = {
@@ -38,7 +39,8 @@ export function BrandingSettings({
         <CardDescription>
           Logo sa tlačí v hlavičke každého dokladu. Podpis a pečiatka na
           faktúrach, ponukách a dobropisoch — na dodacom liste nie, ten má
-          vlastné miesto na podpis prevzatia. Podporujeme PNG a JPEG do 2 MB.
+          vlastné miesto na podpis prevzatia. Podporujeme PNG a JPEG do{" "}
+          {Math.round(MAX_IMAGE_BYTES / (1024 * 1024))} MB.
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-6">

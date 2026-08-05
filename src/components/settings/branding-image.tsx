@@ -6,13 +6,14 @@ import { Loader2, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 import {
-  uploadOrgImage,
+  setBrandingImage,
   removeOrgImage,
   getBrandingSignedUrl,
   type BrandingImage as BrandingImageKind,
 } from "@/app/actions/org"
+import { uploadDirect } from "@/lib/upload/direct"
 
-import { MAX_IMAGE_BYTES } from "@/lib/images/validate"
+import { MAX_IMAGE_BYTES, tooLargeMessage } from "@/lib/upload/limits"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -84,18 +85,21 @@ export function BrandingImageField({
     // Server Actions sa k nemu poziadavka vobec nedostane a spadla by na
     // HTTP 413 bez zrozumitelnej hlasky.
     if (file.size > MAX_IMAGE_BYTES) {
-      const mb = (file.size / (1024 * 1024)).toFixed(1)
-      toast.error(
-        `Obrázok má ${mb} MB, povolené sú najviac 2 MB. Zmenši ho a skús znova.`,
-      )
+      // Hlaska sa odvodzuje z limitu, nie napisana rukou — inak sa pri zmene
+      // stropu rozide s tym, co server naozaj pusti.
+      toast.error(`${tooLargeMessage(file.size, MAX_IMAGE_BYTES)} Zmenši ho a skús znova.`)
       return
     }
 
-    const fd = new FormData()
-    fd.set("file", file)
     startTransition(async () => {
       try {
-        const res = await uploadOrgImage(kind, fd)
+        // Priamo do uloziska — cez server action by vacsi subor neprelezol.
+        const uploaded = await uploadDirect("branding", file)
+        if (!uploaded.ok) {
+          toast.error(uploaded.error)
+          return
+        }
+        const res = await setBrandingImage(kind, uploaded.path)
         if (!res.ok) {
           toast.error(res.error)
           return
