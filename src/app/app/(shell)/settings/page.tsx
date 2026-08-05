@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
 import { OrgSettings } from "@/components/settings/org-settings"
+import { BrandingSettings } from "@/components/settings/branding-settings"
 import { SequencesSettings } from "@/components/settings/sequences-settings"
 import { BankAccountsSettings } from "@/components/settings/bank-accounts-settings"
 import { TagsSettings } from "@/components/settings/tags-settings"
@@ -8,10 +9,16 @@ import { TravelRatesSettings } from "@/components/settings/travel-rates-settings
 import { EInvoiceSettings } from "@/components/settings/einvoice-settings"
 import { BillingSettings } from "@/components/settings/billing-settings"
 import { MembersSettings } from "@/components/settings/members-settings"
-import { getOrganizationProfile } from "@/app/actions/org"
+import {
+  getOrganizationProfile,
+  getOrganizationBranding,
+} from "@/app/actions/org"
 import { listBankAccounts } from "@/app/actions/bank-accounts"
 import { listTags } from "@/app/actions/tags"
-import { listTravelRates } from "@/app/actions/travel-rates"
+import {
+  listTravelRates,
+  pendingStatutoryRate,
+} from "@/app/actions/travel-rates"
 import { getEInvoiceSettings } from "@/app/actions/einvoice-settings"
 import { getBillingInfo } from "@/app/actions/billing"
 import { listMembers, listPendingInvites } from "@/app/actions/members"
@@ -34,7 +41,9 @@ export default async function SettingsPage() {
     bankAccounts,
     tags,
     travelRates,
+    pendingRate,
     orgProfile,
+    branding,
     einvoice,
     billing,
     members,
@@ -52,7 +61,9 @@ export default async function SettingsPage() {
     listBankAccounts(),
     listTags(),
     listTravelRates(),
+    pendingStatutoryRate(),
     getOrganizationProfile(),
+    getOrganizationBranding(),
     getEInvoiceSettings(),
     getBillingInfo(),
     listMembers(),
@@ -89,6 +100,10 @@ export default async function SettingsPage() {
         <OrgSettings initial={orgProfile} canManage={canManage} />
       ) : null}
 
+      {branding ? (
+        <BrandingSettings branding={branding} canManage={canManage} />
+      ) : null}
+
       {billing ? <BillingSettings initial={billing} /> : null}
 
       <MembersSettings
@@ -103,7 +118,7 @@ export default async function SettingsPage() {
 
       <TagsSettings tags={tags} />
 
-      <TravelRatesSettings rates={travelRates} />
+      <TravelRatesSettings rates={travelRates} pending={pendingRate} />
 
       <SequencesSettings sequences={sequences ?? []} />
       {einvoice ? <EInvoiceSettings initial={einvoice} /> : null}

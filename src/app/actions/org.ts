@@ -3,7 +3,14 @@
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
+import { writeOutcome } from "@/lib/supabase/affected"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
+import { checkImage, MAX_IMAGE_BYTES } from "@/lib/images/validate"
+import {
+  ATTACHMENTS_BUCKET,
+  BRANDING_PREFIX,
+} from "@/lib/storage/buckets"
 import {
   createOrganizationSchema,
   updateOrganizationSchema,
@@ -103,6 +110,34 @@ export async function getOrganizationProfile(): Promise<OrganizationProfile | nu
 }
 
 /**
+ * Cesty k firemnym obrazkom. Zamerne SAMOSTATNE od `getOrganizationProfile`:
+ * ten vracia hodnoty pre formular s textovymi polami, kym obrazky sa nahravaju
+ * po jednom a s formularom sa neukladaju.
+ */
+export async function getOrganizationBranding(): Promise<{
+  logoUrl: string | null
+  signatureUrl: string | null
+  stampUrl: string | null
+} | null> {
+  const supabase = await createClient()
+  const orgId = await getCurrentOrgId(supabase)
+  if (!orgId) return null
+
+  const { data } = await supabase
+    .from("organizations")
+    .select("logo_url, signature_url, stamp_url")
+    .eq("id", orgId)
+    .maybeSingle()
+  if (!data) return null
+
+  return {
+    logoUrl: data.logo_url,
+    signatureUrl: data.signature_url,
+    stampUrl: data.stamp_url,
+  }
+}
+
+/**
  * Upravi firemny profil aktivnej organizacie. Meni sa VYLUCNE organizacia, ktorej
  * je volajuci clenom (`getCurrentOrgId` + `.eq("id", orgId)`) — samotna RLS by
  * pustila kazdu organizaciu, v ktorej ma pouzivatel clenstvo. Navyse rolovy guard:
@@ -139,7 +174,10 @@ export async function updateOrganization(
     }
   }
 
-  const { error } = await supabase
+  // `.select("id")` nie je kozmetika: PostgREST pri zapise odfiltrovanom RLS
+  // nevrati chybu, len nezmeni ziadny riadok — pouzivatel by dostal hlasku
+  // o ulozeni a udaje by ostali stare.
+  const { data: updated, error } = await supabase
     .from("organizations")
     .update({
       name: v.name,
@@ -158,12 +196,230 @@ export async function updateOrganization(
       default_due_days: v.defaultDueDays,
     })
     .eq("id", orgId)
+    .select("id")
 
-  if (error) {
+  const outcome = writeOutcome(error, updated)
+  if (outcome.kind === "failed") {
     return { ok: false, error: "Firemné údaje sa nepodarilo uložiť." }
+  }
+  if (outcome.kind === "noRows") {
+    return { ok: false, error: "Firma sa nenašla." }
   }
 
   revalidatePath("/app/settings")
   revalidatePath("/app/dashboard")
   return { ok: true }
+}
+
+/** Ktorý firemný obrázok sa nahráva. */
+export type BrandingImage = "logo" | "signature" | "stamp"
+
+const BRANDING_LABEL: Record<BrandingImage, string> = {
+  logo: "Logo",
+  signature: "Podpis",
+  stamp: "Pečiatka",
+}
+
+/**
+ * Zápis do správneho stĺpca. Vypísané po jednom zámerne: dynamický kľúč
+ * (`{ [column]: value }`) TypeScript proti typom Supabase neoverí, takže by
+ * preklep v názve stĺpca prešiel prekladom a zlyhal až za behu.
+ */
+function brandingUpdate(kind: BrandingImage, value: string | null) {
+  switch (kind) {
+    case "logo":
+      return { logo_url: value }
+    case "signature":
+      return { signature_url: value }
+    case "stamp":
+      return { stamp_url: value }
+  }
+}
+
+/** Aktuálna cesta k obrázku danej firmy, alebo `null`. */
+async function currentBrandingPath(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  orgId: string,
+  kind: BrandingImage,
+): Promise<string | null> {
+  const { data } = await supabase
+    .from("organizations")
+    .select("logo_url, signature_url, stamp_url")
+    .eq("id", orgId)
+    .maybeSingle()
+  if (!data) return null
+  if (kind === "logo") return data.logo_url
+  if (kind === "signature") return data.signature_url
+  return data.stamp_url
+}
+
+/**
+ * Overí, že volajúci smie meniť firemné údaje, a vráti id organizácie.
+ *
+ * Ten istý guard ako `updateOrganization`. Logo a najmä PODPIS firmy nie sú
+ * vec, ktorú má meniť hocijaký člen — existujúci `uploadAttachment` pre
+ * prílohy nákladov taký guard nemá a to je pri prílohe v poriadku, tu nie.
+ */
+async function requireOrgManager(): Promise<
+  { ok: true; orgId: string } | { ok: false; error: string }
+> {
+  const supabase = await createClient()
+  const orgId = await getCurrentOrgId(supabase)
+  if (!orgId) return { ok: false, error: "Chýba firma." }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: "Nie si prihlásený." }
+
+  const { data: me } = await supabase
+    .from("organization_members")
+    .select("role")
+    .eq("organization_id", orgId)
+    .eq("user_id", user.id)
+    .maybeSingle()
+  if (me?.role !== "owner" && me?.role !== "admin") {
+    return {
+      ok: false,
+      error: "Firemné údaje môže meniť len vlastník alebo administrátor.",
+    }
+  }
+  return { ok: true, orgId }
+}
+
+/**
+ * Nahrá logo, podpis alebo pečiatku firmy.
+ *
+ * Ukladá sa do SÚKROMNÉHO bucketu pod `{orgId}/branding/…`. Verejný bucket by
+ * pri podpise a pečiatke bol chyba — verejná adresa obrázku podpisu je návod
+ * na falšovanie. PDF si súbor stiahne service-role klientom priamo pri
+ * generovaní (`lib/pdf/render.tsx`).
+ *
+ * Formát a veľkosť sa kontrolujú TU, nie až pri renderi. Bez toho by
+ * používateľ nahral 5 MB WebP, dostal „nahraté" a logo by mu na faktúre
+ * nikdy nevyšlo.
+ */
+export async function uploadOrgImage(
+  kind: BrandingImage,
+  formData: FormData,
+): Promise<OrgActionResult> {
+  const guard = await requireOrgManager()
+  if (!guard.ok) return guard
+  const { orgId } = guard
+
+  const file = formData.get("file")
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, error: "Žiadny súbor." }
+  }
+  // Strop sa overí ešte pred načítaním do pamäte.
+  if (file.size > MAX_IMAGE_BYTES) {
+    const mb = (file.size / (1024 * 1024)).toFixed(1)
+    return {
+      ok: false,
+      error: `Obrázok má ${mb} MB, povolené sú najviac 2 MB. Zmenši ho a skús znova.`,
+    }
+  }
+
+  const bytes = new Uint8Array(await file.arrayBuffer())
+  const check = checkImage(bytes)
+  if (!check.ok) return { ok: false, error: check.error }
+
+  const supabase = await createClient()
+  const admin = createAdminClient()
+
+  const { data: buckets } = await admin.storage.listBuckets()
+  if (!buckets?.some((b) => b.name === ATTACHMENTS_BUCKET)) {
+    const { error: bucketError } = await admin.storage.createBucket(
+      ATTACHMENTS_BUCKET,
+      { public: false },
+    )
+    if (bucketError) {
+      return { ok: false, error: "Úložisko sa nepodarilo pripraviť." }
+    }
+  }
+
+  const ext = check.mime === "image/png" ? "png" : "jpg"
+  const path = `${orgId}/${BRANDING_PREFIX}/${kind}-${Date.now()}.${ext}`
+  const { error: uploadError } = await admin.storage
+    .from(ATTACHMENTS_BUCKET)
+    .upload(path, bytes, { contentType: check.mime, upsert: false })
+  if (uploadError) {
+    return { ok: false, error: "Súbor sa nepodarilo nahrať." }
+  }
+
+  const oldPath = await currentBrandingPath(supabase, orgId, kind)
+
+  const { data: saved, error } = await supabase
+    .from("organizations")
+    .update(brandingUpdate(kind, path))
+    .eq("id", orgId)
+    .select("id")
+  const outcome = writeOutcome(error, saved)
+  if (outcome.kind !== "ok") {
+    // Zapis do DB zlyhal, tak po sebe upraceme — inak by v buckete zostal
+    // subor, na ktory sa uz nikto neodkaze.
+    await admin.storage.from(ATTACHMENTS_BUCKET).remove([path])
+    return { ok: false, error: `${BRANDING_LABEL[kind]} sa nepodarilo uložiť.` }
+  }
+
+  // Stary subor uz nikto necita. Bez tohto by kazde nove logo nechalo to
+  // predchadzajuce navzdy v uloziske.
+  if (oldPath && oldPath !== path && !/^https?:\/\//i.test(oldPath)) {
+    await admin.storage.from(ATTACHMENTS_BUCKET).remove([oldPath])
+  }
+
+  revalidatePath("/app/settings")
+  revalidatePath("/app/dashboard")
+  return { ok: true }
+}
+
+/** Odstráni firemný obrázok — z databázy aj z úložiska. */
+export async function removeOrgImage(
+  kind: BrandingImage,
+): Promise<OrgActionResult> {
+  const guard = await requireOrgManager()
+  if (!guard.ok) return guard
+  const { orgId } = guard
+
+  const supabase = await createClient()
+  const path = await currentBrandingPath(supabase, orgId, kind)
+
+  const { data: saved, error } = await supabase
+    .from("organizations")
+    .update(brandingUpdate(kind, null))
+    .eq("id", orgId)
+    .select("id")
+  const outcome = writeOutcome(error, saved)
+  if (outcome.kind !== "ok") {
+    return { ok: false, error: `${BRANDING_LABEL[kind]} sa nepodarilo odstrániť.` }
+  }
+
+  if (path && !/^https?:\/\//i.test(path)) {
+    await createAdminClient()
+      .storage.from(ATTACHMENTS_BUCKET)
+      .remove([path])
+  }
+
+  revalidatePath("/app/settings")
+  revalidatePath("/app/dashboard")
+  return { ok: true }
+}
+
+/**
+ * Podpísaná adresa firemného obrázka na náhľad v Nastaveniach (10 minút).
+ *
+ * Prefix organizácie je to, čo bráni prezretiu cudzieho podpisu — rovnaká
+ * poistka ako pri prílohách nákladov.
+ */
+export async function getBrandingSignedUrl(
+  path: string,
+): Promise<string | null> {
+  const supabase = await createClient()
+  const orgId = await getCurrentOrgId(supabase)
+  if (!orgId || !path.startsWith(`${orgId}/`)) return null
+
+  const { data } = await createAdminClient()
+    .storage.from(ATTACHMENTS_BUCKET)
+    .createSignedUrl(path, 60 * 10)
+  return data?.signedUrl ?? null
 }

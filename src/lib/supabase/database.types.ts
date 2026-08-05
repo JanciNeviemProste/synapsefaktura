@@ -1966,37 +1966,56 @@ export type Database = {
       }
       travel_rates: {
         Row: {
+          confirmed_at: string | null
           created_at: string
           currency: string
+          detected_at: string | null
           fuel_rate_per_km: number | null
           id: string
           note: string | null
           organization_id: string | null
           rate_per_km: number
+          source_ref: string | null
+          source_url: string | null
           valid_from: string
           valid_to: string | null
+          vehicle_category: Database["public"]["Enums"]["vehicle_category"] | null
         }
         Insert: {
+          confirmed_at?: string | null
           created_at?: string
           currency?: string
+          detected_at?: string | null
           fuel_rate_per_km?: number | null
           id?: string
           note?: string | null
           organization_id?: string | null
           rate_per_km: number
+          source_ref?: string | null
+          source_url?: string | null
           valid_from: string
           valid_to?: string | null
+          vehicle_category?:
+            | Database["public"]["Enums"]["vehicle_category"]
+            | null
         }
         Update: {
+          confirmed_at?: string | null
           created_at?: string
           currency?: string
+          detected_at?: string | null
           fuel_rate_per_km?: number | null
           id?: string
           note?: string | null
           organization_id?: string | null
           rate_per_km?: number
+          source_ref?: string | null
+          source_url?: string | null
           valid_from?: string
           valid_to?: string | null
+          vehicle_category?:
+            | Database["public"]["Enums"]["vehicle_category"]
+            | null
         }
         Relationships: [
           {
@@ -2181,6 +2200,7 @@ export type Database = {
       vehicles: {
         Row: {
           active: boolean
+          category: Database["public"]["Enums"]["vehicle_category"]
           consumption_l_100km: number | null
           created_at: string
           driver_name: string | null
@@ -2197,6 +2217,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          category?: Database["public"]["Enums"]["vehicle_category"]
           consumption_l_100km?: number | null
           created_at?: string
           driver_name?: string | null
@@ -2213,6 +2234,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          category?: Database["public"]["Enums"]["vehicle_category"]
           consumption_l_100km?: number | null
           created_at?: string
           driver_name?: string | null
@@ -2391,6 +2413,7 @@ export type Database = {
         | "tyres"
         | "fine"
         | "other"
+      vehicle_category: "passenger" | "motorcycle"
       vehicle_ownership: "company" | "private" | "leased"
     }
     CompositeTypes: {
@@ -2598,6 +2621,7 @@ export const Constants = {
         "fine",
         "other",
       ],
+      vehicle_category: ["passenger", "motorcycle"],
       vehicle_ownership: ["company", "private", "leased"],
     },
   },

@@ -24,6 +24,7 @@ function toRow(v: ReturnType<typeof vehicleSchema.parse>) {
     license_plate: v.licensePlate,
     fuel_type: v.fuelType,
     ownership: v.ownership,
+    category: v.category,
     driver_name: v.driverName ?? null,
     consumption_l_100km: v.consumptionL100Km ?? null,
     odometer_km: v.odometerKm,
