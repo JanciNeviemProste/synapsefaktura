@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { VEHICLE_CATEGORIES } from "@/lib/validation/vehicle"
 
 /**
  * Sadzba cestovnej náhrady s platnosťou od-do.
@@ -36,7 +37,7 @@ export const travelRateSchema = z
      * zakon medzi osobnym autom a motocyklom rozlisuje.
      */
     vehicleCategory: z
-      .enum(["passenger", "motorcycle"])
+      .enum(VEHICLE_CATEGORIES)
       .nullable()
       .optional(),
     note: z.string().trim().optional().or(z.literal("")),

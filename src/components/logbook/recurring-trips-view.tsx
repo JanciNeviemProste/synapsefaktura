@@ -102,6 +102,7 @@ export function RecurringTripsView({
   const [contactId, setContactId] = useState("")
   const [distanceKm, setDistanceKm] = useState("")
   const [roundTrip, setRoundTrip] = useState(true)
+  const [withTrailer, setWithTrailer] = useState(false)
   const [purpose, setPurpose] = useState<TripPurpose>("business")
   const [purposeNote, setPurposeNote] = useState("")
   const [nextRunOn, setNextRunOn] = useState(today())
@@ -116,6 +117,7 @@ export function RecurringTripsView({
     setContactId("")
     setDistanceKm("")
     setRoundTrip(true)
+    setWithTrailer(false)
     setPurpose("business")
     setPurposeNote("")
     setNextRunOn(today())
@@ -132,6 +134,7 @@ export function RecurringTripsView({
     setContactId(r.contact_id ?? "")
     setDistanceKm(String(r.distance_km))
     setRoundTrip(r.round_trip)
+    setWithTrailer(r.with_trailer)
     setPurpose(r.purpose as TripPurpose)
     setPurposeNote(r.purpose_note ?? "")
     setNextRunOn(r.next_run_on ?? today())
@@ -154,6 +157,7 @@ export function RecurringTripsView({
         // Prazdne pole nesmie prejst ako 0 — to by bola platna nulova jazda.
         distanceKm: distanceKm.trim() === "" ? Number.NaN : Number(distanceKm),
         roundTrip,
+        withTrailer,
         purpose,
         purposeNote,
         nextRunOn,
@@ -472,6 +476,14 @@ export function RecurringTripsView({
                 id="rt-roundtrip"
                 checked={roundTrip}
                 onCheckedChange={setRoundTrip}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="rt-trailer">S prívesom</Label>
+              <Switch
+                id="rt-trailer"
+                checked={withTrailer}
+                onCheckedChange={setWithTrailer}
               />
             </div>
             <div className="flex items-center justify-between">

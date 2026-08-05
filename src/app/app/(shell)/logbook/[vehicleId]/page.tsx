@@ -10,10 +10,11 @@ import {
 } from "@/lib/logbook/consumption"
 import {
   resolveTravelRate,
+  trailerEligible,
   type VehicleCategory,
 } from "@/lib/logbook/rates"
 import { listTravelRates } from "@/app/actions/travel-rates"
-import { formatMoney } from "@/lib/money"
+import { formatMoney, round2 } from "@/lib/money"
 import {
   FUEL_TYPE_LABELS,
   VEHICLE_OWNERSHIP_LABELS,
@@ -170,8 +171,23 @@ export default async function VehicleLogbookPage({
   const rateChangedInPeriod =
     rate !== null && rateAtStart !== null && rate.rate_per_km !== rateAtStart.rate_per_km
 
+  // Kilometre sa delia na dve vedra: jazdy s privesom maju o 15 % vyssiu
+  // zakladnu nahradu. Jeden sucet vynasobeny jednou sadzbou by nesedel hned,
+  // ako by bola cast jazd s vlekom.
+  const trailerAllowed = trailerEligible(category)
+  const businessTrips = tripRows.filter((t) => t.purpose === "business")
+  const trailerKm = businessTrips
+    .filter((t) => t.with_trailer)
+    .reduce((sum, t) => sum + t.distance_km, 0)
+  const plainKm = round2(businessKm - trailerKm)
+
   const reimbursement = rate
-    ? travelReimbursement({ km: businessKm, ratePerKm: rate.rate_per_km })
+    ? travelReimbursement({
+        km: plainKm,
+        kmWithTrailer: trailerKm,
+        ratePerKm: rate.rate_per_km,
+        trailerAllowed,
+      })
     : null
 
   return (
@@ -323,6 +339,25 @@ export default async function VehicleLogbookPage({
                   note={`platná od ${rate.valid_from}`}
                 />
               </div>
+              {trailerKm > 0 ? (
+                <p className="text-muted-foreground text-sm">
+                  {trailerAllowed ? (
+                    <>
+                      Z toho {formatKm(trailerKm)} s prívesom — základná náhrada
+                      za ne je o 15 % vyššia, čo je{" "}
+                      {formatMoney(reimbursement.trailerSurcharge, rate.currency)}{" "}
+                      navyše.
+                    </>
+                  ) : (
+                    <>
+                      {formatKm(trailerKm)} je zapísaných s prívesom, ale{" "}
+                      {VEHICLE_CATEGORY_LABELS[category].toLowerCase()} na
+                      príplatok nárok nemá — zákon ho priznáva len osobným autám
+                      a štvorkolkám, takže sa nezapočítal.
+                    </>
+                  )}
+                </p>
+              ) : null}
               {/* Pri danovej kontrole je prve, na co sa pytaju, odkial to cislo
                   je. Nech to nikto nemusi hladat. */}
               {rate.source_ref ? (
@@ -364,6 +399,7 @@ export default async function VehicleLogbookPage({
         vehicleId={vehicle.id}
         trips={tripRows}
         contacts={contacts ?? []}
+        trailerAllowed={trailerAllowed}
       />
 
       <Separator />

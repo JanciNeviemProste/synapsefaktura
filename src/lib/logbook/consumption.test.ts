@@ -178,7 +178,12 @@ describe("travelReimbursement", () => {
   it("sčíta základnú náhradu za km a náhradu za palivo", () => {
     expect(
       travelReimbursement({ km: 120, ratePerKm: 0.264, fuelCost: 14.5 }),
-    ).toEqual({ basicAmount: 31.68, fuelAmount: 14.5, total: 46.18 })
+    ).toEqual({
+      basicAmount: 31.68,
+      fuelAmount: 14.5,
+      total: 46.18,
+      trailerSurcharge: 0,
+    })
   })
 
   it("bez nákladu na palivo je náhrada len za km", () => {
@@ -186,6 +191,7 @@ describe("travelReimbursement", () => {
       basicAmount: 26.4,
       fuelAmount: 0,
       total: 26.4,
+      trailerSurcharge: 0,
     })
   })
 
@@ -196,5 +202,90 @@ describe("travelReimbursement", () => {
   it("odmietne záporné km alebo sadzbu", () => {
     expect(travelReimbursement({ km: -1, ratePerKm: 0.264 })).toBeNull()
     expect(travelReimbursement({ km: 10, ratePerKm: -0.264 })).toBeNull()
+    expect(
+      travelReimbursement({ km: 10, kmWithTrailer: -5, ratePerKm: 0.264 }),
+    ).toBeNull()
+  })
+})
+
+describe("travelReimbursement — príves", () => {
+  // Sadzba pre osobné auto od 1. 1. 2026 (oznámenie 340/2025 Z. z.).
+  const RATE = 0.313
+
+  it("pridá 15 % k jazdám s prívesom, ostatné nechá tak", () => {
+    const r = travelReimbursement({
+      km: 100,
+      kmWithTrailer: 100,
+      ratePerKm: RATE,
+      trailerAllowed: true,
+    })
+    // 100 x 0,313 = 31,30 ; 100 x 0,313 x 1,15 = 36,00
+    expect(r).toEqual({
+      basicAmount: 67.3,
+      fuelAmount: 0,
+      total: 67.3,
+      trailerSurcharge: 4.7,
+    })
+  })
+
+  it("NEPRIDÁ príplatok tam, kde naň zákon nedáva nárok", () => {
+    // Motocykel a trojkolka priplatok za prives nemaju. Ticho ho pripocitat
+    // by znamenalo nadhodnotit danovy podklad.
+    const r = travelReimbursement({
+      km: 0,
+      kmWithTrailer: 100,
+      ratePerKm: 0.09,
+      trailerAllowed: false,
+    })
+    expect(r?.basicAmount).toBe(9)
+    expect(r?.trailerSurcharge).toBe(0)
+  })
+
+  it("bez prívesu je výsledok rovnaký ako predtým", () => {
+    const bez = travelReimbursement({ km: 250, ratePerKm: RATE })
+    const sNulou = travelReimbursement({
+      km: 250,
+      kmWithTrailer: 0,
+      ratePerKm: RATE,
+      trailerAllowed: true,
+    })
+    expect(sNulou).toEqual(bez)
+  })
+
+  it("príplatok sa počíta LEN z kilometrov s prívesom", () => {
+    // 900 km bez vleku + 100 s vlekom. Priplatok musi byt z tej stovky,
+    // nie z celeho tisica.
+    const r = travelReimbursement({
+      km: 900,
+      kmWithTrailer: 100,
+      ratePerKm: RATE,
+      trailerAllowed: true,
+    })
+    expect(r?.trailerSurcharge).toBe(4.7)
+    expect(r?.basicAmount).toBe(317.7) // 281,70 + 31,30 + 4,70
+  })
+
+  it("samotné jazdy s prívesom fungujú tiež", () => {
+    const r = travelReimbursement({
+      km: 0,
+      kmWithTrailer: 200,
+      ratePerKm: RATE,
+      trailerAllowed: true,
+    })
+    expect(r?.basicAmount).toBe(71.99) // 62,60 + 9,39
+    expect(r?.trailerSurcharge).toBe(9.39)
+  })
+
+  it("palivo sa príplatkom nenavyšuje", () => {
+    // Priplatok je k ZAKLADNEJ nahrade; nahrada za palivo je iny titul.
+    const r = travelReimbursement({
+      km: 0,
+      kmWithTrailer: 100,
+      ratePerKm: RATE,
+      trailerAllowed: true,
+      fuelCost: 20,
+    })
+    expect(r?.fuelAmount).toBe(20)
+    expect(r?.total).toBe(56)
   })
 })

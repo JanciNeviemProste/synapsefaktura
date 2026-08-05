@@ -51,11 +51,17 @@ export function TripForm({
   vehicleId,
   trip,
   contacts,
+  trailerAllowed = true,
   onDone,
 }: {
   vehicleId: string
   trip?: Trip | null
   contacts: ContactOption[]
+  /**
+   * Ma vozidlo narok na +15 % pri privese? Zakon ho priznava len osobnym
+   * autam a stvorkolkam, tak to formular povie rovno a nie az v prepocte.
+   */
+  trailerAllowed?: boolean
   onDone: () => void
 }) {
   const [submitting, startSubmit] = useTransition()
@@ -70,6 +76,7 @@ export function TripForm({
       contactId: trip?.contact_id ?? undefined,
       distanceKm: trip?.distance_km ?? 0,
       roundTrip: trip?.round_trip ?? true,
+      withTrailer: trip?.with_trailer ?? false,
       purpose: (trip?.purpose as TripPurpose | undefined) ?? "business",
       purposeNote: trip?.purpose_note ?? "",
       driverName: trip?.driver_name ?? "",
@@ -323,6 +330,29 @@ export function TripForm({
                   onCheckedChange={field.onChange}
                 />
               </FormControl>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="withTrailer"
+          render={({ field }) => (
+            <FormItem className="rounded-lg border p-3">
+              <div className="flex flex-row items-center justify-between">
+                <FormLabel>S prívesom</FormLabel>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+              </div>
+              <p className="text-muted-foreground text-xs">
+                {trailerAllowed
+                  ? "Základná náhrada za tieto kilometre bude o 15 % vyššia."
+                  : "Toto vozidlo na príplatok za príves nárok nemá — zákon ho priznáva len osobným autám a štvorkolkám."}
+              </p>
             </FormItem>
           )}
         />
