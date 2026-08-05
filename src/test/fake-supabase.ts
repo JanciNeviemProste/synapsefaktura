@@ -32,6 +32,10 @@ export class FakeStorage {
           error: null,
         }),
         createBucket: async (name: string) => {
+          // Supabase pri existujucom buckete vrati chybu, nie ticho uspech.
+          if (this.buckets.includes(name)) {
+            return { data: null, error: { message: "The resource already exists" } }
+          }
           this.buckets.push(name)
           return { data: { name }, error: null }
         },

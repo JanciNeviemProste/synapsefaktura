@@ -115,6 +115,22 @@ describe("createUploadTicket", () => {
     expect(res.ok).toBe(true)
     expect(storage.buckets).toContain("attachments")
   })
+
+  it("súbežné prvé nahratie nezhodí „už existuje“", async () => {
+    // Produkcia bucket zatiaľ nemá, takže dvaja naraz pri PRVOM použití sú
+    // najpravdepodobnejší prípad. Zoznam ho ešte nevidí, vytvorenie zlyhá.
+    storage.buckets = []
+    const listBuckets = async () => ({ data: [], error: null })
+    const base = storage.client()
+    const racing = { storage: { ...base.storage, listBuckets } }
+    vi.spyOn(storage, "client").mockReturnValueOnce(
+      racing as ReturnType<typeof storage.client>,
+    )
+    storage.buckets = ["attachments"] // medzitým ho vytvoril niekto iný
+
+    const res = await createUploadTicket("attachment", "a.jpg", 10)
+    expect(res.ok).toBe(true)
+  })
 })
 
 describe("verifyUpload", () => {

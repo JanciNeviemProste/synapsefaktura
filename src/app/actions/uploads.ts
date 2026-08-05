@@ -90,8 +90,16 @@ export async function createUploadTicket(
   if (!buckets?.some((b) => b.name === ATTACHMENTS_BUCKET)) {
     const { error } = await admin.storage.createBucket(ATTACHMENTS_BUCKET, {
       public: false,
+      // Strop priamo na buckete. Podpísaný lístok sám o sebe veľkosť
+      // NEOBMEDZUJE, takže bez tohto by 50 MB súbor prešiel do úložiska
+      // a `verifyUpload` by ho musel celý stiahnuť, aby ho zahodil.
+      fileSizeLimit: MAX_ATTACHMENT_BYTES,
     })
-    if (error) return { ok: false, error: "Úložisko sa nepodarilo pripraviť." }
+    // „Už existuje" nie je chyba: bucket mohol medzitým vytvoriť súbežný
+    // upload. A práve prvé použitie je chvíľa, keď je to najpravdepodobnejšie.
+    if (error && !/exist/i.test(error.message)) {
+      return { ok: false, error: "Úložisko sa nepodarilo pripraviť." }
+    }
   }
 
   const { data, error } = await admin.storage
