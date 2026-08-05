@@ -19,7 +19,7 @@ import { Separator } from "@/components/ui/separator"
 import { signUp } from "@/app/actions/auth"
 import { GoogleButton } from "./google-button"
 
-export function RegisterForm() {
+export function RegisterForm({ googleEnabled }: { googleEnabled: boolean }) {
   const t = useTranslations("auth")
   const [pending, startTransition] = useTransition()
 
@@ -37,12 +37,18 @@ export function RegisterForm() {
         <CardDescription>{t("registerSubtitle")}</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-4">
-        <GoogleButton />
-        <div className="flex items-center gap-3">
-          <Separator className="flex-1" />
-          <span className="text-muted-foreground text-xs">{t("orEmail")}</span>
-          <Separator className="flex-1" />
-        </div>
+        {googleEnabled && (
+          <>
+            <GoogleButton />
+            <div className="flex items-center gap-3">
+              <Separator className="flex-1" />
+              <span className="text-muted-foreground text-xs">
+                {t("orEmail")}
+              </span>
+              <Separator className="flex-1" />
+            </div>
+          </>
+        )}
         <form action={action} className="grid gap-4">
           <div className="grid gap-2">
             <Label htmlFor="fullName">{t("name")}</Label>

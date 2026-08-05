@@ -5,8 +5,20 @@ import { redirect } from "next/navigation"
 import { headers } from "next/headers"
 import { z } from "zod"
 import { createClient } from "@/lib/supabase/server"
+import { isGoogleEnabled } from "@/lib/auth/providers"
+import { isUnconfirmedEmail, isEmailRateLimited } from "@/lib/auth/errors"
 
-export type AuthActionResult = { error: string } | undefined
+export type AuthActionResult =
+  | {
+      error: string
+      /**
+       * Účet existuje, len nie je potvrdený e-mailom. UI podľa toho ponúkne
+       * poslať potvrdenie znova — inak by používateľ donekonečna skúšal heslo,
+       * ktoré má správne.
+       */
+      unconfirmedEmail?: boolean
+    }
+  | undefined
 
 const UNAVAILABLE =
   "Prihlásenie je momentálne nedostupné (služba neodpovedá). Skús to prosím o chvíľu."
@@ -54,6 +66,16 @@ export async function signIn(formData: FormData): Promise<AuthActionResult> {
   )
   if (!res.ok) return { error: res.error }
   if (res.data.error) {
+    // Doteraz sa KAŽDÉ zlyhanie ohlásilo ako „Nesprávny e-mail alebo heslo."
+    // Pri nepotvrdenom účte to bola nepravda, ktorá posielala človeka skúšať
+    // heslo, ktoré má správne — a skutočnú príčinu mu nikto nepovedal.
+    if (isUnconfirmedEmail(res.data.error)) {
+      return {
+        error:
+          "Účet ešte nie je potvrdený. Pozri sa do e-mailu na potvrdzovací odkaz.",
+        unconfirmedEmail: true,
+      }
+    }
     return { error: "Nesprávny e-mail alebo heslo." }
   }
 
@@ -97,14 +119,57 @@ export async function signUp(formData: FormData): Promise<AuthActionResult> {
   // user to confirm their inbox instead of into the app (middleware would
   // otherwise bounce them to /login).
   if (!data.session) {
-    redirect("/registracia-hotova")
+    // Adresa ide so sebou, aby si používateľ vedel nechať poslať potvrdenie
+    // znova bez toho, aby ju písal druhýkrát.
+    redirect(`/registracia-hotova?email=${encodeURIComponent(parsed.data.email)}`)
   }
   redirect("/app/onboarding")
 }
 
+/**
+ * Pošle potvrdzovací e-mail znova.
+ *
+ * Bez toho bol nepotvrdený účet slepá ulička: prihlásiť sa nedalo a registrácia
+ * na tú istú adresu druhýkrát tiež nie.
+ */
+export async function resendConfirmation(
+  formData: FormData,
+): Promise<AuthActionResult | { ok: true }> {
+  const email = z.string().email().safeParse(formData.get("email"))
+  if (!email.success) return { error: "Zadaj platný e-mail." }
+
+  const res = await withSupabase((supabase) =>
+    supabase.auth.resend({ type: "signup", email: email.data }),
+  )
+  if (!res.ok) return { error: res.error }
+  if (res.data.error) {
+    // Časté a mätúce: Supabase má strop na počet odoslaných e-mailov za hodinu.
+    if (isEmailRateLimited(res.data.error)) {
+      return {
+        error:
+          "E-mail sa práve posielať nedá (limit odosielania). Skús to o pár minút.",
+      }
+    }
+    return { error: res.data.error.message }
+  }
+  return { ok: true }
+}
+
 export async function signInWithGoogle(): Promise<AuthActionResult> {
+  // Overuje sa PRED presmerovaním. `signInWithOAuth` poskytovateľa nekontroluje
+  // a vždy vráti adresu, takže pri vypnutom Google používateľ dovtedy pristál
+  // na bielej stránke so surovým JSON-om od Supabase.
+  if (!(await isGoogleEnabled())) {
+    return {
+      error:
+        "Prihlásenie cez Google zatiaľ nie je nastavené. Použi e-mail a heslo.",
+    }
+  }
+
   const origin =
-    (await headers()).get("origin") ?? process.env.NEXT_PUBLIC_SITE_URL
+    (await headers()).get("origin") ??
+    process.env.NEXT_PUBLIC_APP_URL ??
+    process.env.NEXT_PUBLIC_SITE_URL
 
   const res = await withSupabase((supabase) =>
     supabase.auth.signInWithOAuth({
