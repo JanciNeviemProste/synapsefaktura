@@ -13,6 +13,10 @@ import {
 import { addExpensePayment, expensePaymentStatus } from "@/lib/expenses/payment"
 import { computeExpenseItems } from "@/lib/expenses/items"
 import { round2 } from "@/lib/money"
+import {
+  MAX_ATTACHMENT_BYTES,
+  tooLargeMessage,
+} from "@/lib/upload/limits"
 import type { Database } from "@/lib/supabase/database.types"
 
 export type ExpenseActionResult =
@@ -470,6 +474,10 @@ export async function uploadAttachment(
   const file = formData.get("file")
   if (!(file instanceof File) || file.size === 0) {
     return { ok: false, error: "Žiadny súbor." }
+  }
+  // Klientska kontrola sa da obist — server musi mat vlastnu.
+  if (file.size > MAX_ATTACHMENT_BYTES) {
+    return { ok: false, error: tooLargeMessage(file.size, MAX_ATTACHMENT_BYTES) }
   }
   const supabase = await createClient()
   const orgId = await getCurrentOrgId(supabase)

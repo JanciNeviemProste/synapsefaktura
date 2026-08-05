@@ -139,8 +139,14 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
     <nav className="flex flex-1 flex-col gap-1 p-2">
       {NAV.map((item) => {
         const [itemPath] = item.href.split("?")
+        // Podstranky dokladu (`/app/invoices/new`, `/app/invoices/<id>`) patria
+        // pod polozku „Faktury". Bez toho sa pri vystavovani dokladu zhasla
+        // cela navigacia a pouzivatel nevidel, kde vlastne je.
+        const onSubPage =
+          itemPath !== "/app" && pathname.startsWith(`${itemPath}/`)
         const active =
-          pathname === itemPath && (item.docType ?? null) === activeDocType
+          (pathname === itemPath || onSubPage) &&
+          (item.docType ?? null) === activeDocType
         const Icon = item.icon
 
         if (!item.ready) {

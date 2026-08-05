@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation"
 import { Upload, Loader2, CheckCircle2 } from "lucide-react"
 import { toast } from "sonner"
 
+import { MAX_IMPORT_BYTES, tooLargeMessage } from "@/lib/upload/limits"
+
 import type { Database } from "@/lib/supabase/database.types"
 import { formatMoney } from "@/lib/money"
 import { importBankCsv } from "@/app/actions/payments"
@@ -41,7 +43,17 @@ export function BankImport({ transactions }: { transactions: Tx[] }) {
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+
+    // Rocny vypis vie mat niekolko MB. Bez kontroly by skoncil na HTTP 413
+    // bez hlasky — obsah ide na server ako telo server action.
+    if (file.size > MAX_IMPORT_BYTES) {
+      toast.error(tooLargeMessage(file.size, MAX_IMPORT_BYTES))
+      e.target.value = ""
+      return
+    }
+
     startTransition(async () => {
+      try {
       const content = await file.text()
       const res = await importBankCsv(content)
       if (!res.ok) {
@@ -54,6 +66,9 @@ export function BankImport({ transactions }: { transactions: Tx[] }) {
       if (res.errors.length)
         toast.warning(`${res.errors.length} riadkov preskočených.`)
       router.refresh()
+      } catch {
+        toast.error("Výpis sa nepodarilo načítať. Skús to znova.")
+      }
     })
     e.target.value = ""
   }

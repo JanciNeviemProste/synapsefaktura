@@ -86,12 +86,17 @@ export function MembersSettings({
   const [inviteRole, setInviteRole] = useState<InviteRole>("member")
   const [removing, setRemoving] = useState<Member | null>(null)
 
-  async function copyLink(token: string) {
+  /**
+   * Vrati, ci sa kopirovanie podarilo. Volajuci to MUSI overit — schranka je
+   * v nezabezpecenom kontexte alebo bez opravnenia nedostupna a tvrdit potom
+   * „odkaz je skopirovany" by poslalo pouzivatela hladat nieco, co tam nie je.
+   */
+  async function copyLink(token: string): Promise<boolean> {
     try {
       await navigator.clipboard.writeText(inviteLink(appUrl, token))
-      toast.success("Odkaz skopírovaný.")
+      return true
     } catch {
-      toast.error("Odkaz sa nepodarilo skopírovať.")
+      return false
     }
   }
 
@@ -105,8 +110,12 @@ export function MembersSettings({
         else toast.error(res.error ?? "Pozvánku sa nepodarilo vytvoriť.")
         return
       }
-      await copyLink(res.token)
-      toast.success("Pozvánka vytvorená. Odkaz je skopírovaný v schránke.")
+      const copied = await copyLink(res.token)
+      toast.success(
+        copied
+          ? "Pozvánka vytvorená. Odkaz je skopírovaný v schránke."
+          : "Pozvánka vytvorená. Odkaz skopíruj tlačidlom v zozname nižšie.",
+      )
       setEmail("")
       router.refresh()
     })
@@ -303,7 +312,11 @@ export function MembersSettings({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => copyLink(inv.token)}
+                      onClick={async () => {
+                        const copied = await copyLink(inv.token)
+                        if (copied) toast.success("Odkaz skopírovaný.")
+                        else toast.error("Odkaz sa nepodarilo skopírovať.")
+                      }}
                     >
                       <Copy className="size-4" />
                       Kopírovať odkaz

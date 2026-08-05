@@ -244,7 +244,15 @@ export function EInvoicePanel({
             Overiť
           </Button>
 
-          <Button onClick={runSend} disabled={sending || isDraft}>
+          <Button
+            onClick={runSend}
+            disabled={sending || isDraft}
+            title={
+              isDraft
+                ? "Koncept sa odoslať nedá — najprv doklad vystav."
+                : undefined
+            }
+          >
             {sending ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (

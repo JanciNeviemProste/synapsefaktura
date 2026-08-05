@@ -89,15 +89,30 @@ export default async function InvoicesPage({
 
   const activeTag = tags.find((t) => t.id === activeTagId) ?? null
 
+  // Nadpis musi povedat, na co sa pouzivatel prave pozera. Doteraz tu bolo
+  // natvrdo „Faktury" aj vtedy, ked bol zoznam vyfiltrovany na cenove ponuky
+  // — filter zabral, ale na obrazovke to nebolo vidiet.
+  const heading = activeType ? DOCUMENT_TYPE_LABELS[activeType] : t("title")
+
+  // Typ sa nesie do noveho dokladu. Bez toho vznikla z „Dodacie listy →
+  // Novy doklad" faktura a pouzivatel to musel prepinat az v doklade.
+  const newDocHref = activeType
+    ? `/app/invoices/new?type=${activeType}`
+    : "/app/invoices/new"
+
   return (
     <div className="mx-auto grid max-w-5xl gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">{t("title")}</h1>
-          <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
+          <h1 className="text-2xl font-semibold">{heading}</h1>
+          <p className="text-muted-foreground text-sm">
+            {activeType
+              ? `Zoznam dokladov typu „${DOCUMENT_TYPE_LABELS[activeType]}“.`
+              : t("subtitle")}
+          </p>
         </div>
         <Button asChild>
-          <Link href="/app/invoices/new">
+          <Link href={newDocHref}>
             <Plus className="size-4" />
             {t("newDoc")}
           </Link>
@@ -170,7 +185,7 @@ export default async function InvoicesPage({
             </p>
           </div>
           <Button asChild variant="outline">
-            <Link href="/app/invoices/new">
+            <Link href={newDocHref}>
               <Plus className="size-4" />
               {t("newDoc")}
             </Link>

@@ -52,6 +52,8 @@ type ItemRow = Database["public"]["Tables"]["document_items"]["Row"]
 // V DOCUMENT_TYPE_LABELS "draft" zostava, aby sa stare zaznamy dali zobrazit.
 const HIDDEN_DOCUMENT_TYPES: DocumentType[] = ["draft"]
 
+const PRODUCT_LIST_ID = "cennik-polozky"
+
 function today() {
   return new Date().toISOString().slice(0, 10)
 }
@@ -117,6 +119,7 @@ export function InvoiceEditor({
   defaultDueDays,
   document: doc,
   items: existingItems,
+  initialType,
 }: {
   contacts: Contact[]
   products: Product[]
@@ -124,6 +127,11 @@ export function InvoiceEditor({
   defaultDueDays: number
   document?: DocRow | null
   items?: ItemRow[]
+  /**
+   * Typ z adresy (`/app/invoices/new?type=delivery_note`). Bez neho zacinal
+   * kazdy novy doklad ako faktura, aj ked pouzivatel prisiel z „Dodacie listy".
+   */
+  initialType?: DocumentType
 }) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -131,7 +139,7 @@ export function InvoiceEditor({
   const form = useForm<DocumentValues>({
     resolver: zodResolver(documentSchema),
     defaultValues: {
-      type: (doc?.type as DocumentType) ?? "invoice",
+      type: (doc?.type as DocumentType) ?? initialType ?? "invoice",
       contactId: doc?.contact_id ?? undefined,
       issueDate: doc?.issue_date ?? today(),
       supplyDate: doc?.supply_date ?? "",
@@ -239,6 +247,26 @@ export function InvoiceEditor({
     language === "en" ? "en" : "sk",
   )
 
+  /**
+   * Ked pouzivatel vyberie polozku z nasepkavaca (alebo napise presne jej
+   * nazov), doplnia sa aj MJ, cena a sadzba DPH. Bez toho by nasepkavac
+   * setril len pisanie popisu a cenu by aj tak musel dohladat.
+   *
+   * Porovnava sa normalizovane, aby „doprava" naslo „Doprava".
+   */
+  function applyProductByName(idx: number, name: string) {
+    const needle = name.trim().replace(/\s+/g, " ").toLowerCase()
+    if (needle === "") return
+    const p = products.find(
+      (x) => x.name.trim().replace(/\s+/g, " ").toLowerCase() === needle,
+    )
+    if (!p) return
+    form.setValue(`items.${idx}.unit`, p.unit, { shouldDirty: true })
+    form.setValue(`items.${idx}.unitPrice`, p.unit_price, { shouldDirty: true })
+    form.setValue(`items.${idx}.vatRate`, p.vat_rate, { shouldDirty: true })
+    form.setValue(`items.${idx}.productId`, p.id, { shouldDirty: true })
+  }
+
   function addFromProduct(productId: string | null) {
     const p = products.find((x) => x.id === productId)
     if (!p) return
@@ -281,9 +309,18 @@ export function InvoiceEditor({
     <Form {...form}>
       <form className="mx-auto grid max-w-5xl gap-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold">
-            {doc ? "Upraviť doklad" : "Nový doklad"}
-          </h1>
+          <div>
+            {/* Nadpis musi povedat, aky doklad sa prave vystavuje. Doteraz tu
+                bolo natvrdo „Novy doklad" a typ nebolo vidiet nikde okrem
+                rozbalovacky — preto vsetky doklady posobili rovnako. */}
+            <h1 className="text-2xl font-semibold">
+              {doc ? "Upraviť " : "Nový "}
+              {DOCUMENT_TYPE_LABELS[docType].toLowerCase()}
+            </h1>
+            {doc?.number ? (
+              <p className="text-muted-foreground text-sm">{doc.number}</p>
+            ) : null}
+          </div>
           <div className="flex gap-2">
             <Button
               type="button"
@@ -505,14 +542,31 @@ export function InvoiceEditor({
             )}
           </CardHeader>
           <CardContent className="grid gap-3">
-            <div className="text-muted-foreground hidden grid-cols-[1fr_70px_60px_90px_80px_70px_100px_32px] gap-2 px-1 text-xs font-medium sm:grid">
+            {products.length > 0 ? (
+              <datalist id={PRODUCT_LIST_ID}>
+                {products.map((p) => (
+                  <option key={p.id} value={p.name} />
+                ))}
+              </datalist>
+            ) : null}
+            <div
+              className={`text-muted-foreground hidden gap-2 px-1 text-xs font-medium sm:grid ${
+                presentation.showPrices
+                  ? "grid-cols-[1fr_70px_60px_90px_80px_70px_100px_32px]"
+                  : "grid-cols-[1fr_70px_60px_32px]"
+              }`}
+            >
               <span>Popis</span>
               <span>Množ.</span>
               <span>MJ</span>
-              <span>Cena/j.</span>
-              <span>DPH</span>
-              <span>Zľava%</span>
-              <span className="text-right">Spolu</span>
+              {presentation.showPrices ? (
+                <>
+                  <span>Cena/j.</span>
+                  <span>DPH</span>
+                  <span>Zľava%</span>
+                  <span className="text-right">Spolu</span>
+                </>
+              ) : null}
               <span />
             </div>
             {fields.map((f, idx) => {
@@ -520,12 +574,22 @@ export function InvoiceEditor({
               return (
                 <div key={f.id} className="grid gap-2">
                 <div
-                  className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_70px_60px_90px_80px_70px_100px_32px] sm:items-center"
+                  className={`grid grid-cols-2 gap-2 sm:items-center ${
+                    presentation.showPrices
+                      ? "sm:grid-cols-[1fr_70px_60px_90px_80px_70px_100px_32px]"
+                      : "sm:grid-cols-[1fr_70px_60px_32px]"
+                  }`}
                 >
+                  {/* Nasepkavac z cennika. Natívny `datalist` zamerne:
+                      filtrovanie robi prehliadac, funguje aj bez JS a nepotrebuje
+                      dalsiu UI kniznicu. Vyber polozky doplni aj MJ, cenu a DPH. */}
                   <Input
                     placeholder="Popis položky"
                     className="col-span-2 sm:col-span-1"
-                    {...form.register(`items.${idx}.description`)}
+                    list={products.length > 0 ? PRODUCT_LIST_ID : undefined}
+                    {...form.register(`items.${idx}.description`, {
+                      onChange: (e) => applyProductByName(idx, e.target.value),
+                    })}
                   />
                   <Input
                     type="number"
@@ -533,29 +597,37 @@ export function InvoiceEditor({
                     {...form.register(`items.${idx}.quantity`)}
                   />
                   <Input {...form.register(`items.${idx}.unit`)} />
-                  <Input
-                    type="number"
-                    step="0.0001"
-                    {...form.register(`items.${idx}.unitPrice`)}
-                  />
-                  <select
-                    className="border-input h-8 rounded-md border bg-transparent px-2 text-sm"
-                    {...form.register(`items.${idx}.vatRate`)}
-                  >
-                    {CURRENT_VAT_RATES.map((r) => (
-                      <option key={r} value={r}>
-                        {vatRateLabel(r)}
-                      </option>
-                    ))}
-                  </select>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    {...form.register(`items.${idx}.discountPct`)}
-                  />
-                  <span className="text-right text-sm font-medium tabular-nums">
-                    {formatMoney(line?.lineTotal ?? 0, currency)}
-                  </span>
+                  {/* Dodaci list sa tlaci bez cien, tak ich ani needitujeme —
+                      inak vyzera jeho editor presne ako editor faktury.
+                      Polia zostavaju vo formulari (registrovane vyssie), takze
+                      prepnutim typu spat sa hodnoty nestratia. */}
+                  {presentation.showPrices ? (
+                    <>
+                      <Input
+                        type="number"
+                        step="0.0001"
+                        {...form.register(`items.${idx}.unitPrice`)}
+                      />
+                      <select
+                        className="border-input h-8 rounded-md border bg-transparent px-2 text-sm"
+                        {...form.register(`items.${idx}.vatRate`)}
+                      >
+                        {CURRENT_VAT_RATES.map((r) => (
+                          <option key={r} value={r}>
+                            {vatRateLabel(r)}
+                          </option>
+                        ))}
+                      </select>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        {...form.register(`items.${idx}.discountPct`)}
+                      />
+                      <span className="text-right text-sm font-medium tabular-nums">
+                        {formatMoney(line?.lineTotal ?? 0, currency)}
+                      </span>
+                    </>
+                  ) : null}
                   <Button
                     type="button"
                     variant="ghost"
@@ -627,6 +699,10 @@ export function InvoiceEditor({
         <Card>
           <CardContent className="grid gap-4 pt-6 sm:grid-cols-2">
             <div className="grid gap-2">
+              {/* Dodaci list rekapitulaciu DPH nema — `presentation` to vie
+                  a doteraz sa jej nikto nespytal. */}
+              {presentation.showVatRecap ? (
+                <>
               <p className="text-sm font-medium">Daňová rekapitulácia</p>
               <div className="grid gap-1 text-sm">
                 {totals.recap.map((r) => (
@@ -642,6 +718,8 @@ export function InvoiceEditor({
                   </div>
                 ))}
               </div>
+                </>
+              ) : null}
               {legalNote && (
                 <p className="text-muted-foreground mt-2 text-xs italic">
                   {legalNote}
@@ -662,7 +740,11 @@ export function InvoiceEditor({
                 </span>
               </div>
               <div className="flex w-full max-w-xs justify-between border-t pt-1 text-base font-semibold">
-                <span>Spolu na úhradu</span>
+                <span>
+                  {presentation.totalLabelKey === "toPay"
+                    ? "Spolu na úhradu"
+                    : "Spolu"}
+                </span>
                 <span className="tabular-nums">
                   {formatMoney(totals.total, currency)}
                 </span>

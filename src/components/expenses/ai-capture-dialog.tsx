@@ -7,6 +7,10 @@ import { toast } from "sonner"
 
 import type { ExtractedDocument } from "@/lib/ai/extractor"
 import { formatMoney } from "@/lib/money"
+import {
+  MAX_ATTACHMENT_BYTES,
+  tooLargeMessage,
+} from "@/lib/upload/limits"
 import { uploadAttachment } from "@/app/actions/expenses"
 import { useUpgrade } from "@/components/billing/upgrade-dialog"
 import {
@@ -81,18 +85,35 @@ export function AiCaptureDialog({
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
+    // Cisti sa HNED — inak po zlyhani neslo znova vybrat ten isty subor,
+    // co je pri fotke bloceka bezny pripad.
+    e.target.value = ""
     if (!file) return
     reset()
+
+    // Fotka z mobilu ma bezne 2-5 MB. Bez tejto kontroly by skoncila na
+    // HTTP 413 bez hlasky.
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      toast.error(tooLargeMessage(file.size, MAX_ATTACHMENT_BYTES))
+      return
+    }
 
     startExtract(async () => {
       const fd = new FormData()
       fd.set("file", file)
 
       // Store the file (best-effort) and extract in parallel.
-      const [upload, extraction] = await Promise.all([
-        uploadAttachment(fd),
-        extractFromUpload(fd),
-      ])
+      let upload: Awaited<ReturnType<typeof uploadAttachment>>
+      let extraction: Awaited<ReturnType<typeof extractFromUpload>>
+      try {
+        ;[upload, extraction] = await Promise.all([
+          uploadAttachment(fd),
+          extractFromUpload(fd),
+        ])
+      } catch {
+        toast.error("Súbor sa nepodarilo spracovať. Skús to znova.")
+        return
+      }
 
       if (!extraction.ok) {
         // Paywall má ponúknuť upgrade, nie tvrdiť, že chýba kľúč.

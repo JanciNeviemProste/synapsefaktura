@@ -12,6 +12,8 @@ import {
   type BrandingImage as BrandingImageKind,
 } from "@/app/actions/org"
 
+import { MAX_IMAGE_BYTES } from "@/lib/images/validate"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -65,24 +67,46 @@ export function BrandingImageField({
 
   const previewUrl =
     directUrl ?? (signed.path === storagePath ? signed.url : null)
+  // Odlisi „este sa nacitava" od „nacitanie zlyhalo". Bez toho ostal nahlad
+  // navzdy na „Nacitavam…", hoci sa uz nic nedialo.
+  const previewFailed = storagePath !== null && signed.path === storagePath && signed.url === null
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (!file) return
     const input = e.target
+    // Pole sa cisti HNED a synchronne, nie az po `await`. Inak by sa po
+    // zlyhani ten isty subor nedal vybrat druhy raz — prehliadac by na
+    // rovnaku hodnotu nevyvolal `change`.
+    input.value = ""
+    if (!file) return
+
+    // Velkost sa kontroluje uz tu. Server ma rovnaky limit, ale nad strop
+    // Server Actions sa k nemu poziadavka vobec nedostane a spadla by na
+    // HTTP 413 bez zrozumitelnej hlasky.
+    if (file.size > MAX_IMAGE_BYTES) {
+      const mb = (file.size / (1024 * 1024)).toFixed(1)
+      toast.error(
+        `Obrázok má ${mb} MB, povolené sú najviac 2 MB. Zmenši ho a skús znova.`,
+      )
+      return
+    }
+
     const fd = new FormData()
     fd.set("file", file)
     startTransition(async () => {
-      const res = await uploadOrgImage(kind, fd)
-      // Pole sa vzdy vycisti, aby sa dal ten isty subor skusit znova po tom,
-      // co ho pouzivatel zmensi.
-      input.value = ""
-      if (!res.ok) {
-        toast.error(res.error)
-        return
+      try {
+        const res = await uploadOrgImage(kind, fd)
+        if (!res.ok) {
+          toast.error(res.error)
+          return
+        }
+        toast.success(`${label} nahraté.`)
+        router.refresh()
+      } catch {
+        // Vypadok siete alebo nedostupna sluzba — bez tohto by pouzivatel
+        // namiesto hlasky dostal celoobrazovkovu chybu.
+        toast.error("Súbor sa nepodarilo nahrať. Skús to znova.")
       }
-      toast.success(`${label} nahraté.`)
-      router.refresh()
     })
   }
 
@@ -112,8 +136,12 @@ export function BrandingImageField({
               className="max-h-full max-w-full object-contain"
             />
           ) : (
-            <span className="text-muted-foreground text-xs">
-              {path ? "Načítavam…" : "Nenahraté"}
+            <span className="text-muted-foreground px-2 text-center text-xs">
+              {!path
+                ? "Nenahraté"
+                : previewFailed
+                  ? "Náhľad sa nenačítal"
+                  : "Načítavam…"}
             </span>
           )}
         </div>
