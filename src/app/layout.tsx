@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
+import { Inter_Tight, Geist_Mono } from "next/font/google"
 import { NextIntlClientProvider } from "next-intl"
 import { getLocale } from "next-intl/server"
 import "./globals.css"
@@ -10,8 +10,19 @@ import { CookieNotice } from "@/components/cookie-notice"
 import { DesignSwitcher } from "@/components/design-switcher"
 import { Analytics } from "@/components/analytics"
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+/**
+ * Inter Tight — úzky neutrálny grotesk, ktorý nesie celý dizajn: úvodnú
+ * stránku aj vnútro appky.
+ *
+ * `latin-ext` je povinné, nie kozmetika — bez neho by slovenská diakritika
+ * (ľ, š, č, ť, ž, ô, ä, ď, ň, ĺ, ŕ) vypadla na náhradný font a text by bol
+ * roztrhaný na dve písma uprostred slova.
+ *
+ * Font sa pri builde stiahne a servíruje z našej domény, takže na cudzej CDN
+ * nezávisíme a nič sa neposiela tretej strane.
+ */
+const interTight = Inter_Tight({
+  variable: "--font-inter-tight",
   subsets: ["latin", "latin-ext"],
 })
 
@@ -64,7 +75,7 @@ export default async function RootLayout({
   return (
     <html
       lang={locale}
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${interTight.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col">

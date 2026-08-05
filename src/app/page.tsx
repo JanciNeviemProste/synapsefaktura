@@ -1,42 +1,46 @@
 import Link from "next/link"
-import { Sparkles, Check, Minus, Bot, ShieldCheck, Zap } from "lucide-react"
+import { Check, Minus } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import { SiteFooter } from "@/components/site-footer"
+import { HeroVideo } from "@/components/landing/hero-video"
+import { LandingNav } from "@/components/landing/landing-nav"
+import { Hero } from "@/components/landing/hero"
 import { PLANS, PLAN_ORDER, type Feature, type PlanTier } from "@/lib/billing/plans"
 import { featureLabel } from "@/lib/billing/feature-labels"
 
+/**
+ * Úvodná stránka.
+ *
+ * Prvá obrazovka je hero s postavou na pozadí, ktorá reaguje na pohyb myši.
+ * Pod ňou pokračuje obsah v tom istom jazyku — veľká typografia, vlasové
+ * linky namiesto rámčekov, pilulkové tlačidlá, veľa vzduchu.
+ *
+ * Video je `position: fixed`, takže všetko pod hero musí mať vlastné nepriehľadné
+ * pozadie a vyššiu vrstvu — inak by pri scrollovaní presvitalo.
+ */
+
 const FEATURES = [
   {
-    icon: Bot,
+    n: "01",
     title: "AI píše faktúry za teba",
     text: "Povedz jednou vetou, čo fakturuješ — AI pripraví koncept, ty ho skontroluješ a vystavíš. Bločky a prijaté faktúry vyťaží z fotky na tvoje potvrdenie. Asistent odpovie na otázky o tvojich financiách.",
   },
   {
-    icon: ShieldCheck,
+    n: "02",
     title: "Nikdy nepošleš zlú faktúru",
     text: "Kontrola DPH (23/19/5 %) a povinných náležitostí ešte pred odoslaním. Žiadne dodatočné opravy ani starosti s daňovým úradom.",
   },
   {
-    icon: Zap,
+    n: "03",
     title: "Na 2027 pripravený skôr než ostatní",
     text: "Postavené na Peppol / EN 16931 od základu. Keď príde povinná e-faktúra, ty už budeš mať hotovo.",
   },
 ]
 
-/** Highlighted bullet lines per plan for the pricing cards. */
+/** Highlighted bullet lines per plan for the pricing columns. */
 const PLAN_HIGHLIGHTS: Record<PlanTier, string[]> = {
   free: ["5 dokladov / mesiac", "Príjem e-faktúr (Peppol)", "1 používateľ"],
-  pro: [
-    "Neobmedzené doklady",
-    ...[...PLANS.pro.features].map(featureLabel),
-  ],
+  pro: ["Neobmedzené doklady", ...[...PLANS.pro.features].map(featureLabel)],
   business: [
     "Všetko z Pro",
     ...[...PLANS.business.features]
@@ -86,225 +90,236 @@ function planPrice(tier: PlanTier): string {
   return p ? `${p} €` : "0 €"
 }
 
+/** Nadpis sekcie — malý štítok nad veľkým riadkom, rovnako v celom dokumente. */
+function SectionHeading({
+  label,
+  title,
+}: {
+  label: string
+  title: React.ReactNode
+}) {
+  return (
+    <div className="mb-12 sm:mb-16">
+      <p className="text-muted-foreground mb-4 text-sm tracking-wide uppercase">
+        {label}
+      </p>
+      <h2 className="font-heading max-w-3xl text-[clamp(28px,5vw,52px)] leading-[1.1] tracking-tight">
+        {title}
+      </h2>
+    </div>
+  )
+}
+
 export default function LandingPage() {
   return (
-    <div className="flex flex-col">
-      <header className="flex h-16 items-center justify-between border-b px-6">
-        <span className="flex items-center gap-2 font-semibold">
-          <Sparkles className="text-primary size-5" />
-          Synapse Faktúra
-        </span>
-        <div className="flex items-center gap-2">
-          <Button asChild variant="ghost">
-            <Link href="/login">Prihlásiť sa</Link>
-          </Button>
-          <Button asChild>
-            <Link href="/register">Začať zadarmo</Link>
-          </Button>
-        </div>
-      </header>
+    <div className="landing-light">
+      <HeroVideo />
+      <LandingNav />
+      <Hero />
 
-      {/* Hero */}
-      <section className="mx-auto flex max-w-3xl flex-col items-center gap-6 px-6 py-24 text-center">
-        <Link
-          href="/e-faktura-2027"
-          className="bg-muted/50 hover:bg-muted rounded-full border px-3 py-1 text-xs font-medium"
+      {/* Všetko pod hero prekrýva fixné video — odtiaľ vlastné pozadie a vrstva. */}
+      <div className="bg-background relative z-1">
+        <section className="mx-auto max-w-5xl px-5 py-24 sm:px-8 sm:py-32">
+          <p className="font-heading max-w-3xl text-[clamp(26px,4.5vw,46px)] leading-[1.15] tracking-tight">
+            Naháňaš faktúry, prepisuješ bločky a bojíš sa chýb v DPH? Nechaj to
+            na nás a venuj sa tomu, čo ťa živí.
+          </p>
+        </section>
+
+        <section
+          id="funkcie"
+          className="mx-auto max-w-5xl border-t px-5 py-24 sm:px-8 sm:py-32"
         >
-          Povinná e-faktúra 2027 už klope. Buď pripravený →
-        </Link>
-        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-          Fakturuj vetou. O zvyšok sa postará AI.
-        </h1>
-        <p className="text-muted-foreground max-w-2xl text-lg">
-          Vystav faktúru jednou vetou, doklady ti vyťaží AI z fotky a upomienky
-          pošle za teba. Slovenská fakturácia pripravená na povinnú e-faktúru 2027.
-        </p>
-        <div className="flex flex-wrap items-center justify-center gap-3">
-          <Button asChild size="lg">
-            <Link href="/register">Vytvoriť faktúru zadarmo</Link>
-          </Button>
-          <Button asChild size="lg" variant="outline">
-            <Link href="/e-faktura-2027">Čo je e-faktúra 2027?</Link>
-          </Button>
-        </div>
-        <p className="text-muted-foreground text-xs">
-          Bez platobnej karty · Pro na 14 dní zdarma · Zruš kedykoľvek
-        </p>
-      </section>
-
-      {/* Problem */}
-      <section className="mx-auto max-w-2xl px-6 pb-16 text-center">
-        <p className="text-xl font-medium sm:text-2xl">
-          Naháňaš faktúry, prepisuješ bločky a bojíš sa chýb v DPH?
-        </p>
-        <p className="text-muted-foreground mt-2">
-          Nechaj administratívu na Synapse Faktúru a venuj sa tomu, čo ťa živí.
-        </p>
-      </section>
-
-      {/* Features */}
-      <section className="mx-auto grid max-w-5xl gap-6 px-6 pb-24 sm:grid-cols-3">
-        {FEATURES.map((f) => {
-          const Icon = f.icon
-          return (
-            <Card key={f.title}>
-              <CardHeader>
-                <Icon className="text-primary size-6" />
-                <CardTitle className="text-lg">{f.title}</CardTitle>
-                <CardDescription>{f.text}</CardDescription>
-              </CardHeader>
-            </Card>
-          )
-        })}
-      </section>
-
-      {/* Pricing */}
-      <section id="cennik" className="mx-auto max-w-5xl px-6 pb-16">
-        <h2 className="mb-2 text-center text-2xl font-semibold">
-          Jednoduché ceny
-        </h2>
-        <p className="text-muted-foreground mb-10 text-center text-sm">
-          Začni zadarmo. Keď firma porastie, prejdi na Pro — prvých 14 dní zdarma,
-          potom {planPrice("pro")} / mesiac. Bez viazanosti, zruš kedykoľvek.
-        </p>
-        <div className="grid gap-6 sm:grid-cols-3">
-          {PLAN_ORDER.map((tier) => {
-            const plan = PLANS[tier]
-            const highlight = tier === "pro"
-            return (
-              <Card
-                key={tier}
-                className={highlight ? "border-primary shadow-md" : undefined}
+          <SectionHeading
+            label="Čo to vie"
+            title="Tri veci, ktoré ti zoberú administratívu z krku."
+          />
+          <div className="grid gap-px">
+            {FEATURES.map((f) => (
+              <div
+                key={f.n}
+                className="grid gap-4 border-t py-10 sm:grid-cols-[auto_1fr] sm:gap-12"
               >
-                <CardHeader>
-                  <CardTitle className="flex items-baseline justify-between">
-                    {plan.label}
-                    {highlight && (
-                      <span className="bg-primary text-primary-foreground rounded px-2 py-0.5 text-xs">
-                        Obľúbené
+                <span className="text-muted-foreground font-mono text-sm">
+                  {f.n}
+                </span>
+                <div className="max-w-2xl">
+                  <h3 className="font-heading mb-3 text-[clamp(20px,3vw,30px)] leading-tight tracking-tight">
+                    {f.title}
+                  </h3>
+                  <p className="text-muted-foreground text-base leading-relaxed">
+                    {f.text}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section
+          id="cennik"
+          className="mx-auto max-w-5xl border-t px-5 py-24 sm:px-8 sm:py-32"
+        >
+          <SectionHeading
+            label="Cenník"
+            title="Začni zadarmo. Plať, až keď ti to začne šetriť čas."
+          />
+          <p className="text-muted-foreground mb-12 max-w-2xl text-base">
+            Pro si vyskúšaš 14 dní zdarma, potom {planPrice("pro")} mesačne. Bez
+            viazanosti, zrušíš kedykoľvek.
+          </p>
+
+          <div className="grid border-t sm:grid-cols-3">
+            {PLAN_ORDER.map((tier) => {
+              const plan = PLANS[tier]
+              const highlight = tier === "pro"
+              return (
+                <div
+                  key={tier}
+                  className="flex flex-col gap-6 border-b px-0 py-10 sm:border-b-0 sm:px-8 sm:not-first:border-l sm:first:pl-0 sm:last:pr-0"
+                >
+                  <div>
+                    <div className="mb-3 flex items-baseline gap-3">
+                      <h3 className="font-heading text-xl tracking-tight">
+                        {plan.label}
+                      </h3>
+                      {highlight && (
+                        <span className="rounded-full border px-2.5 py-0.5 text-xs">
+                          Obľúbené
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="font-heading text-[40px] leading-none tracking-tight">
+                        {planPrice(tier)}
                       </span>
-                    )}
-                  </CardTitle>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-bold">
-                      {planPrice(tier)}
-                    </span>
-                    <span className="text-muted-foreground text-sm">
-                      {plan.priceEur ? "/ mesiac" : "navždy"}
-                    </span>
+                      <span className="text-muted-foreground text-sm">
+                        {plan.priceEur ? "/ mesiac" : "navždy"}
+                      </span>
+                    </div>
                   </div>
-                </CardHeader>
-                <CardContent className="grid gap-3">
-                  <ul className="grid gap-2 text-sm">
+
+                  <ul className="grid flex-1 content-start gap-2.5 text-sm">
                     {PLAN_HIGHLIGHTS[tier].map((feat) => (
-                      <li key={feat} className="flex items-center gap-2">
-                        <Check className="text-primary size-4 shrink-0" />
-                        {feat}
+                      <li key={feat} className="flex items-start gap-2.5">
+                        <Check className="mt-0.5 size-4 shrink-0" />
+                        <span>{feat}</span>
                       </li>
                     ))}
                   </ul>
+
                   <Button
                     asChild
+                    size="lg"
                     variant={highlight ? "default" : "outline"}
-                    className="mt-2 w-full"
+                    className="w-full"
                   >
                     <Link href="/register">
-                      {tier === "free" ? "Začať zadarmo" : `Vyskúšať ${plan.label}`}
+                      {tier === "free"
+                        ? "Začať zadarmo"
+                        : `Vyskúšať ${plan.label}`}
                     </Link>
                   </Button>
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
-      </section>
+                </div>
+              )
+            })}
+          </div>
+        </section>
 
-      {/* Comparison table */}
-      <section className="mx-auto max-w-4xl px-6 pb-24">
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="border-b">
-                <th className="py-3 text-left font-medium">Funkcia</th>
-                {PLAN_ORDER.map((t) => (
-                  <th key={t} className="px-3 py-3 text-center font-medium">
-                    {PLANS[t].label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-b">
-                <td className="py-3">Doklady / mesiac</td>
-                {PLAN_ORDER.map((t) => (
-                  <td key={t} className="px-3 py-3 text-center">
-                    {PLANS[t].docsPerMonth === null
-                      ? "∞"
-                      : PLANS[t].docsPerMonth}
-                  </td>
-                ))}
-              </tr>
-              {ALL_FEATURES.map((f) => (
-                <tr key={f} className="border-b">
-                  <td className="py-3">{featureLabel(f)}</td>
+        <section className="mx-auto max-w-5xl border-t px-5 py-24 sm:px-8 sm:py-32">
+          <SectionHeading label="Porovnanie" title="Čo je v ktorom pláne." />
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="py-4 text-left font-medium">Funkcia</th>
                   {PLAN_ORDER.map((t) => (
-                    <td key={t} className="px-3 py-3 text-center">
-                      {PLANS[t].features.has(f) ? (
-                        <Check className="text-primary mx-auto size-4" />
-                      ) : (
-                        <Minus className="text-muted-foreground mx-auto size-4" />
-                      )}
+                    <th key={t} className="px-3 py-4 text-center font-medium">
+                      {PLANS[t].label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b">
+                  <td className="py-4">Doklady / mesiac</td>
+                  {PLAN_ORDER.map((t) => (
+                    <td key={t} className="px-3 py-4 text-center tabular-nums">
+                      {PLANS[t].docsPerMonth === null
+                        ? "∞"
+                        : PLANS[t].docsPerMonth}
                     </td>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+                {ALL_FEATURES.map((f) => (
+                  <tr key={f} className="border-b">
+                    <td className="py-4">{featureLabel(f)}</td>
+                    {PLAN_ORDER.map((t) => (
+                      <td key={t} className="px-3 py-4 text-center">
+                        {PLANS[t].features.has(f) ? (
+                          <Check className="mx-auto size-4" />
+                        ) : (
+                          <Minus className="text-muted-foreground/40 mx-auto size-4" />
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
 
-      {/* 2027 section */}
-      <section className="bg-muted/30 border-y">
-        <div className="mx-auto flex max-w-3xl flex-col items-center gap-4 px-6 py-16 text-center">
-          <h2 className="text-2xl font-semibold">Povinná e-faktúra 2027 nepočká</h2>
-          <p className="text-muted-foreground">
-            Si platiteľ DPH? Od 1. 1. 2027 budeš musieť posielať faktúry
-            elektronicky cez Peppol. So Synapse Faktúrou to máš vyriešené už dnes —
-            žiadny zmätok na poslednú chvíľu.
-          </p>
-          <Button asChild variant="outline">
-            <Link href="/e-faktura-2027">Zisti, čo ťa čaká</Link>
-          </Button>
-        </div>
-      </section>
+        <section className="border-t">
+          <div className="mx-auto max-w-5xl px-5 py-24 sm:px-8 sm:py-32">
+            <SectionHeading
+              label="e-Faktúra 2027"
+              title="Od 1. januára 2027 to už nebude dobrovoľné."
+            />
+            <p className="text-muted-foreground mb-8 max-w-2xl text-base leading-relaxed">
+              Si platiteľ DPH? Faktúry budeš musieť posielať elektronicky cez
+              Peppol. So Synapse Faktúrou to máš vyriešené už dnes — žiadny
+              zmätok na poslednú chvíľu.
+            </p>
+            <Button asChild size="lg" variant="outline">
+              <Link href="/e-faktura-2027">Zisti, čo ťa čaká</Link>
+            </Button>
+          </div>
+        </section>
 
-      {/* FAQ */}
-      <section className="mx-auto max-w-3xl px-6 py-24">
-        <h2 className="mb-8 text-center text-2xl font-semibold">
-          Časté otázky
-        </h2>
-        <div className="grid gap-3">
-          {FAQ.map((item) => (
-            <details
-              key={item.q}
-              className="bg-card rounded-lg border px-4 py-3"
-            >
-              <summary className="cursor-pointer font-medium">{item.q}</summary>
-              <p className="text-muted-foreground mt-2 text-sm">{item.a}</p>
-            </details>
-          ))}
-        </div>
-        <div className="mt-10 flex flex-col items-center gap-2 text-center">
-          <Button asChild size="lg">
-            <Link href="/register">Vytvoriť účet zadarmo</Link>
-          </Button>
-          <p className="text-muted-foreground text-xs">
-            Hotové za 2 minúty. Bez platobnej karty.
-          </p>
-        </div>
-      </section>
+        <section className="mx-auto max-w-5xl border-t px-5 py-24 sm:px-8 sm:py-32">
+          <SectionHeading label="Otázky" title="Časté otázky." />
+          <div className="border-t">
+            {FAQ.map((item) => (
+              <details key={item.q} className="group border-b py-5">
+                <summary className="flex cursor-pointer items-center justify-between gap-4 text-base font-medium">
+                  {item.q}
+                  <span className="text-muted-foreground shrink-0 text-xl transition-transform group-open:rotate-45">
+                    +
+                  </span>
+                </summary>
+                <p className="text-muted-foreground mt-3 max-w-2xl text-sm leading-relaxed">
+                  {item.a}
+                </p>
+              </details>
+            ))}
+          </div>
 
-      <SiteFooter />
+          <div className="mt-16 flex flex-col items-start gap-3">
+            <h3 className="font-heading text-[clamp(24px,4vw,40px)] leading-tight tracking-tight">
+              Hotové za dve minúty.
+            </h3>
+            <Button asChild size="lg">
+              <Link href="/register">Vytvoriť účet zadarmo</Link>
+            </Button>
+            <p className="text-muted-foreground text-xs">
+              Bez platobnej karty · Pro na 14 dní zdarma · Zruš kedykoľvek
+            </p>
+          </div>
+        </section>
+
+        <SiteFooter />
+      </div>
     </div>
   )
 }
