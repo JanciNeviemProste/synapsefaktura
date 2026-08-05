@@ -50,6 +50,19 @@ export const VEHICLE_OWNERSHIP_LABELS: Record<VehicleOwnership, string> = {
 }
 
 /**
+ * Kategoria vozidla podla zakona o cestovnych nahradach. Rozhoduje o tom, ktora
+ * zakonna sadzba za km sa uplatni — od 1. 1. 2026 je to 0,313 €/km pre osobne
+ * auto a 0,090 €/km pre motocykel, teda 3,5-nasobny rozdiel.
+ */
+export const VEHICLE_CATEGORIES = ["passenger", "motorcycle"] as const
+export type VehicleCategory = (typeof VEHICLE_CATEGORIES)[number]
+
+export const VEHICLE_CATEGORY_LABELS: Record<VehicleCategory, string> = {
+  passenger: "Osobné auto",
+  motorcycle: "Motocykel / štvorkolka",
+}
+
+/**
  * Vozidlo (vehicles). ECV drzime velkymi pismenami bez medzier — v DB je
  * unikatny index `(organization_id, license_plate)` a "BA123AB" vs "ba 123 ab"
  * je to iste auto, ktore by inak preslo dvakrat.
@@ -73,6 +86,12 @@ export const vehicleSchema = z.object({
       invalid_type_error: "Vyber vlastníctvo.",
     })
     .default("company"),
+  category: z
+    .enum(VEHICLE_CATEGORIES, {
+      required_error: "Vyber kategóriu vozidla.",
+      invalid_type_error: "Vyber kategóriu vozidla.",
+    })
+    .default("passenger"),
   driverName: optionalString,
   /** Kombinovana spotreba v l/100 km podla technickeho preukazu. */
   consumptionL100Km: optionalConsumption,

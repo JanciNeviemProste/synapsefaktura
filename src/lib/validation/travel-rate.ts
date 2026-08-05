@@ -30,6 +30,15 @@ export const travelRateSchema = z
     ratePerKm: rateNumber,
     fuelRatePerKm: rateNumber.nullable().optional(),
     currency: z.string().trim().default("EUR"),
+    /**
+     * Prazdne = sadzba plati pre akekolvek vozidlo. Tak sa zvycajne zadava
+     * vlastna sadzba firmy; zakonne sadzby kategoriu vyplnenu maju, lebo
+     * zakon medzi osobnym autom a motocyklom rozlisuje.
+     */
+    vehicleCategory: z
+      .enum(["passenger", "motorcycle"])
+      .nullable()
+      .optional(),
     note: z.string().trim().optional().or(z.literal("")),
   })
   .refine((v) => !v.validTo || v.validTo >= v.validFrom, {

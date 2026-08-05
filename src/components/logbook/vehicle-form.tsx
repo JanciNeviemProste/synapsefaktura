@@ -13,6 +13,8 @@ import {
   FUEL_TYPE_LABELS,
   VEHICLE_OWNERSHIPS,
   VEHICLE_OWNERSHIP_LABELS,
+  VEHICLE_CATEGORIES,
+  VEHICLE_CATEGORY_LABELS,
   type VehicleValues,
 } from "@/lib/validation/vehicle"
 import { createVehicle, updateVehicle } from "@/app/actions/vehicles"
@@ -55,6 +57,7 @@ export function VehicleForm({
       licensePlate: vehicle?.license_plate ?? "",
       fuelType: vehicle?.fuel_type ?? "petrol",
       ownership: vehicle?.ownership ?? "company",
+      category: vehicle?.category ?? "passenger",
       driverName: vehicle?.driver_name ?? "",
       // Zamerne `undefined`, nie 0 — nevyplnena spotreba nie je nulova spotreba.
       consumptionL100Km: vehicle?.consumption_l_100km ?? undefined,
@@ -165,6 +168,40 @@ export function VehicleForm({
                     ))}
                   </SelectContent>
                 </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="category"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Kategória</FormLabel>
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <FormControl>
+                    <SelectTrigger className="w-full">
+                      <SelectValue>
+                        {(v: string) =>
+                          VEHICLE_CATEGORY_LABELS[
+                            v as keyof typeof VEHICLE_CATEGORY_LABELS
+                          ]
+                        }
+                      </SelectValue>
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {VEHICLE_CATEGORIES.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {VEHICLE_CATEGORY_LABELS[c]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-muted-foreground text-xs">
+                  Rozhoduje o sadzbe cestovnej náhrady — zákon má pre motocykel
+                  výrazne nižšiu než pre osobné auto.
+                </p>
                 <FormMessage />
               </FormItem>
             )}

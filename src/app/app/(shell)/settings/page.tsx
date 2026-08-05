@@ -11,7 +11,10 @@ import { MembersSettings } from "@/components/settings/members-settings"
 import { getOrganizationProfile } from "@/app/actions/org"
 import { listBankAccounts } from "@/app/actions/bank-accounts"
 import { listTags } from "@/app/actions/tags"
-import { listTravelRates } from "@/app/actions/travel-rates"
+import {
+  listTravelRates,
+  pendingStatutoryRate,
+} from "@/app/actions/travel-rates"
 import { getEInvoiceSettings } from "@/app/actions/einvoice-settings"
 import { getBillingInfo } from "@/app/actions/billing"
 import { listMembers, listPendingInvites } from "@/app/actions/members"
@@ -34,6 +37,7 @@ export default async function SettingsPage() {
     bankAccounts,
     tags,
     travelRates,
+    pendingRate,
     orgProfile,
     einvoice,
     billing,
@@ -52,6 +56,7 @@ export default async function SettingsPage() {
     listBankAccounts(),
     listTags(),
     listTravelRates(),
+    pendingStatutoryRate(),
     getOrganizationProfile(),
     getEInvoiceSettings(),
     getBillingInfo(),
@@ -103,7 +108,7 @@ export default async function SettingsPage() {
 
       <TagsSettings tags={tags} />
 
-      <TravelRatesSettings rates={travelRates} />
+      <TravelRatesSettings rates={travelRates} pending={pendingRate} />
 
       <SequencesSettings sequences={sequences ?? []} />
       {einvoice ? <EInvoiceSettings initial={einvoice} /> : null}

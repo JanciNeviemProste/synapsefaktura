@@ -8,12 +8,16 @@ import {
   deductibleBusinessFuel,
   travelReimbursement,
 } from "@/lib/logbook/consumption"
-import { resolveTravelRate } from "@/lib/logbook/rates"
+import {
+  resolveTravelRate,
+  type VehicleCategory,
+} from "@/lib/logbook/rates"
 import { listTravelRates } from "@/app/actions/travel-rates"
 import { formatMoney } from "@/lib/money"
 import {
   FUEL_TYPE_LABELS,
   VEHICLE_OWNERSHIP_LABELS,
+  VEHICLE_CATEGORY_LABELS,
   type FuelType,
   type VehicleOwnership,
 } from "@/lib/validation/vehicle"
@@ -158,8 +162,11 @@ export default async function VehicleLogbookPage({
     listTravelRates(),
     listRecurringTrips(vehicleId),
   ])
-  const rate = resolveTravelRate(travelRates, periodTo)
-  const rateAtStart = resolveTravelRate(travelRates, periodFrom)
+  // Kategoria rozhoduje: zakon ma pre motocykel 0,090 €/km oproti 0,313 pri
+  // osobnom aute, takze zamena je 3,5-nasobna chyba.
+  const category = vehicle.category as VehicleCategory
+  const rate = resolveTravelRate(travelRates, periodTo, category)
+  const rateAtStart = resolveTravelRate(travelRates, periodFrom, category)
   const rateChangedInPeriod =
     rate !== null && rateAtStart !== null && rate.rate_per_km !== rateAtStart.rate_per_km
 
@@ -187,6 +194,7 @@ export default async function VehicleLogbookPage({
               )}
             </div>
             <p className="text-muted-foreground text-sm">
+              {VEHICLE_CATEGORY_LABELS[category]} ·{" "}
               {FUEL_TYPE_LABELS[vehicle.fuel_type as FuelType]} ·{" "}
               {VEHICLE_OWNERSHIP_LABELS[vehicle.ownership as VehicleOwnership]}
               {vehicle.driver_name ? ` · ${vehicle.driver_name}` : ""} · stav{" "}
@@ -285,13 +293,12 @@ export default async function VehicleLogbookPage({
         <CardContent className="grid gap-3">
           {reimbursement === null || rate === null ? (
             <p className="text-muted-foreground text-sm">
-              Zatiaľ nie je zadaná žiadna sadzba cestovnej náhrady platná
-              k {periodTo}. Doplň ju v{" "}
+              Pre {VEHICLE_CATEGORY_LABELS[category].toLowerCase()} nie je
+              k {periodTo} zadaná žiadna sadzba cestovnej náhrady. Doplň ju v{" "}
               <Link href="/app/settings" className="underline underline-offset-4">
                 nastaveniach
               </Link>
-              . Sadzbu zámerne nedopĺňame za teba — je to zákonné číslo, ktoré
-              sa mení v čase.
+              .
             </p>
           ) : (
             <>
@@ -316,6 +323,25 @@ export default async function VehicleLogbookPage({
                   note={`platná od ${rate.valid_from}`}
                 />
               </div>
+              {/* Pri danovej kontrole je prve, na co sa pytaju, odkial to cislo
+                  je. Nech to nikto nemusi hladat. */}
+              {rate.source_ref ? (
+                <p className="text-muted-foreground text-sm">
+                  Zdroj sadzby:{" "}
+                  {rate.source_url ? (
+                    <a
+                      href={rate.source_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline underline-offset-4"
+                    >
+                      {rate.source_ref}
+                    </a>
+                  ) : (
+                    rate.source_ref
+                  )}
+                </p>
+              ) : null}
               {rateChangedInPeriod ? (
                 <p className="text-muted-foreground text-sm">
                   Pozor: sadzba sa počas zvoleného obdobia menila. Celá náhrada
