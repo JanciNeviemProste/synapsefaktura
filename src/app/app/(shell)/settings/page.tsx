@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
 import { OrgSettings } from "@/components/settings/org-settings"
+import { BrandingSettings } from "@/components/settings/branding-settings"
 import { SequencesSettings } from "@/components/settings/sequences-settings"
 import { BankAccountsSettings } from "@/components/settings/bank-accounts-settings"
 import { TagsSettings } from "@/components/settings/tags-settings"
@@ -8,7 +9,10 @@ import { TravelRatesSettings } from "@/components/settings/travel-rates-settings
 import { EInvoiceSettings } from "@/components/settings/einvoice-settings"
 import { BillingSettings } from "@/components/settings/billing-settings"
 import { MembersSettings } from "@/components/settings/members-settings"
-import { getOrganizationProfile } from "@/app/actions/org"
+import {
+  getOrganizationProfile,
+  getOrganizationBranding,
+} from "@/app/actions/org"
 import { listBankAccounts } from "@/app/actions/bank-accounts"
 import { listTags } from "@/app/actions/tags"
 import {
@@ -39,6 +43,7 @@ export default async function SettingsPage() {
     travelRates,
     pendingRate,
     orgProfile,
+    branding,
     einvoice,
     billing,
     members,
@@ -58,6 +63,7 @@ export default async function SettingsPage() {
     listTravelRates(),
     pendingStatutoryRate(),
     getOrganizationProfile(),
+    getOrganizationBranding(),
     getEInvoiceSettings(),
     getBillingInfo(),
     listMembers(),
@@ -92,6 +98,10 @@ export default async function SettingsPage() {
 
       {orgProfile ? (
         <OrgSettings initial={orgProfile} canManage={canManage} />
+      ) : null}
+
+      {branding ? (
+        <BrandingSettings branding={branding} canManage={canManage} />
       ) : null}
 
       {billing ? <BillingSettings initial={billing} /> : null}

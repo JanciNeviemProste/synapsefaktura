@@ -5,6 +5,9 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Database } from "@/lib/supabase/database.types"
 import { InvoiceDocument, showsSupplierMark } from "@/lib/pdf/invoice-document"
 import { paymentQrDataUrl } from "@/lib/qr/payment-qr"
+import { createAdminClient } from "@/lib/supabase/admin"
+import { checkImage, MAX_IMAGE_BYTES } from "@/lib/images/validate"
+import { ATTACHMENTS_BUCKET } from "@/lib/storage/buckets"
 import { documentPresentation } from "@/lib/documents/presentation"
 import { resolveClientDetails } from "@/lib/documents/client-details"
 import type { DocumentType } from "@/lib/documents/labels"
@@ -27,58 +30,48 @@ export type RenderedInvoice = {
 
 /** Rozpocet na stiahnutie jedneho firemneho obrazka (logo/podpis/peciatka). */
 const IMAGE_TIMEOUT_MS = 2500
-/** Nad tuto velkost obrazok ignorujeme - do hlavicky faktury nepatri. */
-const MAX_IMAGE_BYTES = 2 * 1024 * 1024
 
 /**
- * Rozpozna format podla magickych bajtov, nie podla content-type hlavicky.
- * Storage vie vratit `application/octet-stream` a naopak pri zlom content-type
- * by sa do PDF dostal napr. SVG/WebP, ktore pdfkit nevie vlozit a vyhodil by
- * vynimku uprostred renderu.
- */
-function imageMime(bytes: Buffer): "image/png" | "image/jpeg" | null {
-  if (
-    bytes.length > 8 &&
-    bytes[0] === 0x89 &&
-    bytes[1] === 0x50 &&
-    bytes[2] === 0x4e &&
-    bytes[3] === 0x47
-  ) {
-    return "image/png"
-  }
-  if (
-    bytes.length > 3 &&
-    bytes[0] === 0xff &&
-    bytes[1] === 0xd8 &&
-    bytes[2] === 0xff
-  ) {
-    return "image/jpeg"
-  }
-  return null
-}
-
-/**
- * Stiahne obrazok z URL (Supabase Storage) a vrati ho ako data URI.
- * Stahujeme ho tu, nie v @react-pdf/renderer: renderer by siahal na siet bez
+ * Vrati obrazok ako data URI. Prijme dve podoby:
+ *
+ *  - `https://…`  — verejna adresa (starsie zaznamy, cudzi hosting),
+ *  - `{orgId}/branding/…` — cesta v SUKROMNOM buckete `attachments`.
+ *
+ * Sukromne ulozisko je zamer, nie komplikacia: verejna URL na obrazok PODPISU
+ * je navod na falsovanie. Preto sa subor stahuje service-role klientom priamo
+ * tu — tento modul je `server-only`, takze sa do prehliadaca nedostane.
+ *
+ * Stahujeme tu a nie v @react-pdf/renderer: renderer by siahal na siet bez
  * timeoutu az pocas layoutu, takze nedostupny bucket by drzal generovanie PDF
  * — a to iste PDF sa priklada k odosielanej fakture (markAsSent). Kazde
  * zlyhanie preto konci ako `null` a doklad sa vykresli bez obrazka.
  */
-async function imageDataUrl(url: string | null): Promise<string | null> {
-  if (!url || !/^https?:\/\//i.test(url)) return null
+async function imageDataUrl(pathOrUrl: string | null): Promise<string | null> {
+  if (!pathOrUrl) return null
   try {
-    const res = await fetch(url, {
-      signal: AbortSignal.timeout(IMAGE_TIMEOUT_MS),
-      cache: "no-store",
-    })
-    if (!res.ok) return null
-    const declared = Number(res.headers.get("content-length"))
-    if (Number.isFinite(declared) && declared > MAX_IMAGE_BYTES) return null
-    const bytes = Buffer.from(await res.arrayBuffer())
-    if (bytes.length > MAX_IMAGE_BYTES) return null
-    const mime = imageMime(bytes)
-    if (!mime) return null
-    return `data:${mime};base64,${bytes.toString("base64")}`
+    let bytes: Buffer
+    if (/^https?:\/\//i.test(pathOrUrl)) {
+      const res = await fetch(pathOrUrl, {
+        signal: AbortSignal.timeout(IMAGE_TIMEOUT_MS),
+        cache: "no-store",
+      })
+      if (!res.ok) return null
+      const declared = Number(res.headers.get("content-length"))
+      if (Number.isFinite(declared) && declared > MAX_IMAGE_BYTES) return null
+      bytes = Buffer.from(await res.arrayBuffer())
+    } else {
+      const { data, error } = await createAdminClient()
+        .storage.from(ATTACHMENTS_BUCKET)
+        .download(pathOrUrl)
+      if (error || !data) return null
+      bytes = Buffer.from(await data.arrayBuffer())
+    }
+
+    // Ta ISTA kontrola ako pri uploade (lib/images/validate) — co preslo
+    // nahravanim, sa musi dat aj vykreslit.
+    const check = checkImage(bytes)
+    if (!check.ok) return null
+    return `data:${check.mime};base64,${bytes.toString("base64")}`
   } catch {
     return null
   }

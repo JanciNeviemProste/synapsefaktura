@@ -135,7 +135,7 @@ export default async function DashboardPage() {
                 href: "/app/settings",
                 icon: Settings,
                 title: "Doplň firemné údaje a logo",
-                text: "IČO, DIČ, banka a logo pre profesionálne doklady.",
+                text: "IČO, DIČ, banka, logo, podpis aj pečiatka na doklady.",
               },
               {
                 href: "/app/assistant",
