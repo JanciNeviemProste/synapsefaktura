@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { newPriceListEntries } from "@/lib/documents/price-list"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
 import { documentSchema, type DocumentInput } from "@/lib/validation/document"
 import {
@@ -240,8 +241,65 @@ export async function saveDocument(
     }
   }
 
+  // Polozky, ktore v cenniku este nie su, sa don doplnia — aby ich appka
+  // nabuduce ponukla. Cennik je na to spravne miesto: je editovatelny,
+  // viditelny a uz dnes sluzi ako zdroj pre „Pridat z cennika".
+  //
+  // Zlyhanie sa NEHLASI ako chyba ulozenia. Doklad je ulozeny a to je to
+  // podstatne; nedoplneny cennik je nepohodlie, nie strata.
+  await addItemsToPriceList(supabase, orgId, v.items)
+
   revalidatePath("/app/invoices")
   return { ok: true, id: savedId }
+}
+
+/**
+ * Doplni cennik o polozky, ktore v nom este nie su.
+ *
+ * Porovnava sa normalizovany nazov (bez okrajovych medzier, jedna medzera,
+ * male pismena), takze „Doprava" a „doprava  " su ta ista polozka a cennik sa
+ * nezaplni variantmi.
+ */
+async function addItemsToPriceList(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  orgId: string,
+  items: ReturnType<typeof documentSchema.parse>["items"],
+): Promise<void> {
+  try {
+    const { data: existing } = await supabase
+      .from("products")
+      .select("name")
+      .eq("organization_id", orgId)
+
+    const entries = newPriceListEntries(
+      items.map((i) => ({
+        description: i.description ?? "",
+        unit: i.unit ?? "ks",
+        unitPrice: Number(i.unitPrice) || 0,
+        vatRate: Number(i.vatRate) || 0,
+      })),
+      (existing ?? []).map((p) => p.name),
+    )
+    if (entries.length === 0) return
+
+    const { error } = await supabase
+      .from("products")
+      .insert(entries.map((e) => ({ organization_id: orgId, ...e })))
+    if (error) {
+      console.error("[saveDocument] cennik sa nepodarilo doplnit", {
+        organizationId: orgId,
+        count: entries.length,
+        error: error.message,
+      })
+      return
+    }
+    revalidatePath("/app/products")
+  } catch (e) {
+    console.error("[saveDocument] cennik sa nepodarilo doplnit", {
+      organizationId: orgId,
+      error: e instanceof Error ? e.message : "neznama chyba",
+    })
+  }
 }
 
 export async function deleteDocument(

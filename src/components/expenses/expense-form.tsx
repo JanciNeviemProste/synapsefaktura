@@ -16,9 +16,13 @@ import { CURRENT_VAT_RATES, vatRateLabel } from "@/lib/vat/rates"
 import { round2, formatMoney } from "@/lib/money"
 import { computeExpenseItems } from "@/lib/expenses/items"
 import {
+  MAX_ATTACHMENT_BYTES,
+  tooLargeMessage,
+} from "@/lib/upload/limits"
+import { uploadDirect } from "@/lib/upload/direct"
+import {
   createExpense,
   updateExpense,
-  uploadAttachment,
 } from "@/app/actions/expenses"
 
 import { Button } from "@/components/ui/button"
@@ -136,18 +140,31 @@ export function ExpenseForm({
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
+    // Pole sa cisti HNED, nie az po `await` — inak sa po zlyhani ten isty
+    // subor neda vybrat druhy raz.
+    e.target.value = ""
     if (!file) return
-    const fd = new FormData()
-    fd.set("file", file)
+
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      toast.error(tooLargeMessage(file.size, MAX_ATTACHMENT_BYTES))
+      return
+    }
+
     startUpload(async () => {
-      const res = await uploadAttachment(fd)
-      if (!res.ok) {
-        toast.error(res.error)
-        return
+      try {
+        // Priamo do uloziska — fotka blocka z mobilu (2-5 MB) by cez server
+        // action neprelezla, Vercel ma strop 4,5 MB na telo poziadavky.
+        const res = await uploadDirect("attachment", file)
+        if (!res.ok) {
+          toast.error(res.error)
+          return
+        }
+        setAttachmentPath(res.path)
+        form.setValue("attachmentUrl", res.path)
+        toast.success("Príloha nahraná.")
+      } catch {
+        toast.error("Súbor sa nepodarilo nahrať. Skús to znova.")
       }
-      setAttachmentPath(res.path)
-      form.setValue("attachmentUrl", res.path)
-      toast.success("Príloha nahraná.")
     })
   }
 

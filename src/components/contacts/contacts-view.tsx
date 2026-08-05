@@ -10,6 +10,7 @@ import { CONTACT_TYPE_LABELS } from "@/lib/validation/contact"
 import { deleteContact } from "@/app/actions/contacts"
 import { ContactForm } from "./contact-form"
 import { ContactPersonsPanel } from "./contact-persons-panel"
+import { ContactsImport } from "./contacts-import"
 import { TagPicker } from "@/components/tags/tag-picker"
 import { TagFilter } from "@/components/tags/tag-filter"
 
@@ -102,10 +103,13 @@ export function ContactsView({
             Odberatelia a dodávatelia.
           </p>
         </div>
-        <Button onClick={openNew}>
-          <Plus className="size-4" />
-          Nový kontakt
-        </Button>
+        <div className="flex items-center gap-2">
+          <ContactsImport />
+          <Button onClick={openNew}>
+            <Plus className="size-4" />
+            Nový kontakt
+          </Button>
+        </div>
       </div>
 
       <TagFilter

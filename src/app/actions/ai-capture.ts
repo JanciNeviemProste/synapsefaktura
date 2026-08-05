@@ -1,6 +1,10 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
+import { ATTACHMENTS_BUCKET } from "@/lib/storage/buckets"
+import { checkDocumentFormat } from "@/lib/ai/document-format"
+import { deriveVatRate } from "@/lib/expenses/vat-rate"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
 import { documentExtractor, type ExtractedDocument } from "@/lib/ai/extractor"
 import { checkAiRateLimit } from "@/lib/ai/rate-limit"
@@ -30,14 +34,9 @@ export type ExtractCaptureResult =
  * extractor, persists an `ai_extractions` row and tries to match the supplier
  * to an existing contact by IČO. Never auto-creates an expense (human-in-loop).
  */
-export async function extractFromUpload(
-  formData: FormData,
+export async function extractFromStoredFile(
+  path: string,
 ): Promise<ExtractCaptureResult> {
-  const file = formData.get("file")
-  if (!(file instanceof File) || file.size === 0) {
-    return { ok: false, degraded: false, error: "Žiadny súbor." }
-  }
-
   // Organizáciu zisťujeme PRED volaním modelu — inak by sa spálil token aj
   // vtedy, keď používateľ firmu nemá a výsledok sa aj tak zahodí.
   const supabase = await createClient()
@@ -46,15 +45,39 @@ export async function extractFromUpload(
     return { ok: false, degraded: false, error: "Chýba firma." }
   }
 
+  // Prefix organizácie bráni siahnuť na cudzí súbor — cestu posiela klient.
+  if (!path.startsWith(`${orgId}/`)) {
+    return { ok: false, degraded: false, error: "Súbor sa nenašiel." }
+  }
+
   const limited = await checkAiRateLimit(supabase, orgId, "capture")
   if (!limited.ok) {
     return { ok: false, degraded: false, error: limited.error }
   }
 
-  const data = new Uint8Array(Buffer.from(await file.arrayBuffer()))
-  const mediaType = file.type || "application/octet-stream"
+  // Súbor je už v úložisku — prehliadač ho tam poslal priamo. Doteraz cestoval
+  // po drôte DVAKRÁT (raz na uloženie, raz na vyťaženie) a pri fotke z mobilu
+  // na dátach to bol dvojnásobný upload.
+  const { data: blob, error: downloadError } = await createAdminClient()
+    .storage.from(ATTACHMENTS_BUCKET)
+    .download(path)
+  if (downloadError || !blob) {
+    return { ok: false, degraded: false, error: "Súbor sa nenašiel." }
+  }
+  const data = new Uint8Array(await blob.arrayBuffer())
 
-  const result = await documentExtractor.extract({ data, mediaType })
+  // Formát sa určuje z OBSAHU, nie z toho, čo nahlásil prehliadač. Prázdny
+  // `file.type` sa doteraz poslal modelu ako `application/octet-stream`,
+  // model vrátil 400 a používateľ videl len „AI volanie zlyhalo."
+  const format = checkDocumentFormat(data)
+  if (!format.ok) {
+    return { ok: false, degraded: false, error: format.error }
+  }
+
+  const result = await documentExtractor.extract({
+    data,
+    mediaType: format.mime,
+  })
   if (!result.ok) {
     return {
       ok: false,
@@ -120,7 +143,25 @@ export async function confirmExpenseFromCapture(
     (parsed.total != null && parsed.vatTotal != null
       ? parsed.total - parsed.vatTotal
       : 0)
-  const vatRate = parsed.vatRate ?? 23
+
+  // Sadzba DPH sa NEHÁDA. Doteraz sa pri nevyťaženej sadzbe natvrdo dosadilo
+  // 23 % — na potravinovom bločku (19 %) to znamenalo tichú chybu v daňovom
+  // podklade. Keď ju model nevyťaží, odvodí sa zo súm; a keď ani to nejde,
+  // ostane 0 % a používateľ ju doplní sám. Nula je viditeľná, 23 % nie.
+  const vatRate = parsed.vatRate ?? deriveVatRate(subtotal, parsed.vatTotal)
+
+  // Položky sa doteraz vyťažili a ZAHODILI, takže bloček s dvomi sadzbami
+  // DPH sa nikdy nedal zaevidovať správne. `expense_items` ich unesie.
+  const items =
+    parsed.lines && parsed.lines.length > 0
+      ? parsed.lines.map((l) => ({
+          description: l.description ?? "",
+          quantity: l.quantity ?? 1,
+          unit: "ks",
+          unitPrice: l.unitPrice ?? 0,
+          vatRate: l.vatRate ?? vatRate,
+        }))
+      : undefined
 
   const res = await createExpense({
     supplierContactId: input.supplierContactId ?? undefined,
@@ -133,6 +174,7 @@ export async function confirmExpenseFromCapture(
     vatRate,
     taxDeductible: true,
     attachmentUrl: input.attachmentPath ?? undefined,
+    ...(items ? { items } : {}),
   })
 
   if (res.ok && input.extractionId) {

@@ -6,11 +6,14 @@ import { Loader2, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 import {
-  uploadOrgImage,
+  setBrandingImage,
   removeOrgImage,
   getBrandingSignedUrl,
   type BrandingImage as BrandingImageKind,
 } from "@/app/actions/org"
+import { uploadDirect } from "@/lib/upload/direct"
+
+import { MAX_IMAGE_BYTES, tooLargeMessage } from "@/lib/upload/limits"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -65,24 +68,49 @@ export function BrandingImageField({
 
   const previewUrl =
     directUrl ?? (signed.path === storagePath ? signed.url : null)
+  // Odlisi „este sa nacitava" od „nacitanie zlyhalo". Bez toho ostal nahlad
+  // navzdy na „Nacitavam…", hoci sa uz nic nedialo.
+  const previewFailed = storagePath !== null && signed.path === storagePath && signed.url === null
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (!file) return
     const input = e.target
-    const fd = new FormData()
-    fd.set("file", file)
+    // Pole sa cisti HNED a synchronne, nie az po `await`. Inak by sa po
+    // zlyhani ten isty subor nedal vybrat druhy raz — prehliadac by na
+    // rovnaku hodnotu nevyvolal `change`.
+    input.value = ""
+    if (!file) return
+
+    // Velkost sa kontroluje uz tu. Server ma rovnaky limit, ale nad strop
+    // Server Actions sa k nemu poziadavka vobec nedostane a spadla by na
+    // HTTP 413 bez zrozumitelnej hlasky.
+    if (file.size > MAX_IMAGE_BYTES) {
+      // Hlaska sa odvodzuje z limitu, nie napisana rukou — inak sa pri zmene
+      // stropu rozide s tym, co server naozaj pusti.
+      toast.error(`${tooLargeMessage(file.size, MAX_IMAGE_BYTES)} Zmenši ho a skús znova.`)
+      return
+    }
+
     startTransition(async () => {
-      const res = await uploadOrgImage(kind, fd)
-      // Pole sa vzdy vycisti, aby sa dal ten isty subor skusit znova po tom,
-      // co ho pouzivatel zmensi.
-      input.value = ""
-      if (!res.ok) {
-        toast.error(res.error)
-        return
+      try {
+        // Priamo do uloziska — cez server action by vacsi subor neprelezol.
+        const uploaded = await uploadDirect("branding", file)
+        if (!uploaded.ok) {
+          toast.error(uploaded.error)
+          return
+        }
+        const res = await setBrandingImage(kind, uploaded.path)
+        if (!res.ok) {
+          toast.error(res.error)
+          return
+        }
+        toast.success(`${label} nahraté.`)
+        router.refresh()
+      } catch {
+        // Vypadok siete alebo nedostupna sluzba — bez tohto by pouzivatel
+        // namiesto hlasky dostal celoobrazovkovu chybu.
+        toast.error("Súbor sa nepodarilo nahrať. Skús to znova.")
       }
-      toast.success(`${label} nahraté.`)
-      router.refresh()
     })
   }
 
@@ -112,8 +140,12 @@ export function BrandingImageField({
               className="max-h-full max-w-full object-contain"
             />
           ) : (
-            <span className="text-muted-foreground text-xs">
-              {path ? "Načítavam…" : "Nenahraté"}
+            <span className="text-muted-foreground px-2 text-center text-xs">
+              {!path
+                ? "Nenahraté"
+                : previewFailed
+                  ? "Náhľad sa nenačítal"
+                  : "Načítavam…"}
             </span>
           )}
         </div>

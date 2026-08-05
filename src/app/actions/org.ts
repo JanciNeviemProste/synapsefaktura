@@ -6,11 +6,7 @@ import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { writeOutcome } from "@/lib/supabase/affected"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
-import { checkImage, MAX_IMAGE_BYTES } from "@/lib/images/validate"
-import {
-  ATTACHMENTS_BUCKET,
-  BRANDING_PREFIX,
-} from "@/lib/storage/buckets"
+import { ATTACHMENTS_BUCKET } from "@/lib/storage/buckets"
 import {
   createOrganizationSchema,
   updateOrganizationSchema,
@@ -257,8 +253,8 @@ async function currentBrandingPath(
  * Overí, že volajúci smie meniť firemné údaje, a vráti id organizácie.
  *
  * Ten istý guard ako `updateOrganization`. Logo a najmä PODPIS firmy nie sú
- * vec, ktorú má meniť hocijaký člen — existujúci `uploadAttachment` pre
- * prílohy nákladov taký guard nemá a to je pri prílohe v poriadku, tu nie.
+ * vec, ktorú má meniť hocijaký člen. Pri prílohe nákladu guard zámerne nie je
+ * — tam ide o doklad, ktorý člen aj tak zadáva.
  */
 async function requireOrgManager(): Promise<
   { ok: true; orgId: string } | { ok: false; error: string }
@@ -295,57 +291,27 @@ async function requireOrgManager(): Promise<
  * na falšovanie. PDF si súbor stiahne service-role klientom priamo pri
  * generovaní (`lib/pdf/render.tsx`).
  *
- * Formát a veľkosť sa kontrolujú TU, nie až pri renderi. Bez toho by
- * používateľ nahral 5 MB WebP, dostal „nahraté" a logo by mu na faktúre
- * nikdy nevyšlo.
+ * Súbor sem už príde NAHRATÝ — prehliadač ho poslal priamo do úložiska
+ * (`lib/upload/direct.ts`), lebo cez server action by sa väčší nedostal
+ * (Vercel má strop 4,5 MB). Formát aj veľkosť overil `verifyUpload` predtým,
+ * než sa sem cesta dostala; tu sa už len zapíše a upratá predchádzajúci súbor.
  */
-export async function uploadOrgImage(
+export async function setBrandingImage(
   kind: BrandingImage,
-  formData: FormData,
+  path: string,
 ): Promise<OrgActionResult> {
   const guard = await requireOrgManager()
   if (!guard.ok) return guard
   const { orgId } = guard
 
-  const file = formData.get("file")
-  if (!(file instanceof File) || file.size === 0) {
-    return { ok: false, error: "Žiadny súbor." }
+  // Cesta MUSI patrit tejto firme. Bez toho by si clen jednej firmy nastavil
+  // ako logo subor druhej — cestu posiela klient.
+  if (!path.startsWith(`${orgId}/`)) {
+    return { ok: false, error: "Súbor sa nenašiel." }
   }
-  // Strop sa overí ešte pred načítaním do pamäte.
-  if (file.size > MAX_IMAGE_BYTES) {
-    const mb = (file.size / (1024 * 1024)).toFixed(1)
-    return {
-      ok: false,
-      error: `Obrázok má ${mb} MB, povolené sú najviac 2 MB. Zmenši ho a skús znova.`,
-    }
-  }
-
-  const bytes = new Uint8Array(await file.arrayBuffer())
-  const check = checkImage(bytes)
-  if (!check.ok) return { ok: false, error: check.error }
 
   const supabase = await createClient()
   const admin = createAdminClient()
-
-  const { data: buckets } = await admin.storage.listBuckets()
-  if (!buckets?.some((b) => b.name === ATTACHMENTS_BUCKET)) {
-    const { error: bucketError } = await admin.storage.createBucket(
-      ATTACHMENTS_BUCKET,
-      { public: false },
-    )
-    if (bucketError) {
-      return { ok: false, error: "Úložisko sa nepodarilo pripraviť." }
-    }
-  }
-
-  const ext = check.mime === "image/png" ? "png" : "jpg"
-  const path = `${orgId}/${BRANDING_PREFIX}/${kind}-${Date.now()}.${ext}`
-  const { error: uploadError } = await admin.storage
-    .from(ATTACHMENTS_BUCKET)
-    .upload(path, bytes, { contentType: check.mime, upsert: false })
-  if (uploadError) {
-    return { ok: false, error: "Súbor sa nepodarilo nahrať." }
-  }
 
   const oldPath = await currentBrandingPath(supabase, orgId, kind)
 

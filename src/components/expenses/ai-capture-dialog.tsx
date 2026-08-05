@@ -6,11 +6,20 @@ import { Loader2, Sparkles, Paperclip } from "lucide-react"
 import { toast } from "sonner"
 
 import type { ExtractedDocument } from "@/lib/ai/extractor"
-import { formatMoney } from "@/lib/money"
-import { uploadAttachment } from "@/app/actions/expenses"
+import {
+  applyEdit,
+  fieldToInput,
+  totalsMismatch,
+  type EditableField,
+} from "@/lib/expenses/capture-edit"
+import {
+  MAX_ATTACHMENT_BYTES,
+  tooLargeMessage,
+} from "@/lib/upload/limits"
+import { uploadDirect } from "@/lib/upload/direct"
 import { useUpgrade } from "@/components/billing/upgrade-dialog"
 import {
-  extractFromUpload,
+  extractFromStoredFile,
   confirmExpenseFromCapture,
 } from "@/app/actions/ai-capture"
 
@@ -32,26 +41,46 @@ type Parsed = {
   attachmentPath: string | null
 }
 
-function fmtDate(iso: string | null): string {
-  if (!iso) return "—"
-  const [y, m, d] = iso.split("-")
-  return d && m && y ? `${d}.${m}.${y}` : iso
-}
-
 function confidenceVariant(c: number): "default" | "secondary" | "destructive" {
   if (c >= 0.75) return "default"
   if (c >= 0.5) return "secondary"
   return "destructive"
 }
 
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
+/**
+ * Vyťažené pole, ktoré sa dá prepísať.
+ *
+ * Predtým to boli len vypísané hodnoty. Pri jednej zle prečítanej číslici tak
+ * ostávalo na výber prijať nesprávny doklad, alebo zahodiť aj to, čo AI
+ * prečítala správne.
+ */
+function Field({
+  label,
+  value,
+  onChange,
+  type = "text",
+  placeholder,
+  disabled,
+}: {
+  label: string
+  value: string
+  onChange: (next: string) => void
+  type?: "text" | "date"
+  placeholder?: string
+  disabled?: boolean
+}) {
   return (
-    <div className="flex items-baseline justify-between gap-4 py-1">
+    <label className="grid grid-cols-[9rem_1fr] items-center gap-3 py-1">
       <span className="text-muted-foreground text-sm">{label}</span>
-      <span className="text-right text-sm font-medium tabular-nums">
-        {value}
-      </span>
-    </div>
+      <Input
+        type={type}
+        value={value}
+        placeholder={placeholder}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-8"
+      />
+    </label>
   )
 }
 
@@ -81,18 +110,37 @@ export function AiCaptureDialog({
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
+    // Cisti sa HNED — inak po zlyhani neslo znova vybrat ten isty subor,
+    // co je pri fotke bloceka bezny pripad.
+    e.target.value = ""
     if (!file) return
     reset()
 
-    startExtract(async () => {
-      const fd = new FormData()
-      fd.set("file", file)
+    // Fotka z mobilu ma bezne 2-5 MB. Bez tejto kontroly by skoncila na
+    // HTTP 413 bez hlasky.
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      toast.error(tooLargeMessage(file.size, MAX_ATTACHMENT_BYTES))
+      return
+    }
 
-      // Store the file (best-effort) and extract in parallel.
-      const [upload, extraction] = await Promise.all([
-        uploadAttachment(fd),
-        extractFromUpload(fd),
-      ])
+    startExtract(async () => {
+      // Subor ide PRIAMO do uloziska a odtial si ho vyzdvihne vytazenie.
+      // Doteraz cestoval po drote dvakrat (raz na ulozenie, raz na vytazenie)
+      // — pri fotke z mobilu na datach to bol dvojnasobny upload. A cez
+      // server action by sa vacsia fotka aj tak nedostala (Vercel: 4,5 MB).
+      let upload: Awaited<ReturnType<typeof uploadDirect>>
+      let extraction: Awaited<ReturnType<typeof extractFromStoredFile>>
+      try {
+        upload = await uploadDirect("attachment", file)
+        if (!upload.ok) {
+          toast.error(upload.error)
+          return
+        }
+        extraction = await extractFromStoredFile(upload.path)
+      } catch {
+        toast.error("Súbor sa nepodarilo spracovať. Skús to znova.")
+        return
+      }
 
       if (!extraction.ok) {
         // Paywall má ponúknuť upgrade, nie tvrdiť, že chýba kľúč.
@@ -112,9 +160,16 @@ export function AiCaptureDialog({
         extractionId: extraction.extractionId,
         parsed: extraction.parsed,
         matchedContactId: extraction.matchedContactId,
-        attachmentPath: upload.ok ? upload.path : null,
+        attachmentPath: upload.path,
       })
     })
+  }
+
+  /** Prepísanie vyťaženého poľa. Uloží sa až pri potvrdení, ako doteraz. */
+  function edit(field: EditableField, input: string) {
+    setResult((prev) =>
+      prev ? { ...prev, parsed: applyEdit(prev.parsed, field, input) } : prev,
+    )
   }
 
   function handleConfirm() {
@@ -138,6 +193,9 @@ export function AiCaptureDialog({
 
   const p = result?.parsed
   const currency = p?.currency ?? "EUR"
+  // Upozornenie, nie zámok: ručná oprava jednej sumy je najčastejší spôsob,
+  // ako sa doklad rozsype, ale bloček s vlastným zaokrúhlením existuje tiež.
+  const mismatch = p ? totalsMismatch(p) : null
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -183,39 +241,74 @@ export function AiCaptureDialog({
                 </Badge>
               </div>
 
-              <div className="bg-muted/40 rounded-lg border p-3">
-                <Row label="Dodávateľ" value={p.supplierName ?? "—"} />
-                <Row label="IČO" value={p.supplierIco ?? "—"} />
-                <Row
-                  label="Priradený kontakt"
-                  value={
-                    result?.matchedContactId ? (
-                      <Badge variant="secondary">spárovaný</Badge>
-                    ) : (
-                      "—"
-                    )
-                  }
+              <div className="bg-muted/40 grid gap-1 rounded-lg border p-3">
+                <Field
+                  label="Dodávateľ"
+                  value={fieldToInput(p, "supplierName")}
+                  onChange={(v) => edit("supplierName", v)}
+                  disabled={confirming}
                 />
-                <Row label="Číslo dokladu" value={p.documentNumber ?? "—"} />
-                <Row label="Vystavené" value={fmtDate(p.issueDate)} />
-                <Row label="Splatnosť" value={fmtDate(p.dueDate)} />
-                <Row
-                  label="Základ"
-                  value={
-                    p.subtotal != null ? formatMoney(p.subtotal, currency) : "—"
-                  }
+                <Field
+                  label="IČO"
+                  value={fieldToInput(p, "supplierIco")}
+                  onChange={(v) => edit("supplierIco", v)}
+                  disabled={confirming}
                 />
-                <Row
-                  label="DPH"
-                  value={
-                    p.vatTotal != null ? formatMoney(p.vatTotal, currency) : "—"
-                  }
+                <Field
+                  label="Číslo dokladu"
+                  value={fieldToInput(p, "documentNumber")}
+                  onChange={(v) => edit("documentNumber", v)}
+                  disabled={confirming}
                 />
-                <Row
-                  label="Spolu"
-                  value={p.total != null ? formatMoney(p.total, currency) : "—"}
+                <Field
+                  label="Vystavené"
+                  type="date"
+                  value={fieldToInput(p, "issueDate")}
+                  onChange={(v) => edit("issueDate", v)}
+                  disabled={confirming}
                 />
+                <Field
+                  label="Splatnosť"
+                  type="date"
+                  value={fieldToInput(p, "dueDate")}
+                  onChange={(v) => edit("dueDate", v)}
+                  disabled={confirming}
+                />
+                <Field
+                  label={`Základ (${currency})`}
+                  value={fieldToInput(p, "subtotal")}
+                  onChange={(v) => edit("subtotal", v)}
+                  placeholder="0,00"
+                  disabled={confirming}
+                />
+                <Field
+                  label={`DPH (${currency})`}
+                  value={fieldToInput(p, "vatTotal")}
+                  onChange={(v) => edit("vatTotal", v)}
+                  placeholder="0,00"
+                  disabled={confirming}
+                />
+                <Field
+                  label={`Spolu (${currency})`}
+                  value={fieldToInput(p, "total")}
+                  onChange={(v) => edit("total", v)}
+                  placeholder="0,00"
+                  disabled={confirming}
+                />
+
+                <div className="text-muted-foreground flex items-center gap-2 pt-1 text-xs">
+                  Priradený kontakt:
+                  {result?.matchedContactId ? (
+                    <Badge variant="secondary">spárovaný podľa IČO</Badge>
+                  ) : (
+                    <span>nový dodávateľ</span>
+                  )}
+                </div>
               </div>
+
+              {mismatch && (
+                <p className="text-destructive text-xs">{mismatch}</p>
+              )}
 
               {result?.attachmentPath && (
                 <span className="text-muted-foreground flex items-center gap-1 text-xs">
@@ -224,7 +317,8 @@ export function AiCaptureDialog({
               )}
 
               <p className="text-muted-foreground text-xs">
-                Skontroluj údaje. Náklad sa vytvorí ako koncept až po potvrdení.
+                Údaje sa dajú prepísať. Náklad sa vytvorí ako koncept až po
+                potvrdení.
               </p>
 
               <div className="flex justify-end gap-2">

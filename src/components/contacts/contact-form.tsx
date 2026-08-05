@@ -41,7 +41,12 @@ export function ContactForm({
   onDone,
 }: {
   contact?: Contact | null
-  onDone: () => void
+  /**
+   * `created` je id NOVO vytvoreneho kontaktu; pri uprave je `undefined`.
+   * Vdaka tomu vie volajuci (napr. editor dokladu) novy kontakt hned vybrat
+   * bez toho, aby musel odist zo stranky a nacitat zoznam odznova.
+   */
+  onDone: (created?: { id: string; name: string }) => void
 }) {
   const [submitting, startSubmit] = useTransition()
   const [looking, startLookup] = useTransition()
@@ -109,7 +114,7 @@ export function ContactForm({
         return
       }
       toast.success(contact ? "Kontakt upravený." : "Kontakt vytvorený.")
-      onDone()
+      onDone(contact ? undefined : { id: res.id, name: values.name })
     })
   }
 
@@ -352,7 +357,7 @@ export function ContactForm({
         />
 
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onDone}>
+          <Button type="button" variant="ghost" onClick={() => onDone()}>
             Zrušiť
           </Button>
           <Button type="submit" disabled={submitting}>

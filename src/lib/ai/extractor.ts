@@ -54,7 +54,16 @@ Pravidlá:
 - Sumy ako čísla s bodkou ako desatinným oddeľovačom (napr. 123.45), bez meny v hodnote.
 - IČO/IČ DPH/IBAN/variabilný symbol presne ako na doklade.
 - Ak údaj na doklade nie je, použi null. Nič si nevymýšľaj.
-- confidence: 0..1 podľa kvality a čitateľnosti skenu.`
+- confidence: 0..1 podľa kvality a čitateľnosti skenu.
+
+DPH na Slovensku:
+- Platné sadzby sú 23 %, 19 %, 5 % a 0 %. Inú sadzbu nikdy neuvádzaj.
+- Sadzbu vyplň LEN ak je na doklade uvedená alebo sa dá jednoznačne dopočítať
+  zo základu a dane. Inak null — nehádaj podľa typu tovaru.
+- POZOR na bločky z obchodu: uvedená býva suma S DPH, kým "subtotal" je základ
+  BEZ DPH. Keď je na doklade len suma s DPH a sadzba, základ dopočítaj.
+- Keď má doklad viac sadzieb naraz (potraviny 19 % + ostatné 23 %), rozpíš to
+  do "lines" a v hlavičke nechaj vatRate null.`
 
 /** Gemini-vision extractor. The DocumentExtractor interface keeps it swappable. */
 export class GeminiExtractor implements DocumentExtractor {
