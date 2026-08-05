@@ -2,8 +2,6 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -55,103 +53,53 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-:root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0 0 0);
-  --primary: oklch(0 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  /* Vlasová linka namiesto rámčeka — v návrhu je to `black/10`. */
-  --border: oklch(0 0 0 / 10%);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  /* Mäkšie tvary — sadajú k pilulkovým tlačidlám úvodnej stránky. */
-  --radius: 0.75rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0 0 0);
-  --sidebar-primary: oklch(0 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0 0 0);
-  --sidebar-border: oklch(0 0 0 / 10%);
-  --sidebar-ring: oklch(0.708 0 0);
-}
-
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-}
-
 /*
- * Úvodná stránka je VŽDY svetlá.
+ * TEPLÁ ŠEDÁ — jedna paleta pre úvodnú stránku aj vnútro appky.
  *
- * Hero stojí na svetlom videu, takže text na ňom musí byť čierny bez ohľadu na
- * to, čo má návštevník nastavené v systéme. Keby zvyšok stránky preplával do
- * tmavého režimu, vznikol by hneď pod prvou obrazovkou ostrý biely-čierny zlom.
- * Tokeny sa preto na tejto vetve prepíšu späť na svetlé hodnoty.
+ * Odtiene sú odvodené z videa v hero, aby landing a appka pôsobili ako jedna
+ * vec, nie ako dva produkty. Čistá biela a čistá čierna sa tu zámerne
+ * nevyskytujú: na svetlom videu pôsobili tvrdo a text bol zbytočne ostrý.
+ *
+ * ⚠️ TMAVÝ REŽIM TU NIE JE a nie je to opomenutie. Kým existoval, `body` mal
+ * `text-foreground` = takmer biela, úvodná stránka si prepísala len PREMENNÉ
+ * na svetlé — a keďže `color` sa DEDÍ, nadpisy zdedili bielu z `body` a stáli
+ * na bielom pozadí. Prepis premennej spätne nezmení už vypočítanú zdedenú
+ * hodnotu. Jedna paleta tú triedu chýb odstraňuje úplne.
  */
-.landing-light {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0 0 0);
-  --primary: oklch(0 0 0);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.45 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0 0 0);
-  --border: oklch(0 0 0 / 10%);
-  --input: oklch(0 0 0 / 10%);
-  --ring: oklch(0.708 0 0);
+:root {
+  --background: #edebe8;
+  --foreground: #1c1b1a;
+  --card: #f6f5f3;
+  --card-foreground: #1c1b1a;
+  --popover: #f6f5f3;
+  --popover-foreground: #1c1b1a;
+  --primary: #1c1b1a;
+  --primary-foreground: #f6f5f3;
+  --secondary: #e4e1dd;
+  --secondary-foreground: #1c1b1a;
+  --muted: #e4e1dd;
+  --muted-foreground: #6b6863;
+  --accent: #e4e1dd;
+  --accent-foreground: #1c1b1a;
+  --destructive: oklch(0.55 0.2 27);
+  /* Vlasová linka namiesto rámčeka — v návrhu je to `black/10`. */
+  --border: #00000014;
+  --input: #00000014;
+  --ring: #b8b4ae;
+  --chart-1: #1c1b1a;
+  --chart-2: #6b6863;
+  --chart-3: #9a958e;
+  --chart-4: #b8b4ae;
+  --chart-5: #d3cfc9;
+  --radius: 0.75rem;
+  --sidebar: #e8e5e1;
+  --sidebar-foreground: #1c1b1a;
+  --sidebar-primary: #1c1b1a;
+  --sidebar-primary-foreground: #f6f5f3;
+  --sidebar-accent: #dedad5;
+  --sidebar-accent-foreground: #1c1b1a;
+  --sidebar-border: #00000014;
+  --sidebar-ring: #b8b4ae;
 }
 
 /* Kurzor pisacieho efektu na uvodnej stranke. */

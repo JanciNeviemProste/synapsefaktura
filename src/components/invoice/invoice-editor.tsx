@@ -326,7 +326,7 @@ export function InvoiceEditor({
             {/* Nadpis musi povedat, aky doklad sa prave vystavuje. Doteraz tu
                 bolo natvrdo „Novy doklad" a typ nebolo vidiet nikde okrem
                 rozbalovacky — preto vsetky doklady posobili rovnako. */}
-            <h1 className="text-2xl font-semibold">
+            <h1 className="font-heading text-[clamp(24px,3.2vw,34px)] leading-tight tracking-tight">
               {doc ? "Upraviť " : "Nový "}
               {DOCUMENT_TYPE_LABELS[docType].toLowerCase()}
             </h1>

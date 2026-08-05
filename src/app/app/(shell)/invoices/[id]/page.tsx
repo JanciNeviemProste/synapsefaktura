@@ -79,7 +79,7 @@ export default async function InvoiceDetailPage({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold">
+            <h1 className="font-heading text-[clamp(24px,3.2vw,34px)] leading-tight tracking-tight">
               {title} {doc.number ?? "(koncept)"}
             </h1>
             <StatusBadge status={doc.status} />

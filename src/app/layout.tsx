@@ -4,7 +4,6 @@ import { NextIntlClientProvider } from "next-intl"
 import { getLocale } from "next-intl/server"
 import "./globals.css"
 import { Toaster } from "@/components/ui/sonner"
-import { ThemeProvider } from "@/components/theme-provider"
 import { PwaRegister } from "@/components/pwa-register"
 import { CookieNotice } from "@/components/cookie-notice"
 import { DesignSwitcher } from "@/components/design-switcher"
@@ -76,18 +75,15 @@ export default async function RootLayout({
     <html
       lang={locale}
       className={`${interTight.variable} ${geistMono.variable} h-full antialiased`}
-      suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col">
         <Analytics />
         <NextIntlClientProvider>
-          <ThemeProvider>
-            {children}
-            <PwaRegister />
-            <CookieNotice />
-            <DesignSwitcher />
-            <Toaster richColors position="top-right" />
-          </ThemeProvider>
+          {children}
+          <PwaRegister />
+          <CookieNotice />
+          <DesignSwitcher />
+          <Toaster richColors position="top-right" />
         </NextIntlClientProvider>
       </body>
     </html>

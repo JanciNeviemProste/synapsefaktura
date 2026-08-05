@@ -79,7 +79,7 @@ export default async function ReportsPage({
   return (
     <div className="mx-auto grid max-w-5xl gap-6">
       <div>
-        <h1 className="text-2xl font-semibold">Reporty</h1>
+        <h1 className="font-heading text-[clamp(24px,3.2vw,34px)] leading-tight tracking-tight">Reporty</h1>
         <p className="text-muted-foreground text-sm">
           Obdobie {from} – {to}.
         </p>
