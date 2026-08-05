@@ -15,7 +15,7 @@ export default async function AssistantPage() {
   return (
     <div className="mx-auto flex h-full max-w-3xl flex-col gap-4">
       <div>
-        <h1 className="text-2xl font-semibold">Asistent</h1>
+        <h1 className="font-heading text-[clamp(24px,3.2vw,34px)] leading-tight tracking-tight">Asistent</h1>
         <p className="text-muted-foreground text-sm">
           Spýtajte sa na svoje financie — odpovede sú podložené reálnymi
           záznamami vo vašej firme.

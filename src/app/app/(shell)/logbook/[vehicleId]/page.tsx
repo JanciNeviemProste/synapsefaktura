@@ -203,7 +203,7 @@ export default async function VehicleLogbookPage({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-2xl font-semibold">{vehicle.name}</h1>
+              <h1 className="font-heading text-[clamp(24px,3.2vw,34px)] leading-tight tracking-tight">{vehicle.name}</h1>
               <Badge variant="outline">{vehicle.license_plate}</Badge>
               {vehicle.active ? null : (
                 <Badge variant="secondary">Neaktívne</Badge>

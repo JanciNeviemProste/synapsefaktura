@@ -167,7 +167,7 @@ export function StockMovementsPanel({
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-muted-foreground text-sm">Stav podľa pohybov</p>
-          <p className="text-2xl font-semibold">
+          <p className="font-heading text-[clamp(24px,3.2vw,34px)] leading-tight tracking-tight">
             {formatStockQty(balance)}{" "}
             <span className="text-muted-foreground text-base font-normal">
               {product.unit}

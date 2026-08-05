@@ -112,7 +112,7 @@ function SectionHeading({
 
 export default function LandingPage() {
   return (
-    <div className="landing-light">
+    <div>
       <HeroVideo />
       <LandingNav />
       <Hero />

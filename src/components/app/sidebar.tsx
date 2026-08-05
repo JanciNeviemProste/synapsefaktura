@@ -76,8 +76,8 @@ const NAV: NavItem[] = [
 
 export function Sidebar() {
   return (
-    <aside className="bg-background hidden w-60 shrink-0 flex-col border-r md:flex">
-      <div className="flex h-14 items-center gap-2 border-b px-4 font-semibold">
+    <aside className="bg-sidebar hidden w-60 shrink-0 flex-col border-r md:flex">
+      <div className="font-heading flex h-14 items-center gap-2 border-b px-4 text-[15px] tracking-tight">
         <Sparkles className="text-primary size-5" />
         Synapse Faktúra
       </div>
@@ -110,7 +110,7 @@ export function MobileNav() {
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="data-open:slide-in-from-left data-closed:slide-out-to-left top-0 left-0 flex h-full w-72 max-w-[85%] translate-x-0 translate-y-0 flex-col gap-0 rounded-none p-0 sm:max-w-[85%]">
-          <DialogTitle className="flex h-14 shrink-0 items-center gap-2 border-b px-4 font-semibold">
+          <DialogTitle className="font-heading flex h-14 shrink-0 items-center gap-2 border-b px-4 text-[15px] tracking-tight">
             <Sparkles className="text-primary size-5" />
             Synapse Faktúra
           </DialogTitle>
@@ -160,7 +160,7 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                 <Icon className="size-4" />
                 {t(item.key)}
               </span>
-              <span className="bg-muted rounded px-1.5 py-0.5 text-[10px] font-medium uppercase">
+              <span className="bg-muted rounded-full px-2 py-0.5 text-[10px] font-medium uppercase">
                 čoskoro
               </span>
             </span>
@@ -173,10 +173,11 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
             href={item.href}
             onClick={onNavigate}
             className={cn(
-              "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+              // Pilulka, rovnako ako tlacidla — jeden tvar drzi cely produkt.
+              "flex items-center gap-2 rounded-full px-3 py-2 text-sm transition-colors",
               active
                 ? "bg-primary text-primary-foreground"
-                : "text-foreground hover:bg-muted",
+                : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground",
             )}
           >
             <Icon className="size-4" />

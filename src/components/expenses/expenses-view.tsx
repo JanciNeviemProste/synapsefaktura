@@ -157,7 +157,7 @@ export function ExpensesView({
     <div className="mx-auto grid max-w-5xl gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">{t("title")}</h1>
+          <h1 className="font-heading text-[clamp(24px,3.2vw,34px)] leading-tight tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground text-sm">{t("subtitle")}</p>
         </div>
         <div className="flex items-center gap-2">

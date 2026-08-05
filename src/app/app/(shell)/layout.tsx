@@ -3,7 +3,6 @@ import { createClient } from "@/lib/supabase/server"
 import { Sidebar, MobileNav } from "@/components/app/sidebar"
 import { UserMenu } from "@/components/app/user-menu"
 import { OrgSwitcher } from "@/components/app/org-switcher"
-import { ThemeToggle } from "@/components/app/theme-toggle"
 import { LocaleSwitcher } from "@/components/app/locale-switcher"
 import { listMyOrganizations, getActiveOrgId } from "@/app/actions/preferences"
 import { UpgradeProvider } from "@/components/billing/upgrade-dialog"
@@ -48,14 +47,13 @@ export default async function ShellLayout({
       <div className="flex min-h-screen">
         <Sidebar />
         <div className="flex flex-1 flex-col">
-          <header className="bg-background flex h-14 items-center justify-between gap-2 border-b px-4">
+          <header className="bg-background flex h-14 shrink-0 items-center justify-between gap-2 border-b px-4">
             <div className="flex min-w-0 items-center gap-1">
               <MobileNav />
               <OrgSwitcher orgs={orgs} activeId={activeOrgId} />
             </div>
             <div className="flex items-center gap-1">
               <LocaleSwitcher />
-              <ThemeToggle />
               <UserMenu
                 email={user.email ?? ""}
                 name={profile?.display_name ?? null}
@@ -63,7 +61,12 @@ export default async function ShellLayout({
               />
             </div>
           </header>
-          <main className="bg-muted/20 flex-1 p-6">{children}</main>
+          {/*
+            Plocha obsahu ma pozadie palety, nie stmavene `muted/20`. Pri tepolej
+            sedej uz nie je co odlisovat — karty sa odlisuju SVETLEJSIM odtienom,
+            nie tmavsim okolim.
+          */}
+          <main className="bg-background flex-1 p-6 md:p-8">{children}</main>
         </div>
       </div>
     </UpgradeProvider>
