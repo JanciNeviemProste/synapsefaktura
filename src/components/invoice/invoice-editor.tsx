@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { useForm, useFieldArray, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Plus, Trash2, Loader2, FileText } from "lucide-react"
+import { Plus, Trash2, Loader2, FileText, UserPlus } from "lucide-react"
 import { toast } from "sonner"
 
 import type { Database } from "@/lib/supabase/database.types"
@@ -24,6 +24,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { ContactForm } from "@/components/contacts/contact-form"
 import {
   Form,
   FormControl,
@@ -235,6 +243,11 @@ export function InvoiceEditor({
     )
   }
 
+  // Kontakty sa drzia v stave, aby sa novo vytvoreny dal hned vybrat bez
+  // reloadu — server prop je staticky na cas zivota stranky.
+  const [contactList, setContactList] = useState<Contact[]>(contacts)
+  const [newContactOpen, setNewContactOpen] = useState(false)
+
   const showPrices = useWatch({ control: form.control, name: "showPrices" })
   const docType = (type as DocumentType) ?? "invoice"
   const presentation = documentPresentation(docType, { showPrices })
@@ -379,33 +392,51 @@ export function InvoiceEditor({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Odberateľ</FormLabel>
-                  <Select
-                    value={field.value ?? ""}
-                    onValueChange={field.onChange}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Vyber kontakt">
-                          {(v: string) =>
-                            contacts.find((c) => c.id === v)?.name ?? ""
-                          }
-                        </SelectValue>
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {contacts.length === 0 ? (
-                        <div className="text-muted-foreground p-2 text-sm">
-                          Žiadne kontakty
-                        </div>
-                      ) : (
-                        contacts.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex gap-2">
+                    <Select
+                      value={field.value ?? ""}
+                      onValueChange={field.onChange}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Vyber kontakt">
+                            {(v: string) =>
+                              contactList.find((c) => c.id === v)?.name ?? ""
+                            }
+                          </SelectValue>
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {contactList.length === 0 ? (
+                          <div className="text-muted-foreground p-2 text-sm">
+                            Žiadne kontakty
+                          </div>
+                        ) : (
+                          contactList.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.name}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    {/* Novy odberatel bez odchodu z rozrobeneho dokladu.
+                        Doteraz musel pouzivatel odist do /app/contacts, cim
+                        prisiel o vsetko, co mal vyplnene. */}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      title="Nový odberateľ"
+                      onClick={() => setNewContactOpen(true)}
+                    >
+                      <UserPlus className="size-4" />
+                    </Button>
+                  </div>
+                  <p className="text-muted-foreground text-xs">
+                    Nový odberateľ sa dá pridať rovno tu — údaje si potiahne
+                    z registra podľa IČO.
+                  </p>
                 </FormItem>
               )}
             />
@@ -854,6 +885,31 @@ export function InvoiceEditor({
           </CardContent>
         </Card>
       </form>
+
+      <Dialog open={newContactOpen} onOpenChange={setNewContactOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Nový odberateľ</DialogTitle>
+            <DialogDescription>
+              Zadaj IČO a načítaj údaje z registra, alebo vyplň ručne.
+            </DialogDescription>
+          </DialogHeader>
+          <ContactForm
+            onDone={(created) => {
+              setNewContactOpen(false)
+              if (!created) return
+              // Novy kontakt pribudne do zoznamu a rovno sa vyberie. Zoznam
+              // sa drzi zoradeny podla mena ako zo servera.
+              setContactList((prev) =>
+                [...prev, { id: created.id, name: created.name } as Contact].sort(
+                  (a, b) => a.name.localeCompare(b.name, "sk"),
+                ),
+              )
+              form.setValue("contactId", created.id, { shouldDirty: true })
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </Form>
   )
 }
