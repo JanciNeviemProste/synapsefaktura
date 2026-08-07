@@ -1,0 +1,39 @@
+# Kto sa na čo pozrie. GitHub podľa toho sám vypýta recenzenta na PR.
+#
+# Nie je to vlastníctvo ani zákaz vstupu — je to zápis toho, ako sa práca
+# prirodzene rozdelila, aby na to nikto nemusel myslieť. Posledné pravidlo,
+# ktoré sedí na cestu, vyhráva.
+
+# Predvolene sa pozrie vlastník repa.
+*                           @JanciNeviemProste
+
+# Doménová logika, obrazovky a preklady
+/src/app/app/               @csrom
+/src/app/actions/           @csrom
+/src/components/            @csrom
+/src/lib/documents/         @csrom
+/src/lib/expenses/          @csrom
+/src/lib/bank/              @csrom
+/src/lib/matching/          @csrom
+/src/lib/pdf/               @csrom
+/src/lib/reports/           @csrom
+/supabase/migrations/       @csrom
+/messages/                  @csrom
+
+# Platforma, bezpečnosť, nasadenie a marketing — a veci označené NEDOTÝKAŤ SA
+/.github/                   @JanciNeviemProste
+/src/middleware.ts          @JanciNeviemProste
+/src/lib/supabase/          @JanciNeviemProste
+/src/lib/vat/               @JanciNeviemProste
+/src/lib/money.ts           @JanciNeviemProste
+/src/lib/peppol/            @JanciNeviemProste
+/src/lib/billing/           @JanciNeviemProste
+/src/lib/site.ts            @JanciNeviemProste
+/src/app/actions/auth.ts    @JanciNeviemProste
+/marketing/                 @JanciNeviemProste
+/docs/                      @JanciNeviemProste
+/CLAUDE.md                  @JanciNeviemProste
+/AGENTS.md                  @JanciNeviemProste
+
+# Denník relácií píše každý sám za seba — recenzent netreba.
+/docs/log/
