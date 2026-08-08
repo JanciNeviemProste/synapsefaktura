@@ -31,22 +31,37 @@ end $$;
 
 -- Zjednodušená auth.users. Skutočná má oveľa viac stĺpcov, ale migrácie sa
 -- odkazujú len na `id` (cez `references auth.users (id)`).
+--
+-- `aud`, `role` a `instance_id` tu nie sú kvôli migráciám — potrebuje ich
+-- `supabase/tests/rls.sql`, ktorý zakladá testovacích používateľov tak, ako to
+-- robí skutočné Supabase.
 create table if not exists auth.users (
   id                 uuid primary key default gen_random_uuid(),
+  instance_id        uuid,
+  aud                text,
+  role               text,
   email              text,
   raw_user_meta_data jsonb not null default '{}'::jsonb,
   created_at         timestamptz not null default now()
 );
 
--- V Supabase číta auth.uid() ID prihláseného používateľa z JWT. Tu sa číta
--- z nastavenia session, aby sa dalo prepínať:
---   select set_config('request.jwt.claim.sub', '<uuid>', true);
+-- V Supabase číta auth.uid() ID prihláseného používateľa z JWT.
+--
+-- Prijímame OBA tvary, lebo sa oba používajú:
+--   set_config('request.jwt.claim.sub', '<uuid>', true)      — jednoduchší
+--   set local request.jwt.claims to '{"sub":"<uuid>", …}'    — ako v Supabase
+--
+-- Keby stub poznal len prvý, RLS testy by tichým spôsobom bežali s `auth.uid()`
+-- = NULL a všetko by "prešlo" — teda by netestovali vôbec nič.
 create or replace function auth.uid()
 returns uuid
 language sql
 stable
 as $$
-  select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
+  select coalesce(
+    nullif(current_setting('request.jwt.claim.sub', true), ''),
+    nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub'
+  )::uuid
 $$;
 
 -- Testovací používateľ, aby mal handle_new_user() a spol. na čom bežať.

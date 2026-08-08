@@ -218,3 +218,41 @@ jobs:
           if [ -n "$open" ]; then
             echo "Tables without RLS: $open"; exit 1
           fi
+
+      # Zapnute RLS este neznamena, ze politiky robia to, co maju. Kroky vyssie
+      # overia, ze je RLS zapnute na kazdej tabulke; toto overi, ci naozaj pusti
+      # spravneho pouzivatela k spravnym riadkom. To je cely rozdiel.
+      #
+      # pgTAP nie je v obraze `postgres:17`, ale PGDG repozitar v nom je, takze
+      # sa da doinstalovat. Service container je bezny docker kontajner na
+      # runneri — `docker exec` na neho funguje.
+      - name: Nainštaluj pgTAP
+        run: |
+          CID=$(docker ps --filter "ancestor=postgres:17" --format '{{.ID}}' | head -1)
+          if [ -z "$CID" ]; then echo "Nenašiel som kontajner s databázou"; exit 1; fi
+          docker exec "$CID" bash -c \
+            "apt-get update -qq && apt-get install -y -qq postgresql-17-pgtap" \
+            > /dev/null
+          psql -h localhost -U postgres -d postgres -q -c "create extension if not exists pgtap"
+
+      - name: RLS testy — izolácia medzi firmami
+        run: |
+          # `--no-psqlrc -X` aby sa spravanie nedalo ovplyvnit prostredim.
+          OUT=$(psql -h localhost -U postgres -d postgres -X -q -t -A \
+                  -v ON_ERROR_STOP=1 -f supabase/tests/rls.sql)
+          echo "$OUT"
+          {
+            echo "### RLS testy"
+            echo '```'
+            echo "$OUT"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          # pgTAP hlasi neuspech riadkom, ktory zacina "not ok".
+          if echo "$OUT" | grep -q '^not ok'; then
+            echo "::error::RLS test zlyhal — izolácia medzi firmami nie je dokázaná."
+            exit 1
+          fi
+          if ! echo "$OUT" | grep -q '^ok 1'; then
+            echo "::error::RLS testy vôbec nebežali. Zelené CI by tu bolo klamstvo."
+            exit 1
+          fi
