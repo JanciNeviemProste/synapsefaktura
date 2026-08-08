@@ -1,0 +1,104 @@
+# Ako spolu pracujeme
+
+Dvaja seniori, jedno produkčné repo, obaja s Claude Code. Tento dokument je krátky schválne —
+všetko, čo sa dá vynútiť mechanicky, je vynútené v hookoch a CI, nie tu.
+
+## Denná slučka
+
+```
+/start-work <čo>          →  collision check, plán, review plánu, claim
+   ↓  (človek odklikne plán)
+implementácia             →  malé kroky, dôkaz po každom
+   ↓
+/ship                     →  rebase, checks, self-review, audit, size gate, PR
+   ↓
+review druhého            →  architektúra a „má to vôbec existovať"
+   ↓
+merge (squash)            →  vetva zmizne
+```
+
+## Päť pravidiel, ktoré držia všetko ostatné
+
+**1. Jeden súbor = jeden vlastník.** `docs/OWNERSHIP.md`. Toto je jediná vec, ktorá spoľahlivo
+znižuje konflikty. Cudziu lane needituješ — vypýtaš si kontrakt.
+
+**2. Malé PR-ky.** ≤5 súborov, ≤300 riadkov. Medzi malou a strednou PR-kou rastie
+pravdepodobnosť konfliktu zhruba trojnásobne — je to najsilnejšia páka, akú máme, a je zadarmo.
+
+**3. Plán pred kódom, review plánu pred review kódu.** Nedorozumenie v pláne sa zmení na tisíc
+zlých riadkov; to isté nedorozumenie v diffe už stálo deň. Čítame si navzájom **plány**, nie kód.
+
+**4. Dôkaz, nie tvrdenie.** „Testy prešli" nie je dôkaz. Výstup testov je dôkaz. Platí pre agenta
+aj pre nás.
+
+**5. ADR ide v tej istej PR ako nový pattern.** Bez výnimky pre malé zmeny — malé zmeny sú presne
+to, ako architektúra tichým spôsobom odtečie.
+
+## Vetvy
+
+`<type>/<lane>-<slug>` — `feat/inv-peppol-dobropis`, `fix/plat-stripe-webhook`.
+Krátko žijúce, max 2 dni. Squash merge. Rebase, nie merge commit.
+
+Dve paralelné veci naraz → **worktree**, nie stashovanie:
+
+```bash
+claude --worktree peppol-dobropis
+```
+
+Claude Code v worktree fyzicky nemôže zapisovať do hlavného checkoutu — je to skutočná izolácia,
+nie dohoda. `.worktreeinclude` prekopíruje `.env` súbory automaticky.
+Max **2 paralelné lanes na osobu.** Nad tým čas na riešenie konfliktov rastie rýchlejšie než výstup.
+
+## Shared zone
+
+`prisma/schema.prisma` · `prisma/migrations/` · `src/lib/` · `src/components/ui/` · `package.json`
+
+- Ohlás **vopred** v `specs/INDEX.md` → Shared zone kalendár
+- Vlastná malá PR, mergne sa prvá, až potom feature PR
+- Pridávaj, needituj. Nový súbor > zmena existujúceho.
+- Pred `pnpm db:migrate` **vždy** `git pull`
+- Cross-cutting veci (importy, routes, config, DI, i18n kľúče) sa odkladajú do integračnej PR na konci
+
+## Review
+
+| Vrstva | Kto | Čo chytá |
+|---|---|---|
+| Plán | **druhý človek** | zlý problém, skrytá väzba, scope creep — pred prvým riadkom kódu |
+| Formát, typy, lint | **hooky + CI** | diff noise |
+| Mechanika, edge cases | **`/code-review` + `diff-auditor`** | to, čo prehliadneš, lebo si to písal |
+| Architektúra, „má to existovať" | **druhý človek** | to, čo AI štrukturálne posúdiť nevie |
+
+Self-review (`/code-review high`) pred každou PR. Je to najlacnejšia slušnosť, akú v dvojici máš:
+nikdy nedávaš druhému čítať niečo, čo si sám neprečítal.
+
+Review druhého: sústreď sa na **architektúru a rozsah**, nie na štýl. Odpovedz do 4 hodín — v dvojici
+je zablokovaný review priamo zablokovaný človek.
+
+## Keď sa niečo pokazí v session
+
+- Agent dvakrát opravoval to isté a stále to nie je → `/clear` a napíš prompt odznova s tým, čo si
+  sa medzitým naučil. Čistá session s lepším promptom skoro vždy porazí dlhú session s nazbieranými opravami.
+- Agent zasekne 3× na tej istej chybe → zastav ho, choď to pozrieť sám
+- Iná téma → `/clear`. Jedna session = jedna vec.
+- Rozbil niečo → `/rewind`
+
+## Rituály
+
+| Kedy | Čo | Ako dlho |
+|---|---|---|
+| Denne ráno | prečítať `specs/INDEX.md` | 1 min |
+| Pred začatím čohokoľvek | `/start-work` | v cene |
+| Pri prerušení práce | `/handoff` | 2 min |
+| Pondelok | prejsť board, dohodnúť shared zone na týždeň | 15 min |
+| Raz mesačne | prečistiť `CLAUDE.md` a `docs/OWNERSHIP.md` — striedavo | 20 min |
+
+## Čo meriame
+
+Nie počet PR-iek. **Koľko súborov na jednu prijatú zmenu · koľko práce sme zahodili · koľko času
+zožral review · koľko PR-iek prekročilo limit veľkosti.** Ak niektoré rastie, príčina je vždy v
+rozsahu, nie v modeli.
+
+## Čo vedome nerobíme
+
+Merge queue (v dvojici je riziko rozbitého `main` pod 1 %) · stacked PRs (réžia väčšia než prínos)
+· druhý AI reviewer (najprv nech nám sadne jeden) · agent teams (experimentálne, tokenovo drahé).

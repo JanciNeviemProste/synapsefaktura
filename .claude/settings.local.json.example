@@ -1,0 +1,10 @@
+{
+  "//": "Skopíruj na .claude/settings.local.json a uprav. Tento súbor je v .gitignore — je len tvoj.",
+  "env": {
+    "SYNAPSE_DEV": "janci"
+  },
+  "outputStyle": "Default",
+  "permissions": {
+    "allow": []
+  }
+}

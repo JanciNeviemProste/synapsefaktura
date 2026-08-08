@@ -1,0 +1,74 @@
+# Synapse Faktúra
+
+Slovak SaaS invoicing product. Production — real customers, real money, real tax filings.
+Two developers: **@janci** and **@roman**. Both use Claude Code.
+
+<!-- Last updated: 2026-08-08 · Owner this month: @janci -->
+
+## Before you write code
+
+1. Read `docs/OWNERSHIP.md` and confirm the files you are about to touch are in **your lane**.
+   If they are not, stop and say so. Do not edit another lane without an explicit go-ahead in the prompt.
+2. Read `specs/INDEX.md` to see what the other developer has claimed right now.
+3. For anything larger than a one-file fix: produce a plan first and wait for approval. Do not start editing.
+
+## Commands
+
+```bash
+pnpm dev              # dev server
+pnpm build            # production build — must pass before PR
+pnpm typecheck        # tsc --noEmit — must pass before PR
+pnpm lint             # eslint — must pass before PR
+pnpm test             # unit tests
+pnpm test <pattern>   # single test file — prefer this while iterating
+pnpm db:migrate       # prisma migrate dev  (NEVER run against production)
+pnpm db:studio        # prisma studio
+```
+
+<!-- FILL IN: replace with the real commands from package.json if they differ -->
+
+## Stack
+
+Next.js 15 (App Router) · TypeScript strict · Tailwind v4 · shadcn/ui · Prisma + Postgres · Vercel
+
+## Non-obvious rules
+
+- **Money is `Decimal`, never `number`.** Prisma `Decimal` end to end. Rounding happens once, at presentation.
+- **Everything is tenant-scoped.** Every query needs `organizationId`. A query without it is a data leak, not a bug.
+- **Invoice numbers are immutable and gapless.** Never regenerate, never renumber, never reuse. Allocation goes through the numbering service only.
+- **An issued invoice is append-only.** Corrections are new documents (dobropis / ťarchopis), never edits.
+- **Peppol/UBL output must validate against BIS 3.0** before it can be considered done. Run the validator, paste the result.
+- **Slovak domain terms stay Slovak in the UI and the DB** (`odberatel`, `dodavatel`, `dph`, `variabilny_symbol`). Code identifiers are English. Do not "clean this up".
+- **Dates are stored UTC, displayed Europe/Bratislava.** Tax period boundaries use Bratislava local time.
+
+## Hard stops — stop and ask, do not proceed
+
+- Any change under `prisma/migrations/` or to `prisma/schema.prisma`
+- Anything touching auth, sessions, payments, or webhook signature verification
+- Adding a new dependency
+- Changing a public API route's request or response shape
+- More than 5 files in one change, or more than ~300 changed lines
+- Deleting or moving a file that you did not create in this session
+- Editing a test to make a failing test pass
+
+## Scope discipline
+
+Change what was asked and nothing else. No opportunistic refactors, no reformatting untouched
+lines, no new abstraction layers, no "while I was in here". If you notice something worth fixing,
+write it in the PR body under *Noticed, not fixed*.
+
+## Definition of done
+
+`pnpm typecheck && pnpm lint && pnpm test` all green, evidence pasted (actual output, not a claim),
+new behaviour covered by a test, and `/ship` run before the PR is opened.
+
+## Deeper context — read on demand, not upfront
+
+Identify which of these are relevant to the task and read those first:
+
+- `docs/OWNERSHIP.md` — who owns which paths (read this every time)
+- `docs/WORKFLOW.md` — branching, PR rules, handoffs
+- `docs/PRODUCT.md` — what the product does and for whom
+- `docs/ARCHITECTURE.md` — module map and data flow
+- `docs/adr/` — why things are the way they are. **Read before changing an established pattern.**
+- `specs/INDEX.md` — active work board

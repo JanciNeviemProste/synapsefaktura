@@ -1,0 +1,121 @@
+{
+  "//": "Jedna pravda pre hooky. Musí sedieť s docs/OWNERSHIP.md a .github/CODEOWNERS.",
+  "//dev": "Kto som — nastav si to lokálne: .claude/settings.local.json -> env.SYNAPSE_DEV=janci|roman, alebo env premenná SYNAPSE_DEV.",
+  "//zdroj": "Rozdelenie vzniklo z git churnu po autoroch (2026-08-08), nie z návrhu. Zdôvodnenie v docs/OWNERSHIP.md.",
+
+  "lanes": {
+    "roman": [
+      "src/app/app/",
+      "src/app/actions/",
+      "src/components/",
+      "src/lib/documents/",
+      "src/lib/expenses/",
+      "src/lib/logbook/",
+      "src/lib/import/",
+      "src/lib/bank/",
+      "src/lib/matching/",
+      "src/lib/pdf/",
+      "src/lib/reports/",
+      "src/lib/cash/",
+      "src/lib/stock/",
+      "src/lib/recurring/",
+      "src/lib/contacts/",
+      "src/lib/upload/",
+      "src/lib/storage/",
+      "src/lib/images/",
+      "src/lib/qr/",
+      "supabase/migrations/",
+      "messages/"
+    ],
+    "janci": [
+      "src/lib/peppol/",
+      "src/lib/vat/",
+      "src/lib/billing/",
+      "src/lib/supabase/",
+      "src/lib/security/",
+      "src/lib/registry/",
+      "src/lib/email/",
+      "src/lib/jobs/",
+      "src/lib/auth/",
+      "src/lib/export/",
+      "src/lib/landing/",
+      "src/lib/money.ts",
+      "src/lib/site.ts",
+      "src/middleware.ts",
+      "src/app/actions/auth.ts",
+      "src/app/api/",
+      "marketing/",
+      "docs/",
+      ".github/"
+    ]
+  },
+
+  "shared": [
+    "src/components/ui/",
+    "src/lib/validation/",
+    "src/lib/ai/",
+    "src/lib/utils.ts",
+    "src/app/layout.tsx",
+    "src/app/globals.css",
+    "package.json",
+    "tsconfig.json",
+    "CLAUDE.md",
+    ".claude/"
+  ],
+
+  "blocked": [
+    {
+      "pattern": ".env",
+      "reason": "Secrets. Nikdy ich needituj agentom — povedz človeku, čo treba doplniť."
+    },
+    {
+      "pattern": "src/lib/vat/engine.ts",
+      "reason": "Výpočet DPH, testovaný v vat/engine.test.ts. Zmena len s testom a dôvodom v PR — chyba tu znamená zle vystavené faktúry."
+    },
+    {
+      "pattern": "src/lib/money.ts",
+      "reason": "Peňažná matematika a zaokrúhľovanie, testované. Zmena len s testom a dôvodom v PR."
+    },
+    {
+      "pattern": "src/lib/peppol/ubl.ts",
+      "reason": "Generovanie UBL 2.1 pre e-faktúru, testované. Štruktúru nemeniť."
+    },
+    {
+      "pattern": "src/lib/peppol/validate.ts",
+      "reason": "Validácia UBL 2.1, testovaná. Štruktúru nemeniť."
+    },
+    {
+      "pattern": "src/lib/peppol/inbound.ts",
+      "reason": "Príjem e-faktúr, testovaný. Štruktúru nemeniť."
+    },
+    {
+      "pattern": "src/lib/supabase/middleware.ts",
+      "reason": "Fail-open Edge guard. Rieši MIDDLEWARE_INVOCATION_FAILED na Verceli — nesprávna zmena zhodí celý web."
+    },
+    {
+      "pattern": "src/app/actions/auth.ts",
+      "reason": "Registrácia, prihlásenie, obnova hesla. Nikdy nie automaticky.",
+      "allowFor": ["janci"]
+    },
+    {
+      "pattern": ".github/workflows/",
+      "reason": "CI je merge gate. Zmena CI ide vždy vo vlastnej PR s ľudským review.",
+      "allowFor": ["janci"]
+    }
+  ],
+
+  "confirmRequired": [
+    {
+      "pattern": "supabase/migrations/",
+      "reason": "Migrácia = konflikt s druhým vývojárom a zásah do produkčnej DB po merge. Vždy NOVÝ súbor, existujúcu nikdy neprepisuj — druhý ju už má aplikovanú. Zapíš to do specs/INDEX.md skôr, než sa toho dotkneš."
+    },
+    {
+      "pattern": "src/lib/supabase/database.types.ts",
+      "reason": "Generovaný typ schémy. Prepisuje sa cez `supabase gen types`, nie ručne — a mení sa pri každej migrácii, takže je to konfliktný magnet."
+    },
+    {
+      "pattern": "src/lib/billing/plans.ts",
+      "reason": "Ceny a limity plánov. Produktové rozhodnutie vlastníka, nie technické."
+    }
+  ]
+}
