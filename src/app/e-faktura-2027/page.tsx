@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import { Sparkles, Check } from "lucide-react"
+import { Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SiteFooter } from "@/components/site-footer"
 
@@ -20,7 +20,9 @@ function Section({
 }) {
   return (
     <section className="grid gap-3">
-      <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
+      <h2 className="font-heading text-[clamp(19px,2.5vw,26px)] leading-tight tracking-tight">
+        {title}
+      </h2>
       {children}
     </section>
   )
@@ -30,9 +32,14 @@ export default function EFaktura2027Page() {
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="flex h-16 items-center justify-between border-b px-6">
-        <Link href="/" className="flex items-center gap-2 font-semibold">
-          <Sparkles className="text-primary size-5" />
-          Synapse Faktúra
+        {/* Rovnaký podpis značky ako v navigácii úvodnej stránky. */}
+        <Link href="/" className="flex items-center gap-3">
+          <span className="font-heading text-lg tracking-tight">
+            Synapse Faktúra
+          </span>
+          <span aria-hidden="true" className="text-xl select-none">
+            ✳︎
+          </span>
         </Link>
         <Button asChild>
           <Link href="/register">Začať zadarmo</Link>
@@ -40,7 +47,7 @@ export default function EFaktura2027Page() {
       </header>
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-12">
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+        <h1 className="font-heading text-[clamp(28px,4.5vw,48px)] leading-[1.1] tracking-tight">
           E-faktúra 2027 na Slovensku: čo to znamená a ako sa pripraviť
         </h1>
         <p className="text-muted-foreground mt-3 text-lg">
@@ -128,7 +135,9 @@ export default function EFaktura2027Page() {
           </Section>
 
           <div className="bg-muted/30 flex flex-col items-center gap-4 rounded-xl border p-8 text-center">
-            <h2 className="text-xl font-semibold">Priprav sa na 2027 už dnes</h2>
+            <h2 className="font-heading text-[clamp(19px,2.5vw,26px)] tracking-tight">
+              Priprav sa na 2027 už dnes
+            </h2>
             <p className="text-muted-foreground">
               Začni zadarmo a maj e-faktúru vyriešenú skôr, než sa stane
               povinnosťou.
