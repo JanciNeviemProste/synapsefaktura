@@ -95,7 +95,23 @@ const owner = Object.keys(lanes).find((dev) =>
   (lanes[dev] || []).some((p) => hit(p)),
 )
 
-if (owner && ME && owner !== ME) {
+// Neznáma identita sa NESMIE tváriť ako "všetko v poriadku". Bez SYNAPSE_DEV
+// by táto vrstva mlčky nekontrolovala nič a človek by sa to nedozvedel — presne
+// tak vyzerá guardrail, ktorý existuje len na papieri.
+if (owner && (!ME || !Object.keys(lanes).includes(ME))) {
+  out(
+    "ask",
+    `[guard] ${rel} patrí do lane @${owner}, ale ja neviem, kto si.\n` +
+      (ME
+        ? `SYNAPSE_DEV="${ME}" nie je platná identita. Povolené: ${Object.keys(lanes).join(", ")}.\n`
+        : `Premenná SYNAPSE_DEV nie je nastavená.\n`) +
+      `Nastav si ju v .claude/settings.local.json:\n` +
+      `  { "env": { "SYNAPSE_DEV": "${Object.keys(lanes).join('" | "')}" } }\n` +
+      `Kým to nespravíš, kontrola cudzích lane nefunguje a ja sa budem pýtať zakaždým.`,
+  )
+}
+
+if (owner && owner !== ME) {
   out(
     "ask",
     `[guard] ${rel} patrí do lane @${owner}, ty si @${ME}.\n` +

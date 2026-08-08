@@ -1,8 +1,12 @@
 # Ako prebieha jedna relácia
 
-Spoločné pre oboch. Kto čo vlastní, je v [`.github/CODEOWNERS`](../.github/CODEOWNERS);
-osobné hranice sú v [`docs/agent/`](agent/). Tento súbor je o postupe — od
-otvorenia terminálu po zavretie PR.
+Spoločné pre oboch. Kto čo vlastní, je v [`docs/OWNERSHIP.md`](OWNERSHIP.md)
+a [`.github/CODEOWNERS`](../.github/CODEOWNERS); osobné hranice sú
+v [`docs/agent/`](agent/). Tento súbor je o postupe — od otvorenia terminálu po
+zavretie PR.
+
+Je krátky schválne. **Všetko, čo sa dá vynútiť strojom, je vynútené
+v `.claude/hooks/` a v CI, nie tu.** Text je len na to, čo stroj nevie.
 
 Mení sa cez pull request ako čokoľvek iné. Keď ti niektoré pravidlo prekáža,
 otvor issue — netreba ho obchádzať potichu.
@@ -102,6 +106,43 @@ Zásadné rozhodnutie (vybrali sme knižnicu X, zamietli Y) patrí do
 - **Pridať závislosť**, keď to vie štandardná knižnica alebo niečo, čo už v
   projekte je.
 
+## 8. Kto čo recenzuje
+
+Nie všetko musí čítať človek. Rozdelené podľa toho, čo ktorá vrstva vie chytiť:
+
+| Vrstva                          | Kto                             | Čo chytá                                                    |
+| ------------------------------- | ------------------------------- | ----------------------------------------------------------- |
+| plán                            | **druhý človek**                | zlý problém, skrytá väzba, scope creep — pred prvým riadkom |
+| formát, typy, lint              | hooky + CI                      | diff noise                                                  |
+| mechanika, hraničné prípady     | `/code-review` + `diff-auditor` | to, čo prehliadneš, lebo si to písal                        |
+| architektúra, „má to vôbec byť" | **druhý človek**                | to, čo AI štrukturálne posúdiť nevie                        |
+
+**Sám seba si prečítaj skôr, než to dáš druhému.** Nikdy nedávaj čítať niečo,
+čo si sám neotvoril — v dvojici je to najlacnejšia slušnosť, aká existuje.
+
+Pri recenzii druhého sa sústreď na **architektúru a rozsah, nie na štýl.**
+Štýl rieši prettier.
+
+## 9. Keď sa relácia pokazí
+
+Agent nie je človek a nemá zmysel ho presviedčať. Keď to nejde:
+
+- **Dvakrát opravoval to isté a stále to nie je** → `/clear` a napíš prompt
+  odznova s tým, čo si sa medzitým dozvedel. Čistá relácia s lepším zadaním
+  skoro vždy porazí dlhú reláciu s nazbieranými opravami.
+- **Zasekol sa 3× na tej istej chybe** → zastav ho a pozri sa na to sám.
+- **Iná téma** → `/clear`. Jedna relácia = jedna vec.
+- **Rozbil niečo** → `/rewind`.
+
+## 10. Čo vedome nerobíme
+
+Aby sa to nemuselo zakaždým prediskutovať:
+
+- **Merge queue** — v dvojici je riziko rozbitého `main` zanedbateľné.
+- **Stacked PR** — réžia väčšia než prínos. Vetvi z `main`.
+- **Druhý AI recenzent** — najprv nech nám sadne jeden.
+- **Formálne standupy** — na to je `docs/log/` a fronta issues.
+
 ## Rýchla tabuľka
 
 | Situácia                        | Čo spraviť                                  |
@@ -112,3 +153,4 @@ Zásadné rozhodnutie (vybrali sme knižnicu X, zamietli Y) patrí do
 | PR narástol nad 500 riadkov     | Rozdeľ. Väčší PR nikto poriadne neprečíta.  |
 | Neviem, či to smiem rozhodnúť   | Nesmieš. Opýtaj sa v issue.                 |
 | CI padá a neviem prečo          | Napíš to do PR. Nemerguj cez to.            |
+| Agent sa zacyklil               | `/clear` a nové zadanie. Nie ďalšia oprava. |

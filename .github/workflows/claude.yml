@@ -28,11 +28,29 @@ jobs:
       actions: read
 
     steps:
+      # Bez tokenu by akcia spadla s nezrozumiteľnou chybou pri každom @claude.
+      # Radšej ticho preskočíme a povieme, čo treba doplniť — červený krížik na
+      # PR, ktorý znamená len "nie je nastavené", naučí ľudí ignorovať červené
+      # krížiky.
+      - name: Je token nastavený?
+        id: token
+        env:
+          T: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          if [ -z "$T" ]; then
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::CLAUDE_CODE_OAUTH_TOKEN nie je nastavený, preskakujem. Doplníš ho cez \`claude setup-token\` → Settings → Secrets and variables → Actions."
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: actions/checkout@v4
+        if: steps.token.outputs.ok == 'true'
         with:
           fetch-depth: 1
 
       - uses: anthropics/claude-code-action@v1
+        if: steps.token.outputs.ok == 'true'
         with:
           # OAuth token z `claude setup-token` — jede na predplatnom (Max), nie na API kredite.
           # Alternatíva: anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }} (účtuje sa zvlášť).

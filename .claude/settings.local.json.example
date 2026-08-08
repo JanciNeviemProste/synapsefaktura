@@ -1,7 +1,8 @@
 {
-  "//": "Skopíruj na .claude/settings.local.json a uprav. Tento súbor je v .gitignore — je len tvoj.",
+  "//": "Skopíruj na .claude/settings.local.json a NAHRAĎ SYNAPSE_DEV svojím menom. Tento súbor je v .gitignore — je len tvoj.",
+  "//pozor": "Nenechaj tam DOPLN_janci_alebo_roman. Guard tú hodnotu neuzná a bude sa pýtať pri každom zápise do cudzej lane.",
   "env": {
-    "SYNAPSE_DEV": "janci"
+    "SYNAPSE_DEV": "DOPLN_janci_alebo_roman"
   },
   "outputStyle": "Default",
   "permissions": {

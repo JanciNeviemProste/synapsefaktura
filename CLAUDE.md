@@ -100,6 +100,18 @@ každej vetve.
 
 ## Spolupráca (dvaja ľudia na jednom repe)
 
+**Skôr než napíšeš prvý riadok kódu**, prečítaj tieto dva súbory — nie sú
+voliteľné a nie sú dlhé:
+
+- **[docs/OWNERSHIP.md](docs/OWNERSHIP.md)** — kto vlastní ktoré cesty. Over,
+  že súbory, ktorých sa ideš dotknúť, sú v **tvojej** lane. Ak nie, povedz to
+  a zastav sa. Hook `.claude/hooks/guard-paths.mjs` to aj tak skontroluje, ale
+  dozvedieť sa to až pri zápise je neskoro.
+- **[specs/INDEX.md](specs/INDEX.md)** — čo si druhý práve claimol. Dve
+  paralelné migrácie sú najhorší konflikt, aký tu vieme vyrobiť.
+
+Celý postup relácie je v **[docs/WORKFLOW.md](docs/WORKFLOW.md)**.
+
 - **Všetko cez pull request** — priamy push na `main` je zakázaný rulesetom,
   pre oboch. PR potrebuje 1 schválenie a zelené `verify` aj `migrations`.
 - **Jeden PR = jedna téma, orientačne do 500 riadkov.** Väčší PR nikto
