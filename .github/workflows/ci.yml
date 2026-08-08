@@ -42,6 +42,82 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
 
+  # Rozsah PR. Zámerne NEPADÁ — dohoda v docs/WORKFLOW.md hovorí "orientačne do
+  # 500 riadkov", a orientačne znamená orientačne. Tvrdý limit by zhodil aj
+  # legitímne veľké PR (nová migrácia + typy + obrazovka) a naučil by nás
+  # obchádzať ho labelom, čo je horšie než čísla len vidieť.
+  #
+  # Čísla idú do zhrnutia PR, aby ich recenzent mal pred očami skôr, než otvorí
+  # diff. PR #15 mal 3 383 riadkov a #12 mal 4 131 — nikto ich neprečítal.
+  size:
+    name: Rozsah PR
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Zmeraj diff
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          # Generované a zamknuté súbory sa nerátajú — nikto ich nečíta.
+          SKIP='(pnpm-lock\.yaml|\.snap$|^supabase/migrations/|database\.types\.ts)'
+          FILES=$(git diff --name-only "$BASE" "$HEAD" | grep -Ev "$SKIP" | wc -l | tr -d ' ')
+          LINES=$(git diff --numstat "$BASE" "$HEAD" | grep -Ev "$SKIP" \
+            | awk '{a+=$1; d+=$2} END {print a+d+0}')
+          echo "### Rozsah: $FILES súborov, $LINES riadkov (bez generovaných)" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$LINES" -gt 500 ]; then
+            echo "::warning::$LINES riadkov — dohoda je orientačne 500. Zváž rozdelenie."
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Nad dohodnutých 500 riadkov. Väčší PR nikto poriadne neprečíta." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  # Toto naopak PADÁ. Sú to štyri vzory, ktorými sa typová chyba zametie pod
+  # koberec namiesto opravy — a v AI diffe vznikajú tichšie než kdekoľvek inde.
+  patterns:
+    name: Zakázané vzory
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Nové potlačenia typov a lintu
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          ADDED=$(git diff "$BASE" "$HEAD" -- '*.ts' '*.tsx' | grep '^+' | grep -v '^+++' || true)
+          FAIL=0
+          check() {
+            if echo "$ADDED" | grep -qE "$1"; then
+              echo "::error::Pridané: $2 — ak to naozaj treba, napíš vedľa komentár prečo."
+              echo "$ADDED" | grep -nE "$1" | head -5
+              FAIL=1
+            fi
+          }
+          check '@ts-ignore'                 '@ts-ignore'
+          check 'eslint-disable'             'eslint-disable'
+          check '\bas any\b'                 'as any'
+          check 'catch\s*\(\s*\)\s*\{\s*\}'  'prázdny catch'
+          [ "$FAIL" = 0 ] || exit 1
+
+      - name: Test a zdroj v jednej zmene
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          CHANGED=$(git diff --name-only "$BASE" "$HEAD")
+          T=$(echo "$CHANGED" | grep -cE '\.(test|spec)\.(ts|tsx)$' || true)
+          S=$(echo "$CHANGED" | grep -E '\.(ts|tsx)$' | grep -vcE '\.(test|spec)\.' || true)
+          if [ "$T" -gt 0 ] && [ "$S" -gt 0 ]; then
+            echo "::warning::PR mení testy ($T) aj zdroják ($S). Recenzent nech overí, že sa test neupravoval preto, aby prešiel kód."
+          fi
+
   # Applies every migration to an EMPTY database, in filename order — exactly
   # what a fresh project would do. Migrations applied one-by-one to a live
   # Supabase never prove this: the order there could differ, and a file that

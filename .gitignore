@@ -43,3 +43,14 @@ next-env.d.ts
 
 # playwright (e2e snapshots from MCP)
 .playwright-mcp/
+
+# Claude Code — osobné nastavenia, nie tímové
+.claude/settings.local.json
+CLAUDE.local.md
+
+# Claude Code — worktrees a cache hookov
+.claude/worktrees/
+.claude/.cache/
+
+# Handoff poznámky sú osobné; specs/INDEX.md je tímový a commituje sa
+specs/*.handoff.md

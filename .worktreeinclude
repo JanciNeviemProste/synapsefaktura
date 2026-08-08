@@ -1,0 +1,10 @@
+# Súbory, ktoré sú v .gitignore, ale nový worktree ich potrebuje.
+# Claude Code ich prekopíruje pri `claude --worktree <meno>`.
+# Bez tohto ti v každom worktree padne dev server na chýbajúcich env premenných
+# a ty budeš viniť worktrees.
+
+.env
+.env.local
+.env.development.local
+.env.test.local
+.claude/settings.local.json
