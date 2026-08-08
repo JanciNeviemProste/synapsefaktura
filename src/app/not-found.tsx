@@ -11,7 +11,9 @@ export default function NotFound() {
           404
         </p>
         <div>
-          <h1 className="text-xl font-semibold">Stránka sa nenašla</h1>
+          <h1 className="font-heading text-[clamp(20px,3vw,28px)] tracking-tight">
+            Stránka sa nenašla
+          </h1>
           <p className="text-muted-foreground text-sm">
             Stránku, ktorú hľadáš, sa nepodarilo nájsť.
           </p>
