@@ -68,3 +68,29 @@ $$;
 insert into auth.users (id, email)
 values ('00000000-0000-0000-0000-000000000001', 'test@example.com')
 on conflict (id) do nothing;
+
+-- ── Prístupové práva tak, ako ich dáva skutočné Supabase ────────────────────
+--
+-- RLS je DRUHÁ vrstva. Prvá je obyčajný GRANT — bez neho Postgres odmietne
+-- dotaz skôr, než sa k politikám vôbec dostane. Supabase tieto granty nastaví
+-- pri zakladaní projektu, takže migrácie ich neobsahujú a v stube chýbali.
+--
+-- Prejavilo sa to presne tak, ako to vyzerá zle: prvý beh RLS testov spadol
+-- na `permission denied for table documents`. Nebola to chyba politiky, ale
+-- toho, že rola `authenticated` nemala na tabuľku vôbec právo.
+--
+-- `alter default privileges` platí na objekty vytvorené NESKÔR — a tento súbor
+-- beží pred migráciami, takže pokryje všetky tabuľky, ktoré migrácie založia.
+grant usage on schema public to anon, authenticated, service_role;
+
+alter default privileges in schema public
+  grant all on tables to anon, authenticated, service_role;
+alter default privileges in schema public
+  grant all on sequences to anon, authenticated, service_role;
+alter default privileges in schema public
+  grant execute on functions to anon, authenticated, service_role;
+
+-- Pozn.: `grant all on tables to anon` je zámerne verné Supabase, nie
+-- odporúčanie. Práve preto je dôležité, že migrácia
+-- `20260805090000_lock_save_document_rpc.sql` beží až po tomto a to právo
+-- cielene odoberá — v CI sa tým overuje aj to, že revoke naozaj zaberie.
