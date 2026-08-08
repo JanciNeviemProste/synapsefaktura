@@ -21,6 +21,15 @@ import type {
  *
  * A real provider is a drop-in implementation of `DigitalPostmanProvider` that
  * calls the certified AP's HTTP API instead of this loopback.
+ *
+ * PRECO TU NIE JE `organization_id` FILTER, hoci sa pouziva service role:
+ * scoping tu drzi `receiver_peppol_id`. Peppol ID slovenskeho subjektu ma tvar
+ * `0245:<DIC>` a DIC je unikatne — takze filter na prijemcu JE filter na firmu,
+ * len inym klucom. Pridanie `organization_id` by navyse rozbilo loopback: pri
+ * nom je odosielatel ina organizacia nez prijemca, co je cely zmysel testu.
+ *
+ * Realny provider tuto uvahu nededi — ten dostava spravy zvonku a musi si
+ * prijemcu overit sam.
  */
 export class MockPostmanProvider implements DigitalPostmanProvider {
   readonly name = "mock"

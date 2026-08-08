@@ -1,0 +1,30 @@
+# Koncovky riadkov: v repe aj v pracovnom strome vždy LF.
+#
+# Bez tohto súboru rozhoduje `core.autocrlf`, ktorý má Git na Windows štandardne
+# zapnutý — pri `git checkout` prepíše LF na CRLF. Prettier má predvolené
+# `endOfLine: "lf"`, takže `pnpm format:check` potom **na Windows padne na
+# každom súbore**, hoci v CI na Linuxe prejde.
+#
+# Zmerané 2026-08-08: hneď po `git checkout main` hlásil format:check 118
+# súborov, pričom v gite boli všetky správne. Presne taká kontrola sa po druhom
+# falošnom poplachu vypne — a s ňou aj tá časť, ktorá chytá skutočné chyby.
+#
+# `text=auto eol=lf` má prednosť pred `core.autocrlf`, takže to platí pre oboch
+# bez ohľadu na to, ako má kto nastavený git.
+* text=auto eol=lf
+
+# Binárne súbory sa nesmú normalizovať — poškodilo by ich to.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.avif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.xlsx binary
+*.zip binary

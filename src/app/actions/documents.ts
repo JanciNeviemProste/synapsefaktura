@@ -353,8 +353,13 @@ export async function markAsSent(
   // Organizaciu posielame aj tu: RLS pusti vsetky organizacie pouzivatela,
   // takze bez nej by odberatel mohol dostat fakturu s hlavickou a IBAN-om
   // druhej firmy, ktorej je odosielatel clenom.
+  // `?? undefined` tu bolo a znamenalo to opak toho, co komentar vyssie slubuje:
+  // bez organizacie sa filtre v renderInvoicePdf vypli uplne. Bez firmy sa PDF
+  // nevykresluje.
   const orgId = await getCurrentOrgId(supabase)
-  const rendered = await renderInvoicePdf(supabase, id, orgId ?? undefined)
+  if (!orgId) return { ok: false, error: "Firma sa nenašla." }
+
+  const rendered = await renderInvoicePdf(supabase, id, orgId)
   if (!rendered) return { ok: false, error: "Doklad sa nenašiel." }
   const { buffer, doc, contact, org } = rendered
 

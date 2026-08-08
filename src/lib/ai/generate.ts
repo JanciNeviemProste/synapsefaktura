@@ -94,19 +94,31 @@ type GateResult =
 /**
  * Resolve the client + org used for gating and usage accounting.
  *
- * Volajuci moze orgId dodat sam — to je jedina cesta pre systemove behy (cron),
- * kde niet session a `getCurrentOrgId()` by vratil null. V takom pripade
- * pouzivame service-role klienta, lebo anonymne RLS by na plan aj na `ai_usage`
- * nedovidelo. POZOR: dodane orgId musi volajuci overit sam, nikdy ho neber
- * priamo z requestu pouzivatela.
+ * `systemOrgId` je jedina cesta pre systemove behy (cron), kde niet session
+ * a `getCurrentOrgId()` by vratil null. Vtedy treba service-role klienta, lebo
+ * anonymne RLS by na plan ani na `ai_usage` nedovidelo.
+ *
+ * Predtym tu stal komentar "dodane orgId musi volajuci overit sam" — a to je
+ * presne ten druh ochrany, ktory raz niekto prehliadne. Teraz to kontroluje
+ * kod: ked session EXISTUJE a jej organizacia nesedi so `systemOrgId`,
+ * odmietneme. Cron ziadnu session nema, takze systemova cesta ide dalej —
+ * ale z poziadavky pouzivatela sa cudzie orgId uz podstrcit neda.
  */
 async function resolveOrg(
-  orgId?: string,
+  systemOrgId?: string,
 ): Promise<{ db: Db; orgId: string } | null> {
   try {
-    if (orgId) return { db: createAdminClient(), orgId }
     const supabase = await createClient()
     const current = await getCurrentOrgId(supabase)
+
+    if (systemOrgId) {
+      if (current && current !== systemOrgId) {
+        console.error("[ai] systemOrgId nesedi so session — odmietam")
+        return null
+      }
+      return { db: createAdminClient(), orgId: systemOrgId }
+    }
+
     if (!current) return null
     return { db: supabase, orgId: current }
   } catch (err) {
@@ -161,15 +173,15 @@ async function checkCostCap(
 
 /**
  * Resolve the org and enforce the plan gate for an AI feature, if gated, plus
- * the monthly cost cap. `orgId` je volitelne — dodaj ho vsade, kde niet session
+ * the monthly cost cap. `systemOrgId` je volitelne — dodaj ho vsade, kde niet session
  * (cron). Bez znamej organizacie zamietame (fail-closed): inak by AI bezala aj
  * pre Free organizacie a bez akehokolvek stropu nakladov.
  */
 async function checkPlanGate(
   feature: AiFeature,
-  orgId?: string,
+  systemOrgId?: string,
 ): Promise<GateResult> {
-  const ctx = await resolveOrg(orgId)
+  const ctx = await resolveOrg(systemOrgId)
   if (!ctx) {
     console.error("[ai] plan gate: unknown org — denying", feature)
     return {
@@ -209,17 +221,17 @@ type Usage = { inputTokens?: number; outputTokens?: number } | undefined
 
 /**
  * Best-effort per-org usage/cost logging to ai_usage (§4/§7). Never throws.
- * `orgId` chodi rovnakou cestou ako do gate-u — bez neho by sa systemove behy
+ * `systemOrgId` chodi rovnakou cestou ako do gate-u — bez neho by sa systemove behy
  * (cron) nikde nezauctovali a mesacny strop by nemal z coho ratat.
  */
 async function logUsage(
   feature: AiFeature,
   model: string,
   usage: Usage,
-  orgId?: string,
+  systemOrgId?: string,
 ) {
   try {
-    const ctx = await resolveOrg(orgId)
+    const ctx = await resolveOrg(systemOrgId)
     if (!ctx) {
       console.error("[ai] usage not logged: unknown org", feature, model)
       return
@@ -246,7 +258,7 @@ async function logUsage(
 /**
  * Structured (zod-validated) generation. Pass `prompt` for text-only, or
  * `messages` for multimodal (OCR — image/file parts). Degrades gracefully when
- * no AI key is configured. `orgId` dodaj vsade, kde niet session (cron).
+ * no AI key is configured. `systemOrgId` dodaj vsade, kde niet session (cron). NIKDY ho neber z requestu.
  */
 export async function generateStructured<SCHEMA extends z.ZodType>(opts: {
   feature: AiFeature
@@ -254,7 +266,7 @@ export async function generateStructured<SCHEMA extends z.ZodType>(opts: {
   system?: string
   prompt?: string
   messages?: ModelMessage[]
-  orgId?: string
+  systemOrgId?: string
 }): Promise<AiResult<z.infer<SCHEMA>>> {
   if (!hasAiKey()) {
     return {
@@ -264,7 +276,7 @@ export async function generateStructured<SCHEMA extends z.ZodType>(opts: {
       error: "AI nie je nakonfigurované.",
     }
   }
-  const gate = await checkPlanGate(opts.feature, opts.orgId)
+  const gate = await checkPlanGate(opts.feature, opts.systemOrgId)
   if (!gate.ok) return gate
   try {
     const { object, usage } = await generateObject({
@@ -282,7 +294,7 @@ export async function generateStructured<SCHEMA extends z.ZodType>(opts: {
         ? { providerOptions: { google: { structuredOutputs: false } } }
         : {}),
     })
-    await logUsage(opts.feature, AI_MODEL, usage, opts.orgId)
+    await logUsage(opts.feature, AI_MODEL, usage, opts.systemOrgId)
     return { ok: true, data: object as z.infer<SCHEMA> }
   } catch (err) {
     // Bez logu su vypadok providera, chyba schemy a vycerpana kvota
@@ -305,7 +317,7 @@ export async function generateStructured<SCHEMA extends z.ZodType>(opts: {
 /**
  * Free-form / tool-using chat (assistant, NL invoice). Returns the final text and
  * the per-step trace. Degrades gracefully when no AI key is configured.
- * `orgId` dodaj vsade, kde niet session (cron).
+ * `systemOrgId` dodaj vsade, kde niet session (cron). NIKDY ho neber z requestu.
  */
 export async function generateChat(opts: {
   feature: AiFeature
@@ -313,7 +325,7 @@ export async function generateChat(opts: {
   messages: ModelMessage[]
   tools?: ToolSet
   maxSteps?: number
-  orgId?: string
+  systemOrgId?: string
 }): Promise<AiResult<{ text: string }>> {
   if (!hasAiKey()) {
     return {
@@ -323,7 +335,7 @@ export async function generateChat(opts: {
       error: "AI nie je nakonfigurované.",
     }
   }
-  const gate = await checkPlanGate(opts.feature, opts.orgId)
+  const gate = await checkPlanGate(opts.feature, opts.systemOrgId)
   if (!gate.ok) return gate
   try {
     const result = await generateText({
@@ -333,7 +345,7 @@ export async function generateChat(opts: {
       tools: opts.tools,
       stopWhen: stepCountIs(opts.maxSteps ?? 6),
     })
-    await logUsage(opts.feature, AI_MODEL, result.usage, opts.orgId)
+    await logUsage(opts.feature, AI_MODEL, result.usage, opts.systemOrgId)
     return { ok: true, data: { text: result.text } }
   } catch (err) {
     // Bez logu su vypadok providera, chyba nastroja a vycerpana kvota
