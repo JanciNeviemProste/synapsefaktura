@@ -12,10 +12,7 @@ import {
   totalsMismatch,
   type EditableField,
 } from "@/lib/expenses/capture-edit"
-import {
-  MAX_ATTACHMENT_BYTES,
-  tooLargeMessage,
-} from "@/lib/upload/limits"
+import { MAX_ATTACHMENT_BYTES, tooLargeMessage } from "@/lib/upload/limits"
 import { uploadDirect } from "@/lib/upload/direct"
 import { useUpgrade } from "@/components/billing/upgrade-dialog"
 import {

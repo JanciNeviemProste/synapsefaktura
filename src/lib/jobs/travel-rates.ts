@@ -145,15 +145,22 @@ export async function checkStatutoryTravelRates(): Promise<TravelRateCheckResult
       error: insertError.message,
       sourceRef: parsed.rates.sourceRef,
     })
-    return { checked: true, proposed: false, reason: "návrh sa nepodarilo uložiť" }
+    return {
+      checked: true,
+      proposed: false,
+      reason: "návrh sa nepodarilo uložiť",
+    }
   }
 
-  console.log("[travel-rates] najdena nova zakonna sadzba, caka na potvrdenie", {
-    sourceRef: parsed.rates.sourceRef,
-    validFrom: parsed.rates.validFrom,
-    passenger: parsed.rates.passenger,
-    motorcycle: parsed.rates.motorcycle,
-  })
+  console.log(
+    "[travel-rates] najdena nova zakonna sadzba, caka na potvrdenie",
+    {
+      sourceRef: parsed.rates.sourceRef,
+      validFrom: parsed.rates.validFrom,
+      passenger: parsed.rates.passenger,
+      motorcycle: parsed.rates.motorcycle,
+    },
+  )
 
   return {
     checked: true,

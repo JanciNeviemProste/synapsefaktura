@@ -3,10 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { createClient } from "@/lib/supabase/server"
 import { getCurrentOrgId } from "@/lib/auth/current-org"
-import {
-  parseContactsTable,
-  contactsFromRows,
-} from "@/lib/import/contacts"
+import { parseContactsTable, contactsFromRows } from "@/lib/import/contacts"
 import { xlsxToTable, looksLikeXlsx } from "@/lib/import/xlsx"
 import { MAX_IMPORT_BYTES, tooLargeMessage } from "@/lib/upload/limits"
 import { contactSchema, type ContactInput } from "@/lib/validation/contact"
@@ -84,7 +81,6 @@ export async function deleteContact(id: string): Promise<ContactActionResult> {
   return { ok: true, id }
 }
 
-
 export type ContactImportOutcome =
   | { ok: true; imported: number; skipped: number; errors: string[] }
   | { ok: false; error: string }
@@ -125,7 +121,8 @@ export async function importContacts(
     } catch {
       return {
         ok: false,
-        error: "Zošit sa nepodarilo prečítať. Skús ho uložiť znova ako .xlsx alebo CSV.",
+        error:
+          "Zošit sa nepodarilo prečítať. Skús ho uložiť znova ako .xlsx alebo CSV.",
       }
     }
   } else {
@@ -134,7 +131,8 @@ export async function importContacts(
   if (parsed.contacts.length === 0) {
     return {
       ok: false,
-      error: parsed.errors[0] ?? "V tabuľke nie je ani jeden použiteľný riadok.",
+      error:
+        parsed.errors[0] ?? "V tabuľke nie je ani jeden použiteľný riadok.",
     }
   }
 

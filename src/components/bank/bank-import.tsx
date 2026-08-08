@@ -54,18 +54,18 @@ export function BankImport({ transactions }: { transactions: Tx[] }) {
 
     startTransition(async () => {
       try {
-      const content = await file.text()
-      const res = await importBankCsv(content)
-      if (!res.ok) {
-        toast.error(res.errors[0] ?? "Import zlyhal.")
-        return
-      }
-      toast.success(
-        `Importovaných ${res.imported}, spárovaných ${res.matched}, nespárovaných ${res.unmatched}.`,
-      )
-      if (res.errors.length)
-        toast.warning(`${res.errors.length} riadkov preskočených.`)
-      router.refresh()
+        const content = await file.text()
+        const res = await importBankCsv(content)
+        if (!res.ok) {
+          toast.error(res.errors[0] ?? "Import zlyhal.")
+          return
+        }
+        toast.success(
+          `Importovaných ${res.imported}, spárovaných ${res.matched}, nespárovaných ${res.unmatched}.`,
+        )
+        if (res.errors.length)
+          toast.warning(`${res.errors.length} riadkov preskočených.`)
+        router.refresh()
       } catch {
         toast.error("Výpis sa nepodarilo načítať. Skús to znova.")
       }
@@ -76,7 +76,9 @@ export function BankImport({ transactions }: { transactions: Tx[] }) {
   return (
     <div className="mx-auto grid max-w-5xl gap-6">
       <div>
-        <h1 className="font-heading text-[clamp(24px,3.2vw,34px)] leading-tight tracking-tight">Banka</h1>
+        <h1 className="font-heading text-[clamp(24px,3.2vw,34px)] leading-tight tracking-tight">
+          Banka
+        </h1>
         <p className="text-muted-foreground text-sm">
           Import bankového výpisu (CSV) a automatické párovanie platieb.
         </p>

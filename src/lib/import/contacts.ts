@@ -139,7 +139,9 @@ export function contactsFromRows(
     }
     const key = normalizeHeader(name)
     if (seen.has(key)) {
-      errors.push(`Riadok ${lineNo}: „${name}“ je v súbore viackrát, preskočené.`)
+      errors.push(
+        `Riadok ${lineNo}: „${name}“ je v súbore viackrát, preskočené.`,
+      )
       return
     }
     seen.add(key)

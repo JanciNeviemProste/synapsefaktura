@@ -107,8 +107,8 @@ export function OrgSettings({
       <CardHeader>
         <CardTitle>Firemné údaje</CardTitle>
         <CardDescription>
-          Údaje, ktoré sa tlačia na doklady — dodávateľ, adresa, režim DPH
-          a predvolené hodnoty nových faktúr.
+          Údaje, ktoré sa tlačia na doklady — dodávateľ, adresa, režim DPH a
+          predvolené hodnoty nových faktúr.
         </CardDescription>
       </CardHeader>
 

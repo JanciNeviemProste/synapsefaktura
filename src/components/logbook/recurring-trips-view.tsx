@@ -444,7 +444,9 @@ export function RecurringTripsView({
               <Label>Klient</Label>
               <Select
                 value={contactId || "none"}
-                onValueChange={(v) => setContactId(v === "none" ? "" : (v ?? ""))}
+                onValueChange={(v) =>
+                  setContactId(v === "none" ? "" : (v ?? ""))
+                }
               >
                 <SelectTrigger className="w-full">
                   <SelectValue />
@@ -515,8 +517,8 @@ export function RecurringTripsView({
           <AlertDialogHeader>
             <AlertDialogTitle>Zmazať pravidelnú jazdu?</AlertDialogTitle>
             <AlertDialogDescription>
-              Zmaže sa len šablóna. Jazdy, ktoré už z nej vznikli, zostávajú
-              v knihe jázd nedotknuté.
+              Zmaže sa len šablóna. Jazdy, ktoré už z nej vznikli, zostávajú v
+              knihe jázd nedotknuté.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

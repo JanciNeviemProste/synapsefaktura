@@ -164,7 +164,7 @@ export function ExpensePaymentForm({
                   className="bg-muted/30 flex items-center gap-2 rounded-md px-2 py-1.5 text-sm"
                 >
                   <span className="tabular-nums">{fmtDate(p.paid_at)}</span>
-                  <span className="tabular-nums font-medium">
+                  <span className="font-medium tabular-nums">
                     {formatMoney(p.amount, expense.currency)}
                   </span>
                   <Badge variant="outline">

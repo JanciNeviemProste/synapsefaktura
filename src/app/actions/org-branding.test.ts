@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { FakeStorage, fakeDb, pngBytes, type FakeDbOptions } from "@/test/fake-supabase"
+import {
+  FakeStorage,
+  fakeDb,
+  pngBytes,
+  type FakeDbOptions,
+} from "@/test/fake-supabase"
 
 /**
  * Testy zápisu loga, podpisu a pečiatky firmy.
@@ -14,7 +19,9 @@ const storage = new FakeStorage()
 let db = fakeDb()
 let currentOrg: string | null = "org-1"
 
-vi.mock("@/lib/supabase/server", () => ({ createClient: async () => db.client }))
+vi.mock("@/lib/supabase/server", () => ({
+  createClient: async () => db.client,
+}))
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => storage.client(),
 }))
@@ -88,7 +95,9 @@ describe("setBrandingImage", () => {
 
   it("staré logo po výmene zmaže", async () => {
     const old = "org-1/branding/1753000000000-stare.png"
-    setup({ organization: { logo_url: old, signature_url: null, stamp_url: null } })
+    setup({
+      organization: { logo_url: old, signature_url: null, stamp_url: null },
+    })
     storage.put(old, pngBytes())
     storage.put(NEW, pngBytes())
 
@@ -101,7 +110,11 @@ describe("setBrandingImage", () => {
   it("pri výmene loga sa podpisu nedotkne", async () => {
     const signature = "org-1/branding/podpis.png"
     setup({
-      organization: { logo_url: null, signature_url: signature, stamp_url: null },
+      organization: {
+        logo_url: null,
+        signature_url: signature,
+        stamp_url: null,
+      },
     })
     storage.put(signature, pngBytes())
     storage.put(NEW, pngBytes())
@@ -111,7 +124,9 @@ describe("setBrandingImage", () => {
   })
 
   it("rovnakú cestu nezmaže sama sebe", async () => {
-    setup({ organization: { logo_url: NEW, signature_url: null, stamp_url: null } })
+    setup({
+      organization: { logo_url: NEW, signature_url: null, stamp_url: null },
+    })
     storage.put(NEW, pngBytes())
     const res = await setBrandingImage("logo", NEW)
     expect(res.ok).toBe(true)

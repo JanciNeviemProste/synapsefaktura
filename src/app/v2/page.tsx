@@ -81,7 +81,11 @@ export default function V2Page() {
           <span style={{ color: MUTED }}>:~$</span>
         </Link>
         <nav className="flex items-center gap-5">
-          <Link href="/login" style={{ color: MUTED }} className="hover:underline underline-offset-4">
+          <Link
+            href="/login"
+            style={{ color: MUTED }}
+            className="underline-offset-4 hover:underline"
+          >
             login
           </Link>
           <Link
@@ -96,7 +100,10 @@ export default function V2Page() {
 
       {/* Hero */}
       <section className="mx-auto max-w-5xl px-6 pt-20 pb-16">
-        <p className="mb-4 text-xs tracking-[0.25em] uppercase" style={{ color: MUTED }}>
+        <p
+          className="mb-4 text-xs tracking-[0.25em] uppercase"
+          style={{ color: MUTED }}
+        >
           Slovenská AI fakturácia · Peppol 2027 ready
         </p>
         <h1 className="max-w-3xl text-3xl leading-snug font-bold sm:text-5xl sm:leading-snug">
@@ -106,8 +113,8 @@ export default function V2Page() {
         </h1>
         <p className="mt-5 max-w-xl leading-relaxed" style={{ color: MUTED }}>
           Žiadne klikanie cez desať formulárov. Povieš, čo fakturuješ — Synapse
-          pripraví koncept dokladu, skontroluje náležitosti a DPH a ty ho
-          jedným klikom vystavíš a odošleš. Bločky vyťaží z fotky.
+          pripraví koncept dokladu, skontroluje náležitosti a DPH a ty ho jedným
+          klikom vystavíš a odošleš. Bločky vyťaží z fotky.
         </p>
 
         {/* Terminal window */}
@@ -119,26 +126,39 @@ export default function V2Page() {
             className="flex items-center gap-2 px-4 py-2.5 text-xs"
             style={{ borderBottom: `1px solid ${RULE}`, color: MUTED }}
           >
-            <span className="size-2.5 rounded-full" style={{ backgroundColor: RULE }} />
-            <span className="size-2.5 rounded-full" style={{ backgroundColor: RULE }} />
-            <span className="size-2.5 rounded-full" style={{ backgroundColor: AMBER_DIM }} />
+            <span
+              className="size-2.5 rounded-full"
+              style={{ backgroundColor: RULE }}
+            />
+            <span
+              className="size-2.5 rounded-full"
+              style={{ backgroundColor: RULE }}
+            />
+            <span
+              className="size-2.5 rounded-full"
+              style={{ backgroundColor: AMBER_DIM }}
+            />
             <span className="ml-2">synapse — fakturácia</span>
           </div>
           <div className="flex flex-col gap-1.5 p-5 text-sm leading-relaxed sm:p-6">
             <p>
-              <span style={{ color: AMBER }}>$</span> vyfakturuj Novákovi 3 hodiny
-              konzultácie po 50 €
+              <span style={{ color: AMBER }}>$</span> vyfakturuj Novákovi 3
+              hodiny konzultácie po 50 €
               <span
                 aria-hidden
                 className="ml-1 inline-block h-[1.1em] w-[0.55em] translate-y-[0.2em] animate-pulse motion-reduce:animate-none"
                 style={{ backgroundColor: AMBER }}
               />
             </p>
-            <p style={{ color: MUTED }}>✓ koncept faktúry 2026-0042 · Ján Novák</p>
-            <p style={{ color: MUTED }}>✓ 3 × konzultácia à 50,00 € · DPH 23 % = 34,50 €</p>
             <p style={{ color: MUTED }}>
-              ✓ spolu <span style={{ color: TEXT }}>184,50 €</span> · QR platba · PDF
-              pripravené na odoslanie
+              ✓ koncept faktúry 2026-0042 · Ján Novák
+            </p>
+            <p style={{ color: MUTED }}>
+              ✓ 3 × konzultácia à 50,00 € · DPH 23 % = 34,50 €
+            </p>
+            <p style={{ color: MUTED }}>
+              ✓ spolu <span style={{ color: TEXT }}>184,50 €</span> · QR platba
+              · PDF pripravené na odoslanie
             </p>
           </div>
         </div>
@@ -161,7 +181,8 @@ export default function V2Page() {
       <section style={{ borderTop: `1px solid ${RULE}` }}>
         <div className="mx-auto max-w-5xl px-6 py-16">
           <h2 className="mb-8 text-xl font-bold">
-            <span style={{ color: MUTED }}>##</span> Čo všetko vybavíš jednou vetou
+            <span style={{ color: MUTED }}>##</span> Čo všetko vybavíš jednou
+            vetou
           </h2>
           <div className="grid gap-6 lg:grid-cols-3">
             {COMMANDS.map((c) => (
@@ -178,7 +199,10 @@ export default function V2Page() {
                     <p key={line}>{line}</p>
                   ))}
                 </div>
-                <p className="mt-auto pt-2 text-xs" style={{ color: AMBER_DIM }}>
+                <p
+                  className="mt-auto pt-2 text-xs"
+                  style={{ color: AMBER_DIM }}
+                >
                   — {c.note}
                 </p>
               </article>
@@ -233,23 +257,34 @@ export default function V2Page() {
                   }}
                 >
                   <div className="flex items-baseline justify-between">
-                    <h3 className="font-bold" style={{ color: featured ? AMBER : TEXT }}>
+                    <h3
+                      className="font-bold"
+                      style={{ color: featured ? AMBER : TEXT }}
+                    >
                       --{plan.tier}
                     </h3>
                     {featured && (
-                      <span className="text-[10px] tracking-[0.2em] uppercase" style={{ color: AMBER }}>
+                      <span
+                        className="text-[10px] tracking-[0.2em] uppercase"
+                        style={{ color: AMBER }}
+                      >
                         odporúčané
                       </span>
                     )}
                   </div>
                   <p className="text-2xl font-bold">{price(tier)}</p>
-                  <p className="text-xs leading-relaxed" style={{ color: MUTED }}>
+                  <p
+                    className="text-xs leading-relaxed"
+                    style={{ color: MUTED }}
+                  >
                     {plan.blurb}
                   </p>
                   <p className="text-xs" style={{ color: MUTED }}>
                     doklady:{" "}
                     <span style={{ color: TEXT }}>
-                      {plan.docsPerMonth === null ? "∞" : `${plan.docsPerMonth}/mes`}
+                      {plan.docsPerMonth === null
+                        ? "∞"
+                        : `${plan.docsPerMonth}/mes`}
                     </span>
                   </p>
                   <Link
@@ -261,7 +296,9 @@ export default function V2Page() {
                         : { border: `1px solid ${AMBER_DIM}`, color: TEXT }
                     }
                   >
-                    {tier === "free" ? "./start --free" : `./trial --${plan.tier}`}
+                    {tier === "free"
+                      ? "./start --free"
+                      : `./trial --${plan.tier}`}
                   </Link>
                 </div>
               )
@@ -275,9 +312,9 @@ export default function V2Page() {
         <div className="mx-auto flex max-w-5xl flex-col gap-6 px-6 py-16">
           <p className="text-sm leading-relaxed" style={{ color: MUTED }}>
             <span style={{ color: AMBER }}>!</span> deadline: od{" "}
-            <span style={{ color: TEXT }}>1. 1. 2027</span> je e-faktúra povinná pre
-            platiteľov DPH (Peppol / IS EFA). Synapse ju posiela natívne — ty
-            nemusíš riešiť nič.
+            <span style={{ color: TEXT }}>1. 1. 2027</span> je e-faktúra povinná
+            pre platiteľov DPH (Peppol / IS EFA). Synapse ju posiela natívne —
+            ty nemusíš riešiť nič.
           </p>
           <div className="flex flex-wrap items-center gap-4">
             <Link
@@ -289,7 +326,7 @@ export default function V2Page() {
             </Link>
             <Link
               href="/e-faktura-2027"
-              className="text-sm hover:underline underline-offset-4"
+              className="text-sm underline-offset-4 hover:underline"
               style={{ color: MUTED }}
             >
               man e-faktura-2027

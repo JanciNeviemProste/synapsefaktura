@@ -34,7 +34,10 @@ export class FakeStorage {
         createBucket: async (name: string) => {
           // Supabase pri existujucom buckete vrati chybu, nie ticho uspech.
           if (this.buckets.includes(name)) {
-            return { data: null, error: { message: "The resource already exists" } }
+            return {
+              data: null,
+              error: { message: "The resource already exists" },
+            }
           }
           this.buckets.push(name)
           return { data: { name }, error: null }
@@ -43,7 +46,11 @@ export class FakeStorage {
           createSignedUploadUrl: async (path: string) => {
             this.signed.push(path)
             return {
-              data: { path, token: `token-${this.signed.length}`, signedUrl: "x" },
+              data: {
+                path,
+                token: `token-${this.signed.length}`,
+                signedUrl: "x",
+              },
               error: null,
             }
           },

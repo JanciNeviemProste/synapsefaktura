@@ -12,6 +12,7 @@ Nahraď `TVOJA-DOMENA` a `[Meno]`.
 Odstupy: e-mail 1 → +4 dni → e-mail 2 → +5 dní → e-mail 3 (breakup).
 
 ### E-mail 1
+
 **Predmet:** e-faktúra 2027
 
 > Dobrý deň [Meno],
@@ -30,6 +31,7 @@ Odstupy: e-mail 1 → +4 dni → e-mail 2 → +5 dní → e-mail 3 (breakup).
 > [Meno odosielateľa]
 
 ### E-mail 2 (+4 dni, nový uhol — čas/AI)
+
 **Predmet:** bločky klientov
 
 > Dobrý deň [Meno],
@@ -44,6 +46,7 @@ Odstupy: e-mail 1 → +4 dni → e-mail 2 → +5 dní → e-mail 3 (breakup).
 > [Meno odosielateľa]
 
 ### E-mail 3 (+5 dní, breakup)
+
 **Predmet:** posledný raz
 
 > Dobrý deň [Meno],
@@ -67,12 +70,14 @@ Krátke, ľudské, peer. Posielaj len ľuďom, ktorých aspoň trochu poznáš (
 > toho? Pošlem ti odkaz. 🙂
 
 ### Variant ešte kratší (do komentára/DM)
+
 > Ahoj, staviam AI fakturáciu pre živnostníkov (faktúra vetou + pripravená na
 > 2027). Vyskúšaš a povieš mi názor? Zadarmo. 🙏
 
 ---
 
 ## Pravidlá
+
 - Jeden ask na e-mail, nízke trenie („dávalo by zmysel sa pozrieť?").
 - „Vy/vaše" > „ja/my". Personalizuj úvod (spravujete viac firiem, konkrétny signál).
 - Žiadne HTML, obrázky, viac odkazov. Predmet krátky, nudný, „interný".

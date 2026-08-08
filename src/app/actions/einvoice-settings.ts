@@ -57,7 +57,10 @@ export async function updateEInvoiceSettings(
   const peppolId = rawPeppolId === "" ? null : rawPeppolId
 
   if (peppolId !== null && !isValidPeppolId(peppolId)) {
-    return { ok: false, error: "Neplatný formát Peppol ID (napr. 0245:2020317068)." }
+    return {
+      ok: false,
+      error: "Neplatný formát Peppol ID (napr. 0245:2020317068).",
+    }
   }
 
   const supabase = await createClient()

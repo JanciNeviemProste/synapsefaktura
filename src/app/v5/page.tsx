@@ -31,7 +31,10 @@ const RULE = "#E2DAC8"
 
 const DAY = [
   { time: "6:40", text: "Náradie do dodávky, kávu do ruky. Ideš na stavbu." },
-  { time: "12:15", text: "Obed. Odfotíš bloček z pumpy — AI ho prečíta a vyplní, ty len skontroluješ a potvrdíš." },
+  {
+    time: "12:15",
+    text: "Obed. Odfotíš bloček z pumpy — AI ho prečíta a vyplní, ty len skontroluješ a potvrdíš.",
+  },
   { time: "17:50", text: "Hotovo, balíš. Zákazník spokojný, ty tiež." },
   {
     time: "18:03",
@@ -84,7 +87,11 @@ export default function V5Page() {
   return (
     <div
       className={`${bricolage.variable} min-h-screen`}
-      style={{ backgroundColor: PAPER, color: INK, fontFamily: "var(--font-v5)" }}
+      style={{
+        backgroundColor: PAPER,
+        color: INK,
+        fontFamily: "var(--font-v5)",
+      }}
     >
       {/* Header */}
       <header className="mx-auto flex h-16 max-w-5xl items-center justify-between px-6">
@@ -92,7 +99,11 @@ export default function V5Page() {
           Synapse Faktúra
         </Link>
         <nav className="flex items-center gap-5 text-sm font-medium">
-          <Link href="/login" className="hover:underline underline-offset-4" style={{ color: CLAY }}>
+          <Link
+            href="/login"
+            className="underline-offset-4 hover:underline"
+            style={{ color: CLAY }}
+          >
             Prihlásiť sa
           </Link>
           <Link
@@ -107,7 +118,10 @@ export default function V5Page() {
 
       {/* Hero */}
       <section className="mx-auto max-w-3xl px-6 pt-16 pb-14 text-center sm:pt-24">
-        <p className="mb-4 text-sm font-semibold tracking-wide" style={{ color: PINE }}>
+        <p
+          className="mb-4 text-sm font-semibold tracking-wide"
+          style={{ color: PINE }}
+        >
           Pre remeselníkov, majstrov a živnostníkov
         </p>
         <h1 className="text-4xl leading-[1.15] font-bold sm:text-6xl">
@@ -120,9 +134,13 @@ export default function V5Page() {
           </span>
           .
         </h1>
-        <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed" style={{ color: CLAY }}>
+        <p
+          className="mx-auto mt-6 max-w-xl text-lg leading-relaxed"
+          style={{ color: CLAY }}
+        >
           Celý deň makáš rukami — večer si nezaslúžiš papierovačky. Faktúru
-          nadiktuješ jednou vetou, bločky odfotíš a máš pokoj. Aj s e-faktúrou 2027.
+          nadiktuješ jednou vetou, bločky odfotíš a máš pokoj. Aj s e-faktúrou
+          2027.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
           <Link
@@ -150,7 +168,10 @@ export default function V5Page() {
         <h2 className="mb-10 text-center text-2xl font-bold sm:text-3xl">
           Utorok s Synapse Faktúrou
         </h2>
-        <ol className="relative flex flex-col gap-7 pl-8" style={{ borderLeft: `3px solid ${RULE}` }}>
+        <ol
+          className="relative flex flex-col gap-7 pl-8"
+          style={{ borderLeft: `3px solid ${RULE}` }}
+        >
           {DAY.map((step) => (
             <li key={step.time} className="relative">
               <span
@@ -161,11 +182,16 @@ export default function V5Page() {
                   border: `3px solid ${step.highlight ? PINE : CLAY}`,
                 }}
               />
-              <p className="text-sm font-bold tabular-nums" style={{ color: step.highlight ? PINE : CLAY }}>
+              <p
+                className="text-sm font-bold tabular-nums"
+                style={{ color: step.highlight ? PINE : CLAY }}
+              >
                 {step.time}
               </p>
               <p
-                className={step.highlight ? "mt-1 rounded-xl p-4 font-medium" : "mt-1"}
+                className={
+                  step.highlight ? "mt-1 rounded-xl p-4 font-medium" : "mt-1"
+                }
                 style={
                   step.highlight
                     ? { backgroundColor: CARD, border: `1px solid ${RULE}` }
@@ -202,9 +228,12 @@ export default function V5Page() {
       {/* Pricing — simple, Free vs Pro focus */}
       <section id="cennik" className="mx-auto max-w-3xl px-6 py-14 text-center">
         <h2 className="text-2xl font-bold sm:text-3xl">Poctivé ceny</h2>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed" style={{ color: CLAY }}>
-          Začneš zadarmo. Keď ti fakturácia vetou prirastie k srdcu, Pro stojí menej
-          ako jedna hodina tvojej práce.
+        <p
+          className="mx-auto mt-2 max-w-md text-sm leading-relaxed"
+          style={{ color: CLAY }}
+        >
+          Začneš zadarmo. Keď ti fakturácia vetou prirastie k srdcu, Pro stojí
+          menej ako jedna hodina tvojej práce.
         </p>
         <div className="mt-10 grid gap-6 sm:grid-cols-2">
           {(["free", "pro"] as const).map((tier) => {
@@ -251,8 +280,8 @@ export default function V5Page() {
           })}
         </div>
         <p className="mt-6 text-xs" style={{ color: CLAY }}>
-          Máš viac firiem alebo účtovníčku? Business za {price("business")}/mes pridá
-          ďalších používateľov, odosielanie e-faktúr a API.
+          Máš viac firiem alebo účtovníčku? Business za {price("business")}/mes
+          pridá ďalších používateľov, odosielanie e-faktúr a API.
         </p>
       </section>
 

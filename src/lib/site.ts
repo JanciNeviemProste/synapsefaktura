@@ -24,8 +24,16 @@ export const SITE = {
     { name: "Vercel", purpose: "hosting aplikácie", region: "EÚ / USA" },
     { name: "Stripe", purpose: "spracovanie platieb", region: "EÚ / USA" },
     { name: "Resend", purpose: "odosielanie e-mailov", region: "EÚ / USA" },
-    { name: "Upstash", purpose: "ochrana pred zneužitím (rate-limit)", region: "EÚ" },
-    { name: "Google (Gemini)", purpose: "voliteľné AI funkcie", region: "EÚ / USA" },
+    {
+      name: "Upstash",
+      purpose: "ochrana pred zneužitím (rate-limit)",
+      region: "EÚ",
+    },
+    {
+      name: "Google (Gemini)",
+      purpose: "voliteľné AI funkcie",
+      region: "EÚ / USA",
+    },
   ],
 } as const
 

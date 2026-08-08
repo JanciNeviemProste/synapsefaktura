@@ -43,7 +43,9 @@ export class MockPostmanProvider implements DigitalPostmanProvider {
     // Outbound messages addressed to me (across the local instance — loopback).
     const { data: outbound, error } = await admin
       .from("einvoices")
-      .select("peppol_message_id, sender_peppol_id, receiver_peppol_id, ubl_xml")
+      .select(
+        "peppol_message_id, sender_peppol_id, receiver_peppol_id, ubl_xml",
+      )
       .eq("direction", "outbound")
       .eq("receiver_peppol_id", receiverPeppolId)
       .in("transport_status", ["sent", "delivered"])

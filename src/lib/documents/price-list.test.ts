@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest"
 import { newPriceListEntries } from "@/lib/documents/price-list"
 
-const item = (p: Partial<Parameters<typeof newPriceListEntries>[0][number]>) => ({
+const item = (
+  p: Partial<Parameters<typeof newPriceListEntries>[0][number]>,
+) => ({
   description: "Konzultácie",
   unit: "h",
   unitPrice: 50,
@@ -23,14 +25,16 @@ describe("newPriceListEntries", () => {
   it("zhoda názvu nezáleží na veľkosti písmen ani medzerách", () => {
     // Bez toho by sa cennik po par dokladoch zaplnil variantmi tej istej veci.
     expect(
-      newPriceListEntries([item({ description: "  konzultácie  " })], [
-        "Konzultácie",
-      ]),
+      newPriceListEntries(
+        [item({ description: "  konzultácie  " })],
+        ["Konzultácie"],
+      ),
     ).toEqual([])
     expect(
-      newPriceListEntries([item({ description: "Doprava   Bratislava" })], [
-        "doprava bratislava",
-      ]),
+      newPriceListEntries(
+        [item({ description: "Doprava   Bratislava" })],
+        ["doprava bratislava"],
+      ),
     ).toEqual([])
   })
 
@@ -50,7 +54,9 @@ describe("newPriceListEntries", () => {
   })
 
   it("preskočí nezmyselnú cenu", () => {
-    expect(newPriceListEntries([item({ unitPrice: Number.NaN })], [])).toEqual([])
+    expect(newPriceListEntries([item({ unitPrice: Number.NaN })], [])).toEqual(
+      [],
+    )
   })
 
   it("prázdna MJ sa doplní na 'ks'", () => {
@@ -59,7 +65,10 @@ describe("newPriceListEntries", () => {
 
   it("uloží popis tak, ako ho používateľ napísal", () => {
     // Porovnava sa normalizovane, ULOZI sa povodny tvar.
-    const r = newPriceListEntries([item({ description: "  Grafické práce " })], [])
+    const r = newPriceListEntries(
+      [item({ description: "  Grafické práce " })],
+      [],
+    )
     expect(r[0].name).toBe("Grafické práce")
   })
 

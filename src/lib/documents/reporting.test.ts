@@ -36,7 +36,9 @@ describe("REPORTED_DOCUMENT_TYPES", () => {
   it("danovy doklad k platbe zostava vonku, kym nevie appka odpocitat zalohu", () => {
     // Ked odpocet zalohy pribudne, tento test padne — a to je zamer. Jeho
     // zmena ma byt vedomym rozhodnutim, nie vedlajsim ucinkom inej upravy.
-    expect(isReportedDocumentType("tax_doc_payment" as DocumentType)).toBe(false)
+    expect(isReportedDocumentType("tax_doc_payment" as DocumentType)).toBe(
+      false,
+    )
   })
 })
 

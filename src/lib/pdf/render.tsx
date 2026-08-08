@@ -119,7 +119,11 @@ export async function renderInvoicePdf(
   if (!doc || !org) return null
 
   const { data: contact } = doc.contact_id
-    ? await db.from("contacts").select("*").eq("id", doc.contact_id).maybeSingle()
+    ? await db
+        .from("contacts")
+        .select("*")
+        .eq("id", doc.contact_id)
+        .maybeSingle()
     : { data: null }
 
   // Na doklad patria udaje odberatela k okamihu vystavenia. Zivy kontakt sa

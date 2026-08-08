@@ -83,7 +83,9 @@ export function RecurringView({
     <div className="mx-auto grid max-w-5xl gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-heading text-[clamp(24px,3.2vw,34px)] leading-tight tracking-tight">Pravidelné faktúry</h1>
+          <h1 className="font-heading text-[clamp(24px,3.2vw,34px)] leading-tight tracking-tight">
+            Pravidelné faktúry
+          </h1>
           <p className="text-muted-foreground text-sm">
             Automaticky vystavované faktúry podľa rozvrhu.
           </p>

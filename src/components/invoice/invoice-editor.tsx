@@ -81,7 +81,10 @@ const ACCOUNTING_FIELDS = [
   { name: "activityCode", label: "Činnosť" },
 ] as const
 
-type AccountingValues = Record<(typeof ACCOUNTING_FIELDS)[number]["name"], string>
+type AccountingValues = Record<
+  (typeof ACCOUNTING_FIELDS)[number]["name"],
+  string
+>
 
 const ACCOUNTING_PLACEHOLDERS: AccountingValues = {
   accountCode: "napr. 602",
@@ -109,7 +112,14 @@ function itemAccountingSummary(
 /** Predvyplni hromadne pole z PRVEJ polozky — pri doklade s jednotnym clenenim
  *  (co je bezny pripad) tak pouzivatel vidi to, co uz plati. */
 function firstItemAccounting(
-  items?: { account_code: string | null; cost_center: string | null; project_code: string | null; activity_code: string | null }[] | null,
+  items?:
+    | {
+        account_code: string | null
+        cost_center: string | null
+        project_code: string | null
+        activity_code: string | null
+      }[]
+    | null,
 ): AccountingValues {
   const first = items?.[0]
   return {
@@ -434,8 +444,8 @@ export function InvoiceEditor({
                     </Button>
                   </div>
                   <p className="text-muted-foreground text-xs">
-                    Nový odberateľ sa dá pridať rovno tu — údaje si potiahne
-                    z registra podľa IČO.
+                    Nový odberateľ sa dá pridať rovno tu — údaje si potiahne z
+                    registra podľa IČO.
                   </p>
                 </FormItem>
               )}
@@ -604,98 +614,99 @@ export function InvoiceEditor({
               const line = totals.lines[idx]
               return (
                 <div key={f.id} className="grid gap-2">
-                <div
-                  className={`grid grid-cols-2 gap-2 sm:items-center ${
-                    presentation.showPrices
-                      ? "sm:grid-cols-[1fr_70px_60px_90px_80px_70px_100px_32px]"
-                      : "sm:grid-cols-[1fr_70px_60px_32px]"
-                  }`}
-                >
-                  {/* Nasepkavac z cennika. Natívny `datalist` zamerne:
+                  <div
+                    className={`grid grid-cols-2 gap-2 sm:items-center ${
+                      presentation.showPrices
+                        ? "sm:grid-cols-[1fr_70px_60px_90px_80px_70px_100px_32px]"
+                        : "sm:grid-cols-[1fr_70px_60px_32px]"
+                    }`}
+                  >
+                    {/* Nasepkavac z cennika. Natívny `datalist` zamerne:
                       filtrovanie robi prehliadac, funguje aj bez JS a nepotrebuje
                       dalsiu UI kniznicu. Vyber polozky doplni aj MJ, cenu a DPH. */}
-                  <Input
-                    placeholder="Popis položky"
-                    className="col-span-2 sm:col-span-1"
-                    list={products.length > 0 ? PRODUCT_LIST_ID : undefined}
-                    {...form.register(`items.${idx}.description`, {
-                      onChange: (e) => applyProductByName(idx, e.target.value),
-                    })}
-                  />
-                  <Input
-                    type="number"
-                    step="0.001"
-                    {...form.register(`items.${idx}.quantity`)}
-                  />
-                  <Input {...form.register(`items.${idx}.unit`)} />
-                  {/* Dodaci list sa tlaci bez cien, tak ich ani needitujeme —
+                    <Input
+                      placeholder="Popis položky"
+                      className="col-span-2 sm:col-span-1"
+                      list={products.length > 0 ? PRODUCT_LIST_ID : undefined}
+                      {...form.register(`items.${idx}.description`, {
+                        onChange: (e) =>
+                          applyProductByName(idx, e.target.value),
+                      })}
+                    />
+                    <Input
+                      type="number"
+                      step="0.001"
+                      {...form.register(`items.${idx}.quantity`)}
+                    />
+                    <Input {...form.register(`items.${idx}.unit`)} />
+                    {/* Dodaci list sa tlaci bez cien, tak ich ani needitujeme —
                       inak vyzera jeho editor presne ako editor faktury.
                       Polia zostavaju vo formulari (registrovane vyssie), takze
                       prepnutim typu spat sa hodnoty nestratia. */}
-                  {presentation.showPrices ? (
-                    <>
-                      <Input
-                        type="number"
-                        step="0.0001"
-                        {...form.register(`items.${idx}.unitPrice`)}
-                      />
-                      <select
-                        className="border-input h-8 rounded-md border bg-transparent px-2 text-sm"
-                        {...form.register(`items.${idx}.vatRate`)}
-                      >
-                        {CURRENT_VAT_RATES.map((r) => (
-                          <option key={r} value={r}>
-                            {vatRateLabel(r)}
-                          </option>
-                        ))}
-                      </select>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        {...form.register(`items.${idx}.discountPct`)}
-                      />
-                      <span className="text-right text-sm font-medium tabular-nums">
-                        {formatMoney(line?.lineTotal ?? 0, currency)}
-                      </span>
-                    </>
-                  ) : null}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={() => remove(idx)}
-                    disabled={fields.length === 1}
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </div>
+                    {presentation.showPrices ? (
+                      <>
+                        <Input
+                          type="number"
+                          step="0.0001"
+                          {...form.register(`items.${idx}.unitPrice`)}
+                        />
+                        <select
+                          className="border-input h-8 rounded-md border bg-transparent px-2 text-sm"
+                          {...form.register(`items.${idx}.vatRate`)}
+                        >
+                          {CURRENT_VAT_RATES.map((r) => (
+                            <option key={r} value={r}>
+                              {vatRateLabel(r)}
+                            </option>
+                          ))}
+                        </select>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          {...form.register(`items.${idx}.discountPct`)}
+                        />
+                        <span className="text-right text-sm font-medium tabular-nums">
+                          {formatMoney(line?.lineTotal ?? 0, currency)}
+                        </span>
+                      </>
+                    ) : null}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => remove(idx)}
+                      disabled={fields.length === 1}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
 
-                {/* Uctovne clenenie tejto polozky. Zabalene, aby riadok
+                  {/* Uctovne clenenie tejto polozky. Zabalene, aby riadok
                     ostal citatelny — vacsina dokladov ho nepotrebuje po
                     riadkoch a vyplni ho hromadne vyssie. */}
-                <details className="text-sm">
-                  <summary className="text-muted-foreground hover:text-foreground w-fit cursor-pointer text-xs select-none">
-                    Účtovné členenie položky
-                    {itemAccountingSummary(watchedItems?.[idx])}
-                  </summary>
-                  <div className="mt-2 grid gap-2 sm:grid-cols-4">
-                    {ACCOUNTING_FIELDS.map((af) => (
-                      <div key={af.name} className="grid gap-1">
-                        <Label
-                          htmlFor={`item-${idx}-${af.name}`}
-                          className="text-muted-foreground text-xs"
-                        >
-                          {af.label}
-                        </Label>
-                        <Input
-                          id={`item-${idx}-${af.name}`}
-                          placeholder={accountingPlaceholder(af.name)}
-                          {...form.register(`items.${idx}.${af.name}`)}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </details>
+                  <details className="text-sm">
+                    <summary className="text-muted-foreground hover:text-foreground w-fit cursor-pointer text-xs select-none">
+                      Účtovné členenie položky
+                      {itemAccountingSummary(watchedItems?.[idx])}
+                    </summary>
+                    <div className="mt-2 grid gap-2 sm:grid-cols-4">
+                      {ACCOUNTING_FIELDS.map((af) => (
+                        <div key={af.name} className="grid gap-1">
+                          <Label
+                            htmlFor={`item-${idx}-${af.name}`}
+                            className="text-muted-foreground text-xs"
+                          >
+                            {af.label}
+                          </Label>
+                          <Input
+                            id={`item-${idx}-${af.name}`}
+                            placeholder={accountingPlaceholder(af.name)}
+                            {...form.register(`items.${idx}.${af.name}`)}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </details>
                 </div>
               )
             })}
@@ -734,21 +745,21 @@ export function InvoiceEditor({
                   a doteraz sa jej nikto nespytal. */}
               {presentation.showVatRecap ? (
                 <>
-              <p className="text-sm font-medium">Daňová rekapitulácia</p>
-              <div className="grid gap-1 text-sm">
-                {totals.recap.map((r) => (
-                  <div
-                    key={r.rate}
-                    className="text-muted-foreground flex justify-between"
-                  >
-                    <span>Základ {r.rate} %</span>
-                    <span className="tabular-nums">
-                      {formatMoney(r.base, currency)} + DPH{" "}
-                      {formatMoney(r.vat, currency)}
-                    </span>
+                  <p className="text-sm font-medium">Daňová rekapitulácia</p>
+                  <div className="grid gap-1 text-sm">
+                    {totals.recap.map((r) => (
+                      <div
+                        key={r.rate}
+                        className="text-muted-foreground flex justify-between"
+                      >
+                        <span>Základ {r.rate} %</span>
+                        <span className="tabular-nums">
+                          {formatMoney(r.base, currency)} + DPH{" "}
+                          {formatMoney(r.vat, currency)}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
                 </>
               ) : null}
               {legalNote && (
@@ -791,9 +802,9 @@ export function InvoiceEditor({
               <Label>Účtovné členenie</Label>
               <p className="text-muted-foreground text-xs">
                 Voliteľné, vstupuje do položkového exportu pre účtovníka.
-                Členenie sedí na <strong>položke</strong> — tu ho vyplníš raz
-                a tlačidlom prepíšeš do všetkých. Jednotlivé riadky sa dajú
-                zmeniť nižšie pri položkách.
+                Členenie sedí na <strong>položke</strong> — tu ho vyplníš raz a
+                tlačidlom prepíšeš do všetkých. Jednotlivé riadky sa dajú zmeniť
+                nižšie pri položkách.
               </p>
             </div>
             <div className="grid gap-4 sm:grid-cols-4">
@@ -901,9 +912,10 @@ export function InvoiceEditor({
               // Novy kontakt pribudne do zoznamu a rovno sa vyberie. Zoznam
               // sa drzi zoradeny podla mena ako zo servera.
               setContactList((prev) =>
-                [...prev, { id: created.id, name: created.name } as Contact].sort(
-                  (a, b) => a.name.localeCompare(b.name, "sk"),
-                ),
+                [
+                  ...prev,
+                  { id: created.id, name: created.name } as Contact,
+                ].sort((a, b) => a.name.localeCompare(b.name, "sk")),
               )
               form.setValue("contactId", created.id, { shouldDirty: true })
             }}

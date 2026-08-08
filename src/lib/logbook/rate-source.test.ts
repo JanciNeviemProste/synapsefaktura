@@ -89,14 +89,18 @@ describe("parseStatutoryRates", () => {
   })
 
   it("odmietne stranku bez cisla oznamenia", () => {
-    const res = parseStatutoryRates(PAGE.replace(/ozn&aacute;men\w*/g, "predpis"))
+    const res = parseStatutoryRates(
+      PAGE.replace(/ozn&aacute;men\w*/g, "predpis"),
+    )
     expect(res.ok).toBe(false)
     if (res.ok) return
     expect(res.reason).toContain("číslo oznámenia")
   })
 
   it("odmietne stranku bez datumu ucinnosti", () => {
-    const res = parseStatutoryRates(PAGE.replace(/od 1\. j[^<,.]*\d{4}/g, "neskôr"))
+    const res = parseStatutoryRates(
+      PAGE.replace(/od 1\. j[^<,.]*\d{4}/g, "neskôr"),
+    )
     expect(res.ok).toBe(false)
     if (res.ok) return
     expect(res.reason).toContain("dátum účinnosti")
@@ -112,14 +116,18 @@ describe("parseStatutoryRates", () => {
   })
 
   it("odmietne nezmyselne vysoku sadzbu", () => {
-    const res = parseStatutoryRates(PAGE.replace("na 0,313 eura", "na 9,999 eura"))
+    const res = parseStatutoryRates(
+      PAGE.replace("na 0,313 eura", "na 9,999 eura"),
+    )
     expect(res.ok).toBe(false)
     if (res.ok) return
     expect(res.reason).toContain("mimo rozsahu")
   })
 
   it("odmietne, ked osobne vozidlo nema vyssiu sadzbu nez jednostopove", () => {
-    const res = parseStatutoryRates(PAGE.replace("na 0,313 eura", "na 0,090 eura"))
+    const res = parseStatutoryRates(
+      PAGE.replace("na 0,313 eura", "na 0,090 eura"),
+    )
     expect(res.ok).toBe(false)
     if (res.ok) return
     expect(res.reason).toContain("nie je vyššia")
@@ -162,7 +170,10 @@ describe("isNewerStatutoryRate", () => {
   })
 
   it("odmietne starsiu ucinnost", () => {
-    const res = isNewerStatutoryRate({ ...found, validFrom: "2025-01-01" }, current)
+    const res = isNewerStatutoryRate(
+      { ...found, validFrom: "2025-01-01" },
+      current,
+    )
     expect(res.ok).toBe(false)
     if (res.ok) return
     expect(res.reason).toContain("nie je novšia")

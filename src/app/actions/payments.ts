@@ -281,7 +281,11 @@ export async function importBankCsv(
           if (c) c.paidAmount = round2(c.paidAmount + paid)
           booked = true
         } else {
-          console.error("[bank] zapis uhrady nakladu zlyhal", m.expenseId, res.error)
+          console.error(
+            "[bank] zapis uhrady nakladu zlyhal",
+            m.expenseId,
+            res.error,
+          )
           errors.push(
             `Úhradu nákladu ${formatMoney(paid, tx.currency)} sa nepodarilo zapísať: ${res.error}`,
           )

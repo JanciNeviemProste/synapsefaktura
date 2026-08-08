@@ -19,7 +19,9 @@ let currentOrg: string | null = "org-1"
 let seen: { mediaType: string; size: number } | null = null
 let extractorResult: unknown = null
 
-vi.mock("@/lib/supabase/server", () => ({ createClient: async () => db.client }))
+vi.mock("@/lib/supabase/server", () => ({
+  createClient: async () => db.client,
+}))
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => storage.client(),
 }))
@@ -77,9 +79,8 @@ beforeEach(() => {
   extractorResult = { ok: true, data: doc() }
 })
 
-const { extractFromStoredFile, confirmExpenseFromCapture } = await import(
-  "@/app/actions/ai-capture"
-)
+const { extractFromStoredFile, confirmExpenseFromCapture } =
+  await import("@/app/actions/ai-capture")
 
 /** JPEG podľa magických bajtov — tak, ako príde fotka z mobilu. */
 function jpeg(size = 512): Uint8Array {

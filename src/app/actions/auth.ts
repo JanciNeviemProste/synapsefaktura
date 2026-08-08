@@ -85,7 +85,10 @@ export async function signIn(formData: FormData): Promise<AuthActionResult> {
 
 export async function signUp(formData: FormData): Promise<AuthActionResult> {
   if (formData.get("consent") !== "on") {
-    return { error: "Pre registráciu musíš súhlasiť s podmienkami a spracovaním údajov." }
+    return {
+      error:
+        "Pre registráciu musíš súhlasiť s podmienkami a spracovaním údajov.",
+    }
   }
 
   const parsed = registerSchema.safeParse({
@@ -121,7 +124,9 @@ export async function signUp(formData: FormData): Promise<AuthActionResult> {
   if (!data.session) {
     // Adresa ide so sebou, aby si používateľ vedel nechať poslať potvrdenie
     // znova bez toho, aby ju písal druhýkrát.
-    redirect(`/registracia-hotova?email=${encodeURIComponent(parsed.data.email)}`)
+    redirect(
+      `/registracia-hotova?email=${encodeURIComponent(parsed.data.email)}`,
+    )
   }
   redirect("/app/onboarding")
 }

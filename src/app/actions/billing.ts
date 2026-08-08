@@ -41,9 +41,7 @@ export async function getBillingInfo(): Promise<BillingInfo | null> {
 
   const { data: org } = await supabase
     .from("organizations")
-    .select(
-      "plan, subscription_status, current_period_end, stripe_customer_id",
-    )
+    .select("plan, subscription_status, current_period_end, stripe_customer_id")
     .eq("id", orgId)
     .maybeSingle()
 
@@ -116,7 +114,10 @@ export async function startCheckout(
         // Don't proceed with an unlinked customer — a second checkout would
         // create a duplicate the webhook can't reliably reverse-map.
         console.error("[billing] failed to link stripe customer", linkErr)
-        return { ok: false, error: "Platbu sa nepodarilo spustiť. Skúste to znova." }
+        return {
+          ok: false,
+          error: "Platbu sa nepodarilo spustiť. Skúste to znova.",
+        }
       }
     }
 
@@ -144,7 +145,10 @@ export async function startCheckout(
     return { ok: true, url: session.url }
   } catch (err) {
     console.error("[billing] startCheckout failed", err)
-    return { ok: false, error: "Platbu sa nepodarilo spustiť. Skúste to znova." }
+    return {
+      ok: false,
+      error: "Platbu sa nepodarilo spustiť. Skúste to znova.",
+    }
   }
 }
 
@@ -188,6 +192,9 @@ export async function openPortal(): Promise<{
     return { ok: true, url: session.url }
   } catch (err) {
     console.error("[billing] openPortal failed", err)
-    return { ok: false, error: "Portál sa nepodarilo otvoriť. Skúste to znova." }
+    return {
+      ok: false,
+      error: "Portál sa nepodarilo otvoriť. Skúste to znova.",
+    }
   }
 }

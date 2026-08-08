@@ -42,7 +42,8 @@ beforeEach(() => {
   setup()
 })
 
-const { createUploadTicket, verifyUpload } = await import("@/app/actions/uploads")
+const { createUploadTicket, verifyUpload } =
+  await import("@/app/actions/uploads")
 
 describe("createUploadTicket", () => {
   it("vydá lístok na cestu pod firmou volajúceho", async () => {
@@ -57,7 +58,11 @@ describe("createUploadTicket", () => {
   it("cestu určuje server, nie názov súboru", async () => {
     // Klasický pokus o vybočenie z priečinka. Lomky sa musia stratiť, inak by
     // sa dal lístok vydať na cudziu cestu.
-    const res = await createUploadTicket("branding", "../../org-2/logo.png", 1000)
+    const res = await createUploadTicket(
+      "branding",
+      "../../org-2/logo.png",
+      1000,
+    )
     expect(res.ok).toBe(true)
     if (!res.ok) return
     expect(res.path.startsWith("org-1/branding/")).toBe(true)
@@ -96,7 +101,11 @@ describe("createUploadTicket", () => {
   })
 
   it("priveľký súbor odmietne ešte pred nahratím", async () => {
-    const res = await createUploadTicket("attachment", "video.mp4", 99 * 1024 * 1024)
+    const res = await createUploadTicket(
+      "attachment",
+      "video.mp4",
+      99 * 1024 * 1024,
+    )
     expect(res.ok).toBe(false)
     if (res.ok) return
     expect(res.error).toMatch(/MB/)
@@ -105,8 +114,12 @@ describe("createUploadTicket", () => {
 
   it("obrázok firmy má prísnejší strop než príloha", async () => {
     const big = 20 * 1024 * 1024
-    expect((await createUploadTicket("branding", "logo.png", big)).ok).toBe(false)
-    expect((await createUploadTicket("attachment", "sken.pdf", big)).ok).toBe(true)
+    expect((await createUploadTicket("branding", "logo.png", big)).ok).toBe(
+      false,
+    )
+    expect((await createUploadTicket("attachment", "sken.pdf", big)).ok).toBe(
+      true,
+    )
   })
 
   it("chýbajúci bucket si vytvorí sám", async () => {

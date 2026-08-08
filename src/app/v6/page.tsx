@@ -77,7 +77,7 @@ export default function V6Page() {
           <nav className="flex items-center gap-6 text-sm">
             <Link
               href="/login"
-              className="hover:underline underline-offset-4"
+              className="underline-offset-4 hover:underline"
               style={{ color: MUTED }}
             >
               Prihlásiť sa
@@ -110,10 +110,13 @@ export default function V6Page() {
           <br />
           <span style={{ color: BRASS }}>Bez kompromisov.</span>
         </h1>
-        <p className="mt-8 max-w-xl text-base leading-relaxed" style={{ color: MUTED }}>
-          Faktúra hovorí o vašej firme viac, než si myslíte. Synapse Faktúra spája
-          presnosť daňového poradcu s pohodlím osobného asistenta — vystavíte ju
-          jednou vetou a každý detail sedí.
+        <p
+          className="mt-8 max-w-xl text-base leading-relaxed"
+          style={{ color: MUTED }}
+        >
+          Faktúra hovorí o vašej firme viac, než si myslíte. Synapse Faktúra
+          spája presnosť daňového poradcu s pohodlím osobného asistenta —
+          vystavíte ju jednou vetou a každý detail sedí.
         </p>
         <div className="mt-10 flex flex-wrap items-center justify-center gap-5">
           <Link
@@ -172,7 +175,10 @@ export default function V6Page() {
               >
                 {n}
               </p>
-              <p className="mt-2 text-xs tracking-[0.2em] uppercase" style={{ color: MUTED }}>
+              <p
+                className="mt-2 text-xs tracking-[0.2em] uppercase"
+                style={{ color: MUTED }}
+              >
                 {d}
               </p>
             </div>
@@ -193,7 +199,10 @@ export default function V6Page() {
           <p className="mt-3 text-center text-sm" style={{ color: MUTED }}>
             Transparentné mesačné ceny. Zrušenie kedykoľvek, bez otázok.
           </p>
-          <div className="mt-12 grid gap-px sm:grid-cols-3" style={{ backgroundColor: RULE }}>
+          <div
+            className="mt-12 grid gap-px sm:grid-cols-3"
+            style={{ backgroundColor: RULE }}
+          >
             {PLAN_ORDER.map((tier) => {
               const plan = PLANS[tier]
               const featured = tier === "business"
@@ -220,7 +229,10 @@ export default function V6Page() {
                       € {plan.priceEur ? "/ mes." : ""}
                     </span>
                   </p>
-                  <p className="min-h-16 text-sm leading-relaxed" style={{ color: MUTED }}>
+                  <p
+                    className="min-h-16 text-sm leading-relaxed"
+                    style={{ color: MUTED }}
+                  >
                     {plan.blurb}
                   </p>
                   <Link

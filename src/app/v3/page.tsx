@@ -95,7 +95,10 @@ export default function V3Page() {
             Synapse&nbsp;Faktúra
           </Link>
           <nav className="flex items-center gap-5 text-sm">
-            <Link href="/login" className="opacity-80 hover:opacity-100 hover:underline underline-offset-4">
+            <Link
+              href="/login"
+              className="underline-offset-4 opacity-80 hover:underline hover:opacity-100"
+            >
               Prihlásiť sa
             </Link>
             <Link
@@ -112,7 +115,10 @@ export default function V3Page() {
 
       {/* Hero — countdown */}
       <section className="mx-auto max-w-5xl px-6 pt-16 pb-14 text-center sm:pt-24">
-        <p className="mb-3 text-xs font-bold tracking-[0.25em] uppercase" style={{ color: GRAY }}>
+        <p
+          className="mb-3 text-xs font-bold tracking-[0.25em] uppercase"
+          style={{ color: GRAY }}
+        >
           Novela zákona č. 222/2004 Z. z. · Peppol / IS EFA
         </p>
         <p
@@ -125,11 +131,16 @@ export default function V3Page() {
           dní do povinnej e-faktúry
         </p>
         <h1 className="mx-auto mt-8 max-w-2xl text-2xl leading-snug font-black sm:text-4xl">
-          Od 1. januára 2027 musí každý platiteľ DPH posielať faktúry elektronicky.
+          Od 1. januára 2027 musí každý platiteľ DPH posielať faktúry
+          elektronicky.
         </h1>
-        <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed" style={{ color: GRAY }}>
-          Nie PDF. Nie papier. Štruktúrovaná e-faktúra cez sieť Peppol, s reportingom
-          Finančnej správe. Kto sa pripraví teraz, v roku 2027 nerieši nič.
+        <p
+          className="mx-auto mt-4 max-w-xl text-base leading-relaxed"
+          style={{ color: GRAY }}
+        >
+          Nie PDF. Nie papier. Štruktúrovaná e-faktúra cez sieť Peppol, s
+          reportingom Finančnej správe. Kto sa pripraví teraz, v roku 2027
+          nerieši nič.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
           <Link
@@ -153,10 +164,16 @@ export default function V3Page() {
 
       {/* Facts */}
       <section className="mx-auto max-w-5xl px-6 py-16">
-        <h2 className="mb-8 text-2xl font-black uppercase">Fakty, nie panika</h2>
+        <h2 className="mb-8 text-2xl font-black uppercase">
+          Fakty, nie panika
+        </h2>
         <dl className="grid gap-x-12 gap-y-8 sm:grid-cols-2">
           {FACTS.map((f) => (
-            <div key={f.k} className="pt-4" style={{ borderTop: `3px solid ${INK}` }}>
+            <div
+              key={f.k}
+              className="pt-4"
+              style={{ borderTop: `3px solid ${INK}` }}
+            >
               <dt className="mb-1 font-black uppercase">{f.k}</dt>
               <dd className="text-sm leading-relaxed" style={{ color: GRAY }}>
                 {f.v}
@@ -188,7 +205,10 @@ export default function V3Page() {
                 </span>
                 <div>
                   <h3 className="mb-1 font-bold">{item.t}</h3>
-                  <p className="text-sm leading-relaxed" style={{ color: GRAY }}>
+                  <p
+                    className="text-sm leading-relaxed"
+                    style={{ color: GRAY }}
+                  >
                     {item.d}
                   </p>
                 </div>
@@ -200,11 +220,16 @@ export default function V3Page() {
 
       {/* Pricing strip */}
       <section id="cennik" className="mx-auto max-w-5xl px-6 py-16">
-        <h2 className="mb-2 text-2xl font-black uppercase">Začni dnes, plať až keď rastieš</h2>
+        <h2 className="mb-2 text-2xl font-black uppercase">
+          Začni dnes, plať až keď rastieš
+        </h2>
         <p className="mb-10 text-sm" style={{ color: GRAY }}>
           Free navždy zadarmo vrátane príjmu e-faktúr. Pro na 14 dní zdarma.
         </p>
-        <div className="grid gap-0 sm:grid-cols-3" style={{ border: `2px solid ${INK}` }}>
+        <div
+          className="grid gap-0 sm:grid-cols-3"
+          style={{ border: `2px solid ${INK}` }}
+        >
           {PLAN_ORDER.map((tier, i) => {
             const plan = PLANS[tier]
             const featured = tier === "pro"
@@ -224,7 +249,10 @@ export default function V3Page() {
                     {plan.priceEur ? "/mes" : ""}
                   </span>
                 </p>
-                <p className="text-sm leading-relaxed" style={{ color: featured ? INK : GRAY }}>
+                <p
+                  className="text-sm leading-relaxed"
+                  style={{ color: featured ? INK : GRAY }}
+                >
                   {plan.blurb}
                 </p>
                 <Link
@@ -255,7 +283,9 @@ export default function V3Page() {
           >
             Vytvoriť účet zadarmo
           </Link>
-          <p className="text-xs opacity-70">Hotové za 2 minúty · bez platobnej karty</p>
+          <p className="text-xs opacity-70">
+            Hotové za 2 minúty · bez platobnej karty
+          </p>
         </div>
       </section>
 

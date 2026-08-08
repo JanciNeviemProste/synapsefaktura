@@ -104,7 +104,9 @@ export default async function InvoicesPage({
     <div className="mx-auto grid max-w-5xl gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-heading text-[clamp(24px,3.2vw,34px)] leading-tight tracking-tight">{heading}</h1>
+          <h1 className="font-heading text-[clamp(24px,3.2vw,34px)] leading-tight tracking-tight">
+            {heading}
+          </h1>
           <p className="text-muted-foreground text-sm">
             {activeType
               ? `Zoznam dokladov typu „${DOCUMENT_TYPE_LABELS[activeType]}“.`
@@ -130,7 +132,9 @@ export default async function InvoicesPage({
           aria-current={activeType ? undefined : "page"}
         >
           <Link
-            href={activeTagId ? `/app/invoices?tag=${activeTagId}` : "/app/invoices"}
+            href={
+              activeTagId ? `/app/invoices?tag=${activeTagId}` : "/app/invoices"
+            }
           >
             Všetky
           </Link>

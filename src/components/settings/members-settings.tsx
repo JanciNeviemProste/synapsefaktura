@@ -162,9 +162,7 @@ export function MembersSettings({
     <Card>
       <CardHeader>
         <CardTitle>Tím</CardTitle>
-        <CardDescription>
-          Spravujte členov firmy a ich roly.
-        </CardDescription>
+        <CardDescription>Spravujte členov firmy a ich roly.</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-6">
         <div className="rounded-lg border">

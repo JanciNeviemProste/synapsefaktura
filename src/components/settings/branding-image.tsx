@@ -70,7 +70,8 @@ export function BrandingImageField({
     directUrl ?? (signed.path === storagePath ? signed.url : null)
   // Odlisi „este sa nacitava" od „nacitanie zlyhalo". Bez toho ostal nahlad
   // navzdy na „Nacitavam…", hoci sa uz nic nedialo.
-  const previewFailed = storagePath !== null && signed.path === storagePath && signed.url === null
+  const previewFailed =
+    storagePath !== null && signed.path === storagePath && signed.url === null
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -87,7 +88,9 @@ export function BrandingImageField({
     if (file.size > MAX_IMAGE_BYTES) {
       // Hlaska sa odvodzuje z limitu, nie napisana rukou — inak sa pri zmene
       // stropu rozide s tym, co server naozaj pusti.
-      toast.error(`${tooLargeMessage(file.size, MAX_IMAGE_BYTES)} Zmenši ho a skús znova.`)
+      toast.error(
+        `${tooLargeMessage(file.size, MAX_IMAGE_BYTES)} Zmenši ho a skús znova.`,
+      )
       return
     }
 

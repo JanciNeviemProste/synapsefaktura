@@ -357,13 +357,14 @@ export async function removeOrgImage(
     .select("id")
   const outcome = writeOutcome(error, saved)
   if (outcome.kind !== "ok") {
-    return { ok: false, error: `${BRANDING_LABEL[kind]} sa nepodarilo odstrániť.` }
+    return {
+      ok: false,
+      error: `${BRANDING_LABEL[kind]} sa nepodarilo odstrániť.`,
+    }
   }
 
   if (path && !/^https?:\/\//i.test(path)) {
-    await createAdminClient()
-      .storage.from(ATTACHMENTS_BUCKET)
-      .remove([path])
+    await createAdminClient().storage.from(ATTACHMENTS_BUCKET).remove([path])
   }
 
   revalidatePath("/app/settings")

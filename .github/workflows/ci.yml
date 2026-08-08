@@ -25,6 +25,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Prvý krok schválne: je najlacnejší a jeho zlyhanie sa opraví jedným
+      # `pnpm format`. Kým repo nebolo naformátované, tento krok tu byť nemohol
+      # a každý diff niesol riadky, ktoré nikto vedome nemenil — presne tie
+      # riadky potom kolidovali medzi dvoma PR.
+      - name: Formát
+        run: pnpm format:check
+
       - name: Typecheck
         run: pnpm typecheck
 

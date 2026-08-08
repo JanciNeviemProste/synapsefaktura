@@ -36,10 +36,7 @@ export const travelRateSchema = z
      * vlastna sadzba firmy; zakonne sadzby kategoriu vyplnenu maju, lebo
      * zakon medzi osobnym autom a motocyklom rozlisuje.
      */
-    vehicleCategory: z
-      .enum(VEHICLE_CATEGORIES)
-      .nullable()
-      .optional(),
+    vehicleCategory: z.enum(VEHICLE_CATEGORIES).nullable().optional(),
     note: z.string().trim().optional().or(z.literal("")),
   })
   .refine((v) => !v.validTo || v.validTo >= v.validFrom, {

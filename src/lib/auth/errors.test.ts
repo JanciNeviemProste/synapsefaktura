@@ -24,15 +24,24 @@ describe("isUnconfirmedEmail", () => {
 
 describe("isEmailRateLimited", () => {
   it("rozpozná strop odosielania", () => {
-    expect(isEmailRateLimited({ code: "over_email_send_rate_limit" })).toBe(true)
+    expect(isEmailRateLimited({ code: "over_email_send_rate_limit" })).toBe(
+      true,
+    )
     expect(
-      isEmailRateLimited({ message: "For security purposes, you can only request this after 51 seconds." }),
+      isEmailRateLimited({
+        message:
+          "For security purposes, you can only request this after 51 seconds.",
+      }),
     ).toBe(true)
-    expect(isEmailRateLimited({ message: "Email rate limit exceeded" })).toBe(true)
+    expect(isEmailRateLimited({ message: "Email rate limit exceeded" })).toBe(
+      true,
+    )
   })
 
   it("bežnú chybu za limit nevydáva", () => {
-    expect(isEmailRateLimited({ message: "User already registered" })).toBe(false)
+    expect(isEmailRateLimited({ message: "User already registered" })).toBe(
+      false,
+    )
     expect(isEmailRateLimited({})).toBe(false)
   })
 })

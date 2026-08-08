@@ -22,18 +22,10 @@ function eq(a: number, b: number): boolean {
 export function validateUbl(model: UblInvoiceModel): ValidationResult {
   const errors: ValidationError[] = []
 
-  const err = (
-    rule: string,
-    message: string,
-    location?: string,
-  ): void => {
+  const err = (rule: string, message: string, location?: string): void => {
     errors.push({ rule, severity: "error", message, location })
   }
-  const warn = (
-    rule: string,
-    message: string,
-    location?: string,
-  ): void => {
+  const warn = (rule: string, message: string, location?: string): void => {
     errors.push({ rule, severity: "warning", message, location })
   }
 
@@ -52,11 +44,7 @@ export function validateUbl(model: UblInvoiceModel): ValidationResult {
   // BR-04 Invoice type code — we always use 380; assert currency present instead.
   // BR-05 Invoice currency code (BT-5)
   if (!model.currency || model.currency.trim() === "") {
-    err(
-      "BR-05",
-      "Faktúra musí mať kód meny.",
-      "/Invoice/DocumentCurrencyCode",
-    )
+    err("BR-05", "Faktúra musí mať kód meny.", "/Invoice/DocumentCurrencyCode")
   }
 
   // BR-06 Seller name (BT-27)

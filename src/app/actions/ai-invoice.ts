@@ -1,9 +1,6 @@
 "use server"
 
-import {
-  generateStructured,
-  type AiFailureReason,
-} from "@/lib/ai/generate"
+import { generateStructured, type AiFailureReason } from "@/lib/ai/generate"
 import { checkAiRateLimit } from "@/lib/ai/rate-limit"
 import type { PlanTier } from "@/lib/billing/plans"
 import { nlInvoiceDraftSchema } from "@/lib/validation/nl-invoice"

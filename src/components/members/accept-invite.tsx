@@ -40,8 +40,8 @@ export function AcceptInvite({ token }: { token: string }) {
       <CardHeader>
         <CardTitle>Pozvánka do tímu</CardTitle>
         <CardDescription>
-          Boli ste pozvaní do firmy v Synapse Faktúra. Prijatím získate prístup k
-          jej dokladom a nastaveniam.
+          Boli ste pozvaní do firmy v Synapse Faktúra. Prijatím získate prístup
+          k jej dokladom a nastaveniam.
         </CardDescription>
       </CardHeader>
       <CardContent>

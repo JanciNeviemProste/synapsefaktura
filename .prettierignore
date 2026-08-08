@@ -1,3 +1,16 @@
+# Generované a cudzie súbory. Prettier nečíta .gitignore, takže čokoľvek
+# ignorované v gite treba zopakovať aj sem — inak to `format:check` v CI
+# hlási ako chybu na súbore, ktorý ani nie je v repe.
+
 pnpm-lock.yaml
 .next/
+
+# Generuje `supabase gen types`, prepisuje sa celý.
 src/lib/supabase/database.types.ts
+
+# Lokálny stav `supabase link` — je v supabase/.gitignore.
+supabase/.temp/
+
+# Pracovné adresáre Claude Code, sú v .gitignore.
+.claude/worktrees/
+.claude/.cache/

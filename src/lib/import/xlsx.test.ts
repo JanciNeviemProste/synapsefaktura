@@ -17,7 +17,9 @@ describe("looksLikeXlsx", () => {
   })
 
   it("CSV za zosit nepovazuje", () => {
-    expect(looksLikeXlsx(new TextEncoder().encode("Nazov;Mesto\nA;B"))).toBe(false)
+    expect(looksLikeXlsx(new TextEncoder().encode("Nazov;Mesto\nA;B"))).toBe(
+      false,
+    )
   })
 
   it("nespadne na kratkom vstupe", () => {

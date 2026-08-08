@@ -29,8 +29,7 @@ export type GenerateTripsResult =
   | { ok: true; generated: number; capped: boolean }
   | { ok: false; error: string }
 
-type RecurringTripRow =
-  Database["public"]["Tables"]["recurring_trips"]["Row"]
+type RecurringTripRow = Database["public"]["Tables"]["recurring_trips"]["Row"]
 
 function pathFor(vehicleId: string) {
   return `/app/logbook/${vehicleId}`
