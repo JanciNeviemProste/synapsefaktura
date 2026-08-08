@@ -432,3 +432,49 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 # declarative_schema_path = "./database"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+# ---------------------------------------------------------------------------
+# Nasadené prostredia
+#
+# Všetko nad touto čiarou platí pre lokálny beh (`supabase start`). Produkcia
+# sa líši len v tom, čo je tu — zvyšok dedí. Aplikuje sa príkazom
+# `supabase config push`, nie klikaním v dashboarde; vďaka tomu je nastavenie
+# v repe a prejde cez PR.
+# ---------------------------------------------------------------------------
+
+[remotes.production]
+project_id = "oukooqfpxeunhdzndsid"
+
+[remotes.production.auth]
+# Musí byť https. Zmerané 2026-08-08: bolo tu `http://…`, čo je vlastný problém
+# — odkaz z e-maila viedol na nešifrované spojenie.
+site_url = "https://synapsefaktura.vercel.app"
+
+[remotes.production.auth.email]
+# DOČASNE VYPNUTÉ — rozhodnutie vlastníka 2026-08-08.
+#
+# Vstavané odosielanie Supabase doručuje len na adresy členov projektu, takže
+# registrácia z cudzej adresy vytvorila účet, ktorý sa nedal potvrdiť. Kým
+# nebude v Resende overená doména, je potvrdzovanie vypnuté, aby sa appka dala
+# vôbec používať.
+#
+# Cena za to: ktokoľvek sa vie zaregistrovať na cudziu e-mailovú adresu.
+# Na ostrú prevádzku to takto nesmie zostať — zapnutie späť rieši issue #35.
+enable_confirmations = false
+
+# Nasledujúce dve hodnoty NIE SÚ zmena. Sú tu preto, aby `config push` nezhodil
+# to, čo na produkcii už je. Hodnoty v `[auth.email]` vyššie sú nastavené pre
+# pohodlný lokálny vývoj a boli by na ostrej prevádzke krok späť:
+#
+#   max_frequency  1s → na produkcii je 60s. Jedna sekunda medzi dvoma
+#                  e-mailami znamená, že sa adresa dá zaplaviť.
+#   otp_length     6  → na produkcii je 8. Kratší kód sa ľahšie uhádne.
+max_frequency = "60s"
+otp_length = 8
+
+[remotes.production.auth.mfa.totp]
+# Tiež nie zmena, ale ochrana. Na produkcii je dvojfaktorové overenie cez
+# aplikáciu (TOTP) zapnuté; v `[auth.mfa.totp]` vyššie je vypnuté, lebo pri
+# lokálnom vývoji zavadzia. Bez tohto bloku by ho `config push` vypol aj naostro.
+enroll_enabled = true
+verify_enabled = true
