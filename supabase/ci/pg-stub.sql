@@ -31,25 +31,66 @@ end $$;
 
 -- Zjednodušená auth.users. Skutočná má oveľa viac stĺpcov, ale migrácie sa
 -- odkazujú len na `id` (cez `references auth.users (id)`).
+--
+-- `aud`, `role` a `instance_id` tu nie sú kvôli migráciám — potrebuje ich
+-- `supabase/tests/rls.sql`, ktorý zakladá testovacích používateľov tak, ako to
+-- robí skutočné Supabase.
 create table if not exists auth.users (
   id                 uuid primary key default gen_random_uuid(),
+  instance_id        uuid,
+  aud                text,
+  role               text,
   email              text,
   raw_user_meta_data jsonb not null default '{}'::jsonb,
   created_at         timestamptz not null default now()
 );
 
--- V Supabase číta auth.uid() ID prihláseného používateľa z JWT. Tu sa číta
--- z nastavenia session, aby sa dalo prepínať:
---   select set_config('request.jwt.claim.sub', '<uuid>', true);
+-- V Supabase číta auth.uid() ID prihláseného používateľa z JWT.
+--
+-- Prijímame OBA tvary, lebo sa oba používajú:
+--   set_config('request.jwt.claim.sub', '<uuid>', true)      — jednoduchší
+--   set local request.jwt.claims to '{"sub":"<uuid>", …}'    — ako v Supabase
+--
+-- Keby stub poznal len prvý, RLS testy by tichým spôsobom bežali s `auth.uid()`
+-- = NULL a všetko by "prešlo" — teda by netestovali vôbec nič.
 create or replace function auth.uid()
 returns uuid
 language sql
 stable
 as $$
-  select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
+  select coalesce(
+    nullif(current_setting('request.jwt.claim.sub', true), ''),
+    nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub'
+  )::uuid
 $$;
 
 -- Testovací používateľ, aby mal handle_new_user() a spol. na čom bežať.
 insert into auth.users (id, email)
 values ('00000000-0000-0000-0000-000000000001', 'test@example.com')
 on conflict (id) do nothing;
+
+-- ── Prístupové práva tak, ako ich dáva skutočné Supabase ────────────────────
+--
+-- RLS je DRUHÁ vrstva. Prvá je obyčajný GRANT — bez neho Postgres odmietne
+-- dotaz skôr, než sa k politikám vôbec dostane. Supabase tieto granty nastaví
+-- pri zakladaní projektu, takže migrácie ich neobsahujú a v stube chýbali.
+--
+-- Prejavilo sa to presne tak, ako to vyzerá zle: prvý beh RLS testov spadol
+-- na `permission denied for table documents`. Nebola to chyba politiky, ale
+-- toho, že rola `authenticated` nemala na tabuľku vôbec právo.
+--
+-- `alter default privileges` platí na objekty vytvorené NESKÔR — a tento súbor
+-- beží pred migráciami, takže pokryje všetky tabuľky, ktoré migrácie založia.
+grant usage on schema public to anon, authenticated, service_role;
+
+alter default privileges in schema public
+  grant all on tables to anon, authenticated, service_role;
+alter default privileges in schema public
+  grant all on sequences to anon, authenticated, service_role;
+alter default privileges in schema public
+  grant execute on functions to anon, authenticated, service_role;
+
+-- Pozn.: `grant all on tables to anon` je zámerne verné Supabase, nie
+-- odporúčanie. Práve preto je dôležité, že migrácia
+-- `20260805090000_lock_save_document_rpc.sql` beží až po tomto a to právo
+-- cielene odoberá — v CI sa tým overuje aj to, že revoke naozaj zaberie.
