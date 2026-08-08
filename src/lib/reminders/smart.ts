@@ -111,7 +111,7 @@ const TONE_GUIDANCE: Record<Tone, string> = {
 export async function smartReminderBody(
   level: number,
   ctx: ReminderContext,
-  orgId?: string,
+  systemOrgId?: string,
 ): Promise<SmartReminderMessage> {
   const lvl = Math.min(Math.max(level, 1), 3)
   const tone = toneForLevel(lvl)
@@ -126,7 +126,7 @@ export async function smartReminderBody(
     // Cron bezi bez session, takze `getCurrentOrgId()` by vratil null a gate by
     // (fail-closed) zamietol kazdu upomienku — aj platiacim. Organizaciu preto
     // dodava volajuci; pochadza z uz nacitaneho dokladu, nie z requestu.
-    orgId,
+    systemOrgId,
     system:
       "Si asistent slovenskej fakturačnej aplikácie. Píšeš upomienky (výzvy na úhradu) " +
       "v spisovnej slovenčine, vecne a profesionálne. Vráť IBA štruktúrovaný výstup. " +

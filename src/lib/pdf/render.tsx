@@ -5,9 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Database } from "@/lib/supabase/database.types"
 import { InvoiceDocument, showsSupplierMark } from "@/lib/pdf/invoice-document"
 import { paymentQrDataUrl } from "@/lib/qr/payment-qr"
-import { createAdminClient } from "@/lib/supabase/admin"
-import { checkImage, MAX_IMAGE_BYTES } from "@/lib/images/validate"
-import { ATTACHMENTS_BUCKET } from "@/lib/storage/buckets"
+import { imageDataUrl } from "@/lib/pdf/image-data-url"
 import { documentPresentation } from "@/lib/documents/presentation"
 import { resolveClientDetails } from "@/lib/documents/client-details"
 import type { DocumentType } from "@/lib/documents/labels"
@@ -28,74 +26,23 @@ export type RenderedInvoice = {
   org: Org
 }
 
-/** Rozpocet na stiahnutie jedneho firemneho obrazka (logo/podpis/peciatka). */
-const IMAGE_TIMEOUT_MS = 2500
-
-/**
- * Vrati obrazok ako data URI. Prijme dve podoby:
- *
- *  - `https://…`  — verejna adresa (starsie zaznamy, cudzi hosting),
- *  - `{orgId}/branding/…` — cesta v SUKROMNOM buckete `attachments`.
- *
- * Sukromne ulozisko je zamer, nie komplikacia: verejna URL na obrazok PODPISU
- * je navod na falsovanie. Preto sa subor stahuje service-role klientom priamo
- * tu — tento modul je `server-only`, takze sa do prehliadaca nedostane.
- *
- * Stahujeme tu a nie v @react-pdf/renderer: renderer by siahal na siet bez
- * timeoutu az pocas layoutu, takze nedostupny bucket by drzal generovanie PDF
- * — a to iste PDF sa priklada k odosielanej fakture (markAsSent). Kazde
- * zlyhanie preto konci ako `null` a doklad sa vykresli bez obrazka.
- */
-async function imageDataUrl(pathOrUrl: string | null): Promise<string | null> {
-  if (!pathOrUrl) return null
-  try {
-    let bytes: Buffer
-    if (/^https?:\/\//i.test(pathOrUrl)) {
-      const res = await fetch(pathOrUrl, {
-        signal: AbortSignal.timeout(IMAGE_TIMEOUT_MS),
-        cache: "no-store",
-      })
-      if (!res.ok) return null
-      const declared = Number(res.headers.get("content-length"))
-      if (Number.isFinite(declared) && declared > MAX_IMAGE_BYTES) return null
-      bytes = Buffer.from(await res.arrayBuffer())
-    } else {
-      const { data, error } = await createAdminClient()
-        .storage.from(ATTACHMENTS_BUCKET)
-        .download(pathOrUrl)
-      if (error || !data) return null
-      bytes = Buffer.from(await data.arrayBuffer())
-    }
-
-    // Ta ISTA kontrola ako pri uploade (lib/images/validate) — co preslo
-    // nahravanim, sa musi dat aj vykreslit.
-    const check = checkImage(bytes)
-    if (!check.ok) return null
-    return `data:${check.mime};base64,${bytes.toString("base64")}`
-  } catch {
-    return null
-  }
-}
-
 /**
  * Fetches a document with everything the invoice PDF needs and renders it to a
  * Buffer. Shared by the PDF download route and email delivery so the layout and
  * data-fetching stay in one place. Returns null when the document/org is missing.
  * Respects RLS via the passed client (use the user client for org-scoped access).
  *
- * `orgId` je POVINNE pri service-role klientovi (cron): ten obchadza RLS, takze
- * bez filtra by `limit(1)` vratil lubovolnu organizaciu a do PDF by sa dostala
- * hlavicka a IBAN cudzej firmy.
+ * `orgId` je POVINNE. Bol nepovinny a to bola diera: `renderInvoicePdf(db, id)`
+ * bez neho vypol VSETKY org filtre naraz, takze `limit(1)` na organizacii
+ * vratil lubovolnu firmu. Pri service-role klientovi (cron) to RLS nekryje
+ * nicim. Volajuci, ktory organizaciu nepozna, PDF vykreslit nesmie — nech
+ * skonci chybou, nie cudzou hlavickou.
  */
 export async function renderInvoicePdf(
   db: Db,
   id: string,
-  orgId?: string,
+  orgId: string,
 ): Promise<RenderedInvoice | null> {
-  const orgQuery = db.from("organizations").select("*")
-  const bankQuery = db.from("bank_accounts").select("*")
-  const docQuery = db.from("documents").select("*").eq("id", id)
-
   const [{ data: doc }, { data: items }, { data: org }, { data: bank }] =
     await Promise.all([
       // Doklad MUSI byt filtrovany na tu istu organizaciu ako hlavicka a banka.
@@ -103,14 +50,22 @@ export async function renderInvoicePdf(
       // vytiahol doklad firmy B vysadzany s hlavickou a IBAN-om firmy A —
       // vratane QR kodu, ktory vyzyva na uhradu cudzej sumy na vlastny ucet.
       // RLS to nezachyti: pusti vsetky organizacie, ktorych je pouzivatel clenom.
-      (orgId ? docQuery.eq("organization_id", orgId) : docQuery).maybeSingle(),
+      db
+        .from("documents")
+        .select("*")
+        .eq("id", id)
+        .eq("organization_id", orgId)
+        .maybeSingle(),
       db
         .from("document_items")
         .select("*")
         .eq("document_id", id)
         .order("position"),
-      (orgId ? orgQuery.eq("id", orgId) : orgQuery).limit(1).maybeSingle(),
-      (orgId ? bankQuery.eq("organization_id", orgId) : bankQuery)
+      db.from("organizations").select("*").eq("id", orgId).maybeSingle(),
+      db
+        .from("bank_accounts")
+        .select("*")
+        .eq("organization_id", orgId)
         .order("is_default", { ascending: false })
         .limit(1)
         .maybeSingle(),
@@ -157,9 +112,9 @@ export async function renderInvoicePdf(
             beneficiaryName: org.name,
           })
         : null,
-      imageDataUrl(org.logo_url),
-      wantsSupplierMark ? imageDataUrl(org.signature_url) : null,
-      wantsSupplierMark ? imageDataUrl(org.stamp_url) : null,
+      imageDataUrl(org.logo_url, orgId),
+      wantsSupplierMark ? imageDataUrl(org.signature_url, orgId) : null,
+      wantsSupplierMark ? imageDataUrl(org.stamp_url, orgId) : null,
     ])
 
   const buffer = await renderToBuffer(
