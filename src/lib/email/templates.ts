@@ -53,7 +53,8 @@ const DICT: Record<
     invoiceMeta: (n, total, due) =>
       `Faktúra ${n}, suma ${total}, splatnosť ${due}.`,
     attachedNote: "Faktúru nájdete v PDF prílohe tohto e-mailu.",
-    footer: (supplier) => `Tento e-mail odoslal ${supplier} cez Synapse Faktúra.`,
+    footer: (supplier) =>
+      `Tento e-mail odoslal ${supplier} cez Synapse Faktúra.`,
     labels: { number: "Číslo", total: "Suma", due: "Splatnosť" },
   },
   cz: {
@@ -65,7 +66,8 @@ const DICT: Record<
     invoiceMeta: (n, total, due) =>
       `Faktura ${n}, částka ${total}, splatnost ${due}.`,
     attachedNote: "Fakturu najdete v PDF příloze tohoto e-mailu.",
-    footer: (supplier) => `Tento e-mail odeslal ${supplier} přes Synapse Faktúra.`,
+    footer: (supplier) =>
+      `Tento e-mail odeslal ${supplier} přes Synapse Faktúra.`,
     labels: { number: "Číslo", total: "Částka", due: "Splatnost" },
   },
   en: {
@@ -77,7 +79,8 @@ const DICT: Record<
     invoiceMeta: (n, total, due) =>
       `Invoice ${n}, amount ${total}, due ${due}.`,
     attachedNote: "The invoice is attached to this email as a PDF.",
-    footer: (supplier) => `This email was sent by ${supplier} via Synapse Faktúra.`,
+    footer: (supplier) =>
+      `This email was sent by ${supplier} via Synapse Faktúra.`,
     labels: { number: "Number", total: "Amount", due: "Due date" },
   },
 }
@@ -92,9 +95,10 @@ export type InvoiceEmailInput = {
 }
 
 /** Subject + HTML for delivering an invoice (PDF attached separately). */
-export function invoiceEmail(
-  input: InvoiceEmailInput,
-): { subject: string; html: string } {
+export function invoiceEmail(input: InvoiceEmailInput): {
+  subject: string
+  html: string
+} {
   const t = DICT[normLang(input.lang)]
   const subject = t.invoiceSubject(input.docNumber, input.supplierName)
   const body = [
@@ -117,9 +121,10 @@ export type ReminderEmailInput = {
 }
 
 /** Subject + HTML for a payment reminder (body already composed elsewhere). */
-export function reminderEmail(
-  input: ReminderEmailInput,
-): { subject: string; html: string } {
+export function reminderEmail(input: ReminderEmailInput): {
+  subject: string
+  html: string
+} {
   const t = DICT[normLang(input.lang)]
   const subject = t.reminderSubject(input.docNumber)
   const paragraphs = input.body

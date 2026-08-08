@@ -55,9 +55,7 @@ export interface ExpenseAmounts {
   items: ExpenseItemRow[]
 }
 
-export function computeExpenseItems(
-  items: ExpenseItemInput[],
-): ExpenseAmounts {
+export function computeExpenseItems(items: ExpenseItemInput[]): ExpenseAmounts {
   const totals = computeInvoice(
     items.map((i) => ({
       quantity: i.quantity,

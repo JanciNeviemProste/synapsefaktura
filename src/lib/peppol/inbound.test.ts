@@ -150,7 +150,11 @@ describe("parseUblInvoice — inline UBL fixture", () => {
     expect(model.vatTotal).toBe(46)
     expect(model.total).toBe(246)
     expect(model.taxSubtotals).toHaveLength(1)
-    expect(model.taxSubtotals[0]).toMatchObject({ base: 200, vat: 46, rate: 23 })
+    expect(model.taxSubtotals[0]).toMatchObject({
+      base: 200,
+      vat: 46,
+      rate: 23,
+    })
   })
 
   it("maps lines (incl. unit reverse map + entity unescape)", () => {
@@ -174,7 +178,10 @@ describe("parseUblInvoice — inline UBL fixture", () => {
   })
 
   it("throws Slovak error when invoice number is missing", () => {
-    const noId = FIXTURE_XML.replace("<cbc:ID>2026001</cbc:ID>", "<cbc:ID></cbc:ID>")
+    const noId = FIXTURE_XML.replace(
+      "<cbc:ID>2026001</cbc:ID>",
+      "<cbc:ID></cbc:ID>",
+    )
     expect(() => parseUblInvoice(noId)).toThrow(/číslo faktúry/)
   })
 })

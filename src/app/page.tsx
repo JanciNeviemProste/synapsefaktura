@@ -5,7 +5,12 @@ import { SiteFooter } from "@/components/site-footer"
 import { HeroVideo } from "@/components/landing/hero-video"
 import { LandingNav } from "@/components/landing/landing-nav"
 import { Hero } from "@/components/landing/hero"
-import { PLANS, PLAN_ORDER, type Feature, type PlanTier } from "@/lib/billing/plans"
+import {
+  PLANS,
+  PLAN_ORDER,
+  type Feature,
+  type PlanTier,
+} from "@/lib/billing/plans"
 import { featureLabel } from "@/lib/billing/feature-labels"
 
 /**

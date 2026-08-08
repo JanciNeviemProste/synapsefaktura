@@ -10,7 +10,8 @@ import type { Database } from "@/lib/supabase/database.types"
  * a single shape regardless of direction.
  */
 
-export type EinvoiceDirection = Database["public"]["Enums"]["einvoice_direction"]
+export type EinvoiceDirection =
+  Database["public"]["Enums"]["einvoice_direction"]
 export type EinvoiceTransportStatus =
   Database["public"]["Enums"]["einvoice_transport_status"]
 export type EinvoiceValidationStatus =

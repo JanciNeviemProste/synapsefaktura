@@ -169,7 +169,9 @@ export default async function VehicleLogbookPage({
   const rate = resolveTravelRate(travelRates, periodTo, category)
   const rateAtStart = resolveTravelRate(travelRates, periodFrom, category)
   const rateChangedInPeriod =
-    rate !== null && rateAtStart !== null && rate.rate_per_km !== rateAtStart.rate_per_km
+    rate !== null &&
+    rateAtStart !== null &&
+    rate.rate_per_km !== rateAtStart.rate_per_km
 
   // Kilometre sa delia na dve vedra: jazdy s privesom maju o 15 % vyssiu
   // zakladnu nahradu. Jeden sucet vynasobeny jednou sadzbou by nesedel hned,
@@ -203,7 +205,9 @@ export default async function VehicleLogbookPage({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="flex flex-wrap items-center gap-3">
-              <h1 className="font-heading text-[clamp(24px,3.2vw,34px)] leading-tight tracking-tight">{vehicle.name}</h1>
+              <h1 className="font-heading text-[clamp(24px,3.2vw,34px)] leading-tight tracking-tight">
+                {vehicle.name}
+              </h1>
               <Badge variant="outline">{vehicle.license_plate}</Badge>
               {vehicle.active ? null : (
                 <Badge variant="secondary">Neaktívne</Badge>
@@ -282,7 +286,8 @@ export default async function VehicleLogbookPage({
                 />
               </div>
               <p className="text-muted-foreground text-sm">
-                Strop je to nižšie z dvojice — {formatLitres(fuel.eligibleLitres)}
+                Strop je to nižšie z dvojice —{" "}
+                {formatLitres(fuel.eligibleLitres)}
                 {fuel.basis === "equal"
                   ? " (obe strany sedia)"
                   : fuel.basis === "normed"
@@ -309,9 +314,12 @@ export default async function VehicleLogbookPage({
         <CardContent className="grid gap-3">
           {reimbursement === null || rate === null ? (
             <p className="text-muted-foreground text-sm">
-              Pre {VEHICLE_CATEGORY_LABELS[category].toLowerCase()} nie je
-              k {periodTo} zadaná žiadna sadzba cestovnej náhrady. Doplň ju v{" "}
-              <Link href="/app/settings" className="underline underline-offset-4">
+              Pre {VEHICLE_CATEGORY_LABELS[category].toLowerCase()} nie je k{" "}
+              {periodTo} zadaná žiadna sadzba cestovnej náhrady. Doplň ju v{" "}
+              <Link
+                href="/app/settings"
+                className="underline underline-offset-4"
+              >
                 nastaveniach
               </Link>
               .
@@ -345,7 +353,10 @@ export default async function VehicleLogbookPage({
                     <>
                       Z toho {formatKm(trailerKm)} s prívesom — základná náhrada
                       za ne je o 15 % vyššia, čo je{" "}
-                      {formatMoney(reimbursement.trailerSurcharge, rate.currency)}{" "}
+                      {formatMoney(
+                        reimbursement.trailerSurcharge,
+                        rate.currency,
+                      )}{" "}
                       navyše.
                     </>
                   ) : (

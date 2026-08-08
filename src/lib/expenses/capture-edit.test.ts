@@ -102,7 +102,9 @@ describe("totalsMismatch", () => {
   })
 
   it("halier zaokrúhlenia toleruje", () => {
-    expect(totalsMismatch(doc({ subtotal: 100, vatTotal: 19, total: 119.01 }))).toBeNull()
+    expect(
+      totalsMismatch(doc({ subtotal: 100, vatTotal: 19, total: 119.01 })),
+    ).toBeNull()
   })
 
   it("bez súm sa nevyjadruje", () => {
@@ -111,6 +113,8 @@ describe("totalsMismatch", () => {
   })
 
   it("chýbajúcu DPH berie ako nulovú", () => {
-    expect(totalsMismatch(doc({ vatTotal: null, subtotal: 119, total: 119 }))).toBeNull()
+    expect(
+      totalsMismatch(doc({ vatTotal: null, subtotal: 119, total: 119 })),
+    ).toBeNull()
   })
 })

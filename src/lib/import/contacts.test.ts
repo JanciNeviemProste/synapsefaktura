@@ -22,11 +22,15 @@ describe("parseContactsTable", () => {
   })
 
   it("zvládne čiarku aj tabulátor ako oddeľovač", () => {
-    expect(parseContactsTable("Nazov,Mesto\nFirma,Nitra").contacts[0]).toMatchObject({
+    expect(
+      parseContactsTable("Nazov,Mesto\nFirma,Nitra").contacts[0],
+    ).toMatchObject({
       name: "Firma",
       city: "Nitra",
     })
-    expect(parseContactsTable("Nazov\tMesto\nFirma\tNitra").contacts[0]).toMatchObject({
+    expect(
+      parseContactsTable("Nazov\tMesto\nFirma\tNitra").contacts[0],
+    ).toMatchObject({
       name: "Firma",
       city: "Nitra",
     })
@@ -59,7 +63,13 @@ describe("parseContactsTable", () => {
       "E;",
     ].join("\n")
     const types = parseContactsTable(csv).contacts.map((c) => c.type)
-    expect(types).toEqual(["customer", "supplier", "both", "supplier", "customer"])
+    expect(types).toEqual([
+      "customer",
+      "supplier",
+      "both",
+      "supplier",
+      "customer",
+    ])
   })
 
   it("odmietne tabuľku bez stĺpca s názvom", () => {

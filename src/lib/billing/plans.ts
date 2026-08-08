@@ -104,7 +104,8 @@ export const PLANS: Record<PlanTier, PlanDef> = {
     aiCallsPerMinute: 40, // TODO: business decision
     features: new Set<Feature>(ALL),
     stripePriceEnv: "STRIPE_PRICE_BUSINESS",
-    blurb: "Všetko z Pro + prognózy, viac používateľov, odosielanie e-faktúr, API.",
+    blurb:
+      "Všetko z Pro + prognózy, viac používateľov, odosielanie e-faktúr, API.",
   },
 }
 

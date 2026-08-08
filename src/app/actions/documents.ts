@@ -366,9 +366,7 @@ export async function markAsSent(
       supplierName: org.name,
       customerName: contact.name,
       total: formatMoney(doc.total, doc.currency),
-      dueDate: doc.due_date
-        ? doc.due_date.split("-").reverse().join(".")
-        : "—",
+      dueDate: doc.due_date ? doc.due_date.split("-").reverse().join(".") : "—",
     })
     const res = await sendEmail({
       to: contact.email,

@@ -184,7 +184,10 @@ export function parseStatutoryRates(html: string): ParseResult {
 
   const announcement = findAnnouncement(text)
   if (!announcement) {
-    return { ok: false, reason: "na stránke nie je číslo oznámenia (č. NNN/RRRR)" }
+    return {
+      ok: false,
+      reason: "na stránke nie je číslo oznámenia (č. NNN/RRRR)",
+    }
   }
   const sourceRef = `${announcement} Z. z.`
 
@@ -240,7 +243,11 @@ export function parseStatutoryRates(html: string): ParseResult {
  */
 export function isNewerStatutoryRate(
   found: ParsedStatutoryRates,
-  current: { validFrom: string; passenger: number; sourceRef: string | null } | null,
+  current: {
+    validFrom: string
+    passenger: number
+    sourceRef: string | null
+  } | null,
 ): { ok: true } | { ok: false; reason: string } {
   if (!current) return { ok: true }
 

@@ -24,7 +24,7 @@ keď to skupina dovoľuje. Žiadne vymyslené čísla/recenzie.
 > Spísal som prehľad, čo presne čaká živnostníkov a ako sa dá pripraviť — hodím
 > odkaz do komentárov, nech nespamujem príspevok. 🙂
 >
-> *(komentár:* odkaz na `TVOJA-DOMENA/e-faktura-2027` *)*
+> _(komentár:_ odkaz na `TVOJA-DOMENA/e-faktura-2027` _)_
 
 ---
 
@@ -34,6 +34,7 @@ keď to skupina dovoľuje. Žiadne vymyslené čísla/recenzie.
 >
 > Pýtam sa vážne — snažím sa pochopiť, čo živnostníkov najviac otravuje na
 > administratíve. U mňa to vždy boli:
+>
 > 1. naháňanie nezaplatených faktúr,
 > 2. prepisovanie údajov z bločkov,
 > 3. strach, či mám správne DPH.
@@ -41,8 +42,8 @@ keď to skupina dovoľuje. Žiadne vymyslené čísla/recenzie.
 > Čo je najväčší časožráč u teba? Napíš do komentára — som zvedavý, či to mám
 > podobne ako ostatní.
 
-*(Účel: rozbehnúť diskusiu + zistiť jazyk zákazníka. Neskôr môžeš spomenúť, že na
-tom staviaš riešenie.)*
+_(Účel: rozbehnúť diskusiu + zistiť jazyk zákazníka. Neskôr môžeš spomenúť, že na
+tom staviaš riešenie.)_
 
 ---
 
@@ -87,6 +88,7 @@ tom staviaš riešenie.)*
 ## 5) Krátke video (Reel/Short) — scenár „faktúra za 30 sekúnd"
 
 Najsilnejší wow moment = faktúra vetou. 15–30 s, 9:16, titulky (bez zvuku).
+
 ```
 [0–3 s]  HOOK (text + reč): „Faktúra za 30 sekúnd? Pozeraj."
 [3–20 s] Ukáž obrazovku: napíšeš vetu „Vyfakturuj Jánovi 3 hodiny konzultácie
@@ -99,6 +101,7 @@ Najsilnejší wow moment = faktúra vetou. 15–30 s, 9:16, titulky (bez zvuku).
 ---
 
 ## Pár pravidiel na záver
+
 - Do tela FB/LinkedIn postu **nedávaj odkaz priamo** ak sa dá (algoritmus tlmí
   dosah) — daj ho do prvého komentára.
 - Na každý komentár odpovedz do pár hodín (prvá hodina = najdôležitejšia).

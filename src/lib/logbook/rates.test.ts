@@ -23,14 +23,54 @@ function rate(p: Partial<TravelRate>): TravelRate {
 
 /** Zákonné sadzby tak, ako ich seeduje migrácia 20260805150000. */
 const STATUTORY: TravelRate[] = [
-  rate({ valid_from: "2024-05-01", valid_to: "2025-02-28", rate_per_km: 0.265, vehicle_category: "passenger" }),
-  rate({ valid_from: "2024-05-01", valid_to: "2025-02-28", rate_per_km: 0.075, vehicle_category: "motorcycle" }),
-  rate({ valid_from: "2025-03-01", valid_to: "2025-05-31", rate_per_km: 0.281, vehicle_category: "passenger" }),
-  rate({ valid_from: "2025-03-01", valid_to: "2025-05-31", rate_per_km: 0.08, vehicle_category: "motorcycle" }),
-  rate({ valid_from: "2025-06-01", valid_to: "2025-12-31", rate_per_km: 0.296, vehicle_category: "passenger" }),
-  rate({ valid_from: "2025-06-01", valid_to: "2025-12-31", rate_per_km: 0.085, vehicle_category: "motorcycle" }),
-  rate({ valid_from: "2026-01-01", valid_to: null, rate_per_km: 0.313, vehicle_category: "passenger" }),
-  rate({ valid_from: "2026-01-01", valid_to: null, rate_per_km: 0.09, vehicle_category: "motorcycle" }),
+  rate({
+    valid_from: "2024-05-01",
+    valid_to: "2025-02-28",
+    rate_per_km: 0.265,
+    vehicle_category: "passenger",
+  }),
+  rate({
+    valid_from: "2024-05-01",
+    valid_to: "2025-02-28",
+    rate_per_km: 0.075,
+    vehicle_category: "motorcycle",
+  }),
+  rate({
+    valid_from: "2025-03-01",
+    valid_to: "2025-05-31",
+    rate_per_km: 0.281,
+    vehicle_category: "passenger",
+  }),
+  rate({
+    valid_from: "2025-03-01",
+    valid_to: "2025-05-31",
+    rate_per_km: 0.08,
+    vehicle_category: "motorcycle",
+  }),
+  rate({
+    valid_from: "2025-06-01",
+    valid_to: "2025-12-31",
+    rate_per_km: 0.296,
+    vehicle_category: "passenger",
+  }),
+  rate({
+    valid_from: "2025-06-01",
+    valid_to: "2025-12-31",
+    rate_per_km: 0.085,
+    vehicle_category: "motorcycle",
+  }),
+  rate({
+    valid_from: "2026-01-01",
+    valid_to: null,
+    rate_per_km: 0.313,
+    vehicle_category: "passenger",
+  }),
+  rate({
+    valid_from: "2026-01-01",
+    valid_to: null,
+    rate_per_km: 0.09,
+    vehicle_category: "motorcycle",
+  }),
 ]
 
 describe("resolveTravelRate", () => {
@@ -39,11 +79,19 @@ describe("resolveTravelRate", () => {
   })
 
   it("berie sadzbu platnu k DATUMU JAZDY, nie tu najnovsiu", () => {
-    const stara = rate({ valid_from: "2024-01-01", valid_to: "2024-12-31", rate_per_km: 0.25 })
+    const stara = rate({
+      valid_from: "2024-01-01",
+      valid_to: "2024-12-31",
+      rate_per_km: 0.25,
+    })
     const nova = rate({ valid_from: "2025-01-01", rate_per_km: 0.28 })
 
-    expect(resolveTravelRate([stara, nova], "2024-06-01")?.rate_per_km).toBe(0.25)
-    expect(resolveTravelRate([stara, nova], "2025-06-01")?.rate_per_km).toBe(0.28)
+    expect(resolveTravelRate([stara, nova], "2024-06-01")?.rate_per_km).toBe(
+      0.25,
+    )
+    expect(resolveTravelRate([stara, nova], "2025-06-01")?.rate_per_km).toBe(
+      0.28,
+    )
   })
 
   it("hranice platnosti su vratane oboch dni", () => {
@@ -58,7 +106,9 @@ describe("resolveTravelRate", () => {
     const zakonna = rate({ organization_id: null, rate_per_km: 0.264 })
     const vlastna = rate({ organization_id: "org-1", rate_per_km: 0.35 })
 
-    expect(resolveTravelRate([zakonna, vlastna], "2026-03-15")?.rate_per_km).toBe(0.35)
+    expect(
+      resolveTravelRate([zakonna, vlastna], "2026-03-15")?.rate_per_km,
+    ).toBe(0.35)
     expect(resolveTravelRate([zakonna], "2026-03-15")?.rate_per_km).toBe(0.264)
   })
 
@@ -69,9 +119,19 @@ describe("resolveTravelRate", () => {
   })
 
   it("vlastna sadzba vyhra aj ked je starsia nez zakonna", () => {
-    const zakonna = rate({ organization_id: null, valid_from: "2026-01-01", rate_per_km: 0.28 })
-    const vlastna = rate({ organization_id: "org-1", valid_from: "2025-01-01", rate_per_km: 0.35 })
-    expect(resolveTravelRate([zakonna, vlastna], "2026-06-01")?.rate_per_km).toBe(0.35)
+    const zakonna = rate({
+      organization_id: null,
+      valid_from: "2026-01-01",
+      rate_per_km: 0.28,
+    })
+    const vlastna = rate({
+      organization_id: "org-1",
+      valid_from: "2025-01-01",
+      rate_per_km: 0.35,
+    })
+    expect(
+      resolveTravelRate([zakonna, vlastna], "2026-06-01")?.rate_per_km,
+    ).toBe(0.35)
   })
 })
 
@@ -101,33 +161,51 @@ describe("resolveTravelRate — kategoria vozidla", () => {
 
   it("NEPOUZIJE sadzbu inej kategorie", () => {
     // Zamena by dala 3,5-nasobok zakonneho stropu, tak radsej nic.
-    const lenAuto = [rate({ vehicle_category: "passenger", rate_per_km: 0.313 })]
+    const lenAuto = [
+      rate({ vehicle_category: "passenger", rate_per_km: 0.313 }),
+    ]
     expect(resolveTravelRate(lenAuto, "2026-03-15", "motorcycle")).toBeNull()
   })
 
   it("sadzba bez kategorie plati pre akekolvek vozidlo", () => {
     // Tak sa zadava vlastna sadzba firmy.
     const vlastna = [
-      rate({ organization_id: "org-1", vehicle_category: null, rate_per_km: 0.4 }),
+      rate({
+        organization_id: "org-1",
+        vehicle_category: null,
+        rate_per_km: 0.4,
+      }),
     ]
-    expect(resolveTravelRate(vlastna, "2026-03-15", "passenger")?.rate_per_km).toBe(0.4)
-    expect(resolveTravelRate(vlastna, "2026-03-15", "motorcycle")?.rate_per_km).toBe(0.4)
+    expect(
+      resolveTravelRate(vlastna, "2026-03-15", "passenger")?.rate_per_km,
+    ).toBe(0.4)
+    expect(
+      resolveTravelRate(vlastna, "2026-03-15", "motorcycle")?.rate_per_km,
+    ).toBe(0.4)
   })
 
   it("stvorkolka pouzije sadzbu motocykla", () => {
     // Oznamenia ich zoskupuju ("dvojkolesove, trojkolesove vozidla
     // a stvorkolky: 0,090 eura"), takze vlastny riadok nema.
-    expect(resolveTravelRate(STATUTORY, "2026-03-15", "quad")?.rate_per_km).toBe(
-      0.09,
-    )
-    expect(resolveTravelRate(STATUTORY, "2025-04-15", "quad")?.rate_per_km).toBe(
-      0.08,
-    )
+    expect(
+      resolveTravelRate(STATUTORY, "2026-03-15", "quad")?.rate_per_km,
+    ).toBe(0.09)
+    expect(
+      resolveTravelRate(STATUTORY, "2025-04-15", "quad")?.rate_per_km,
+    ).toBe(0.08)
   })
 
   it("presna kategoria vyhrava nad sadzbou bez kategorie", () => {
-    const bezKategorie = rate({ organization_id: "org-1", vehicle_category: null, rate_per_km: 0.4 })
-    const preMotorku = rate({ organization_id: "org-1", vehicle_category: "motorcycle", rate_per_km: 0.12 })
+    const bezKategorie = rate({
+      organization_id: "org-1",
+      vehicle_category: null,
+      rate_per_km: 0.4,
+    })
+    const preMotorku = rate({
+      organization_id: "org-1",
+      vehicle_category: "motorcycle",
+      rate_per_km: 0.12,
+    })
     expect(
       resolveTravelRate([bezKategorie, preMotorku], "2026-03-15", "motorcycle")
         ?.rate_per_km,
@@ -144,13 +222,21 @@ describe("resolveTravelRate — nepotvrdena sadzba", () => {
       confirmed_at: null,
     })
     // Do potvrdenia sa pocita starou.
-    expect(resolveTravelRate([stara, navrhnuta], "2026-08-15")?.rate_per_km).toBe(0.313)
+    expect(
+      resolveTravelRate([stara, navrhnuta], "2026-08-15")?.rate_per_km,
+    ).toBe(0.313)
   })
 
   it("po potvrdeni sa zacne pouzivat", () => {
-    const stara = rate({ valid_from: "2026-01-01", valid_to: "2026-06-30", rate_per_km: 0.313 })
+    const stara = rate({
+      valid_from: "2026-01-01",
+      valid_to: "2026-06-30",
+      rate_per_km: 0.313,
+    })
     const potvrdena = rate({ valid_from: "2026-07-01", rate_per_km: 0.33 })
-    expect(resolveTravelRate([stara, potvrdena], "2026-08-15")?.rate_per_km).toBe(0.33)
+    expect(
+      resolveTravelRate([stara, potvrdena], "2026-08-15")?.rate_per_km,
+    ).toBe(0.33)
   })
 
   it("samotna nepotvrdena sadzba znamena ziadnu sadzbu", () => {
@@ -172,7 +258,9 @@ describe("trailerEligible", () => {
 
   it("stvorkolka ma sadzbu motocykla, ale narok na prives ako auto", () => {
     // Presne preto nemoze byt `quad` zluceny s `motorcycle`.
-    expect(resolveTravelRate(STATUTORY, "2026-03-15", "quad")?.rate_per_km).toBe(
+    expect(
+      resolveTravelRate(STATUTORY, "2026-03-15", "quad")?.rate_per_km,
+    ).toBe(
       resolveTravelRate(STATUTORY, "2026-03-15", "motorcycle")?.rate_per_km,
     )
     expect(trailerEligible("quad")).not.toBe(trailerEligible("motorcycle"))

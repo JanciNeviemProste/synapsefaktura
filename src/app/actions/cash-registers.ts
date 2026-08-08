@@ -276,10 +276,11 @@ export async function createCashItem(
     const sequenceId = v.direction === "in" ? seq.inId : seq.outId
     if (sequenceId) {
       const year = Number(v.issuedOn.slice(0, 4)) || new Date().getFullYear()
-      const { data: allocated, error: seqError } = await createAdminClient().rpc(
-        "next_sequence_number",
-        { p_sequence_id: sequenceId, p_year: year },
-      )
+      const { data: allocated, error: seqError } =
+        await createAdminClient().rpc("next_sequence_number", {
+          p_sequence_id: sequenceId,
+          p_year: year,
+        })
       if (seqError) {
         console.error("[cash] cislo z radu sa nepodarilo pridelit", {
           registerId: v.cashRegisterId,

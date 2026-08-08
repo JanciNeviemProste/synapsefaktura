@@ -12,9 +12,9 @@ export default function CookiesPage() {
       <section>
         <h2>Aké cookies používame</h2>
         <p>
-          Používame výhradne <strong>nevyhnutné (funkčné)</strong> súbory cookie,
-          ktoré sú potrebné na fungovanie služby. Nepoužívame reklamné ani
-          sledovacie cookies tretích strán na profilovanie.
+          Používame výhradne <strong>nevyhnutné (funkčné)</strong> súbory
+          cookie, ktoré sú potrebné na fungovanie služby. Nepoužívame reklamné
+          ani sledovacie cookies tretích strán na profilovanie.
         </p>
         <ul>
           <li>
@@ -22,7 +22,8 @@ export default function CookiesPage() {
             prihlásení.
           </li>
           <li>
-            <strong>locale</strong> — zapamätá si zvolený jazyk rozhrania (SK/CZ/EN).
+            <strong>locale</strong> — zapamätá si zvolený jazyk rozhrania
+            (SK/CZ/EN).
           </li>
           <li>
             <strong>theme</strong> — zapamätá si svetlý/tmavý režim.
@@ -36,9 +37,10 @@ export default function CookiesPage() {
       <section>
         <h2>Súhlas</h2>
         <p>
-          Keďže ide o nevyhnutné cookies potrebné na poskytnutie služby, ktorú ste
-          si vyžiadali, nevyžadujú predchádzajúci súhlas. Ak by sme v budúcnosti
-          pridali analytické alebo marketingové cookies, vyžiadame si na ne súhlas.
+          Keďže ide o nevyhnutné cookies potrebné na poskytnutie služby, ktorú
+          ste si vyžiadali, nevyžadujú predchádzajúci súhlas. Ak by sme v
+          budúcnosti pridali analytické alebo marketingové cookies, vyžiadame si
+          na ne súhlas.
         </p>
       </section>
 
@@ -46,8 +48,8 @@ export default function CookiesPage() {
         <h2>Správa cookies</h2>
         <p>
           Cookies môžete kedykoľvek vymazať alebo blokovať v nastaveniach
-          prehliadača. Blokovanie nevyhnutných cookies však znemožní prihlásenie a
-          používanie služby.
+          prehliadača. Blokovanie nevyhnutných cookies však znemožní prihlásenie
+          a používanie služby.
         </p>
       </section>
     </LegalShell>

@@ -25,6 +25,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Prvý krok schválne: je najlacnejší a jeho zlyhanie sa opraví jedným
+      # `pnpm format`. Kým repo nebolo naformátované, tento krok tu byť nemohol
+      # a každý diff niesol riadky, ktoré nikto vedome nemenil — presne tie
+      # riadky potom kolidovali medzi dvoma PR.
+      - name: Formát
+        run: pnpm format:check
+
       - name: Typecheck
         run: pnpm typecheck
 
@@ -91,12 +98,23 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
-          ADDED=$(git diff "$BASE" "$HEAD" -- '*.ts' '*.tsx' | grep '^+' | grep -v '^+++' || true)
+          # Porovnavame PRIDANE voci ODSTRANENYM, nie len pridane.
+          #
+          # Prva verzia ratala iba `+` riadky a hned na to doplatila: pri
+          # preformatovani repa sa uz existujuci `eslint-disable-next-line`
+          # prelomil na iny riadok, cize sa v diffe objavil ako pridany — a job
+          # spadol na nicom. Falosny poplach je horsi nez ziadna kontrola,
+          # lebo ucí ludi ignorovat cervene krížiky.
+          DIFF=$(git diff "$BASE" "$HEAD" -- '*.ts' '*.tsx')
+          ADDED=$(echo "$DIFF" | grep '^+' | grep -v '^+++' || true)
+          REMOVED=$(echo "$DIFF" | grep '^-' | grep -v '^---' || true)
           FAIL=0
           check() {
-            if echo "$ADDED" | grep -qE "$1"; then
-              echo "::error::Pridané: $2 — ak to naozaj treba, napíš vedľa komentár prečo."
-              echo "$ADDED" | grep -nE "$1" | head -5
+            A=$(echo "$ADDED"   | grep -cE "$1" || true)
+            R=$(echo "$REMOVED" | grep -cE "$1" || true)
+            if [ "$A" -gt "$R" ]; then
+              echo "::error::Pribudlo $((A - R))× $2 — ak to naozaj treba, napíš vedľa komentár prečo."
+              echo "$ADDED" | grep -E "$1" | head -5
               FAIL=1
             fi
           }

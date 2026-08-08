@@ -81,8 +81,8 @@ export function EInvoiceSettings({
       <CardHeader>
         <CardTitle>E-fakturácia (Peppol)</CardTitle>
         <CardDescription>
-          Od roku 2027 bude elektronická fakturácia cez sieť Peppol povinná;
-          rok 2026 je dobrovoľné testovacie obdobie, počas ktorého si zapojenie
+          Od roku 2027 bude elektronická fakturácia cez sieť Peppol povinná; rok
+          2026 je dobrovoľné testovacie obdobie, počas ktorého si zapojenie
           môžete vyskúšať nezáväzne.
         </CardDescription>
       </CardHeader>

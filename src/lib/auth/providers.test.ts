@@ -12,7 +12,9 @@ describe("parseEnabledProviders", () => {
 
   it("vypnutý Google sa medzi nimi neocitne", () => {
     // Presne stav produkcie v čase písania: tlačidlo viedlo na surový JSON.
-    const p = parseEnabledProviders({ external: { email: true, google: false } })
+    const p = parseEnabledProviders({
+      external: { email: true, google: false },
+    })
     expect(p).not.toContain("google")
   })
 
@@ -28,7 +30,9 @@ describe("parseEnabledProviders", () => {
   it("neberie hodnoty, ktoré len vyzerajú pravdivo", () => {
     // `"false"` aj `1` sú v JS pravdivé — tu by to znamenalo pokazené tlačidlo.
     expect(
-      parseEnabledProviders({ external: { google: "false", apple: 1, azure: {} } }),
+      parseEnabledProviders({
+        external: { google: "false", apple: 1, azure: {} },
+      }),
     ).toEqual([])
   })
 })

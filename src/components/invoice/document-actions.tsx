@@ -122,10 +122,12 @@ export function DocumentActions({
         variant="outline"
         disabled={pending}
         onClick={() =>
-          run(() => markAsSent(id), (res) =>
-            res.delivered
-              ? "Faktúra odoslaná e-mailom."
-              : "Označené ako odoslané (e-mail nie je nakonfigurovaný).",
+          run(
+            () => markAsSent(id),
+            (res) =>
+              res.delivered
+                ? "Faktúra odoslaná e-mailom."
+                : "Označené ako odoslané (e-mail nie je nakonfigurovaný).",
           )
         }
       >

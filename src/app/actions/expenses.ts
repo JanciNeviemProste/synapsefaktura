@@ -460,7 +460,6 @@ export async function clearExpensePayments(
   return { ok: true, id }
 }
 
-
 /** Signed URL for viewing a stored attachment (org membership enforced by RLS on the expense row). */
 export async function getAttachmentSignedUrl(
   path: string,

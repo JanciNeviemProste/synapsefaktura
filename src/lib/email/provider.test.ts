@@ -36,7 +36,11 @@ describe("sendEmail", () => {
 
   it("skips (no-op) when no key is configured and never calls fetch", async () => {
     delete process.env[KEY]
-    const res = await sendEmail({ to: "a@b.sk", subject: "S", html: "<p>x</p>" })
+    const res = await sendEmail({
+      to: "a@b.sk",
+      subject: "S",
+      html: "<p>x</p>",
+    })
     expect(res).toEqual({ ok: false, skipped: true })
     expect(fetchMock).not.toHaveBeenCalled()
   })
@@ -77,7 +81,11 @@ describe("sendEmail", () => {
       status: 422,
       text: async () => "Invalid from address",
     })
-    const res = await sendEmail({ to: "a@b.sk", subject: "S", html: "<p>x</p>" })
+    const res = await sendEmail({
+      to: "a@b.sk",
+      subject: "S",
+      html: "<p>x</p>",
+    })
     expect(res.ok).toBe(false)
     expect(res.skipped).toBeUndefined()
     expect(res.error).toContain("422")
@@ -86,7 +94,11 @@ describe("sendEmail", () => {
   it("returns an error (does not throw) when fetch rejects", async () => {
     process.env[KEY] = "re_test"
     fetchMock.mockRejectedValue(new Error("network down"))
-    const res = await sendEmail({ to: "a@b.sk", subject: "S", html: "<p>x</p>" })
+    const res = await sendEmail({
+      to: "a@b.sk",
+      subject: "S",
+      html: "<p>x</p>",
+    })
     expect(res.ok).toBe(false)
     expect(res.error).toContain("network down")
   })

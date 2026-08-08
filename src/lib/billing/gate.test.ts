@@ -21,7 +21,17 @@ type DB = SupabaseClient<Database>
  * it too (used by the count query). Result is keyed by table name.
  */
 function fakeDb(perTable: Record<string, Result>): DB {
-  const chain = ["select", "eq", "neq", "gte", "lte", "in", "not", "order", "limit"]
+  const chain = [
+    "select",
+    "eq",
+    "neq",
+    "gte",
+    "lte",
+    "in",
+    "not",
+    "order",
+    "limit",
+  ]
   return {
     from(table: string) {
       const result: Result = perTable[table] ?? { data: null, error: null }
@@ -45,9 +55,9 @@ describe("getOrgPlan", () => {
   })
 
   it("defaults to free when missing or on error", async () => {
-    expect(await getOrgPlan(fakeDb({ organizations: { data: null } }), "o1")).toBe(
-      "free",
-    )
+    expect(
+      await getOrgPlan(fakeDb({ organizations: { data: null } }), "o1"),
+    ).toBe("free")
     expect(
       await getOrgPlan(
         fakeDb({ organizations: { data: null, error: { message: "boom" } } }),
@@ -85,7 +95,9 @@ describe("issuedThisMonth", () => {
   })
 
   it("returns null on a query error (so the caller can fail closed)", async () => {
-    const db = fakeDb({ documents: { count: null, error: { message: "boom" } } })
+    const db = fakeDb({
+      documents: { count: null, error: { message: "boom" } },
+    })
     expect(await issuedThisMonth(db, "o1")).toBeNull()
   })
 })

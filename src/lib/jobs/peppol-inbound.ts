@@ -17,7 +17,11 @@ type Db = SupabaseClient<Database>
  */
 export async function receiveInboundForOrg(
   db: Db,
-  org: { id: string; peppol_id: string; digital_postman_provider: string | null },
+  org: {
+    id: string
+    peppol_id: string
+    digital_postman_provider: string | null
+  },
 ): Promise<number> {
   const provider = getPostmanProvider(org.digital_postman_provider)
   const msgs: InboundMessage[] = await provider.receive(org.peppol_id)

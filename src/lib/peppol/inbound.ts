@@ -24,15 +24,19 @@ import type {
 
 /** Unescape the five predefined XML entities (+ numeric refs). */
 function unescapeXml(s: string): string {
-  return s
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(parseInt(h, 16)))
-    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)))
-    // `&amp;` must be last so we don't double-decode (e.g. `&amp;lt;`).
-    .replace(/&amp;/g, "&")
+  return (
+    s
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/&#x([0-9a-fA-F]+);/g, (_, h) =>
+        String.fromCodePoint(parseInt(h, 16)),
+      )
+      .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)))
+      // `&amp;` must be last so we don't double-decode (e.g. `&amp;lt;`).
+      .replace(/&amp;/g, "&")
+  )
 }
 
 /** Local-name matcher: `ID` matches `<cbc:ID>` and `<ID>` alike. */
@@ -241,7 +245,10 @@ export function parseUblInvoice(xml: string): UblInvoiceModel {
   const paymentMeans = firstElement(xml, "PaymentMeans") ?? ""
   const payee = firstElement(paymentMeans, "PayeeFinancialAccount") ?? ""
   const iban = text(payee, "ID")
-  const bic = text(firstElement(payee, "FinancialInstitutionBranch") ?? payee, "ID")
+  const bic = text(
+    firstElement(payee, "FinancialInstitutionBranch") ?? payee,
+    "ID",
+  )
   const paymentReference = text(paymentMeans, "PaymentID")
 
   // VAT breakdown — document-level TaxTotal (the one carrying TaxSubtotals).
@@ -249,7 +256,9 @@ export function parseUblInvoice(xml: string): UblInvoiceModel {
   const docTaxTotal =
     taxTotals.find((t) => /TaxSubtotal/i.test(t)) ?? taxTotals[0] ?? ""
   const vatTotal = num(docTaxTotal, "TaxAmount")
-  const taxSubtotals = allElements(docTaxTotal, "TaxSubtotal").map(parseTaxSubtotal)
+  const taxSubtotals = allElements(docTaxTotal, "TaxSubtotal").map(
+    parseTaxSubtotal,
+  )
 
   // Monetary totals.
   const monetary = firstElement(xml, "LegalMonetaryTotal") ?? ""

@@ -107,7 +107,9 @@ describe("resolveClientDetails", () => {
   })
 
   it("falls back to the contact when the snapshot has no usable name", () => {
-    expect(resolveClientDetails({ ico: "12345678" }, LIVE)?.name).toBe(LIVE.name)
+    expect(resolveClientDetails({ ico: "12345678" }, LIVE)?.name).toBe(
+      LIVE.name,
+    )
     expect(resolveClientDetails({ name: "   " }, LIVE)?.frozen).toBe(false)
   })
 

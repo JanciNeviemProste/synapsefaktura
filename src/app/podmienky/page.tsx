@@ -4,7 +4,8 @@ import { SITE } from "@/lib/site"
 
 export const metadata: Metadata = {
   title: "Obchodné podmienky — Synapse Faktúra",
-  description: "Všeobecné obchodné podmienky používania služby Synapse Faktúra.",
+  description:
+    "Všeobecné obchodné podmienky používania služby Synapse Faktúra.",
 }
 
 export default function TermsPage() {
@@ -16,8 +17,8 @@ export default function TermsPage() {
       <section>
         <h2>1. Prevádzkovateľ</h2>
         <p>
-          Službu {SITE.name} prevádzkuje {c.legalName}, IČO {c.ico}, DIČ {c.dic},
-          so sídlom {c.address}, {c.registration} (ďalej „poskytovateľ").
+          Službu {SITE.name} prevádzkuje {c.legalName}, IČO {c.ico}, DIČ {c.dic}
+          , so sídlom {c.address}, {c.registration} (ďalej „poskytovateľ").
           Kontakt: {SITE.supportEmail}.
         </p>
       </section>
@@ -36,7 +37,9 @@ export default function TermsPage() {
         <h2>3. Registrácia a účet</h2>
         <ul>
           <li>Na používanie je potrebná registrácia a overenie e-mailu.</li>
-          <li>Používateľ zodpovedá za správnosť údajov a bezpečnosť prihlásenia.</li>
+          <li>
+            Používateľ zodpovedá za správnosť údajov a bezpečnosť prihlásenia.
+          </li>
           <li>Jeden účet môže spravovať viac firiem (organizácií) a členov.</li>
         </ul>
       </section>
@@ -49,16 +52,16 @@ export default function TermsPage() {
             mesačným predplatným. Aktuálne ceny sú uvedené v aplikácii.
           </li>
           <li>
-            Platby spracúva poskytovateľ platobných služieb Stripe. Predplatné sa
-            obnovuje automaticky, kým ho používateľ nezruší.
+            Platby spracúva poskytovateľ platobných služieb Stripe. Predplatné
+            sa obnovuje automaticky, kým ho používateľ nezruší.
           </li>
           <li>
             Zrušiť predplatné je možné kedykoľvek; platí do konca zaplateného
             obdobia. K cene sa účtuje DPH podľa platných predpisov.
           </li>
           <li>
-            Prípadná skúšobná doba (trial) je bezplatná; ak ju používateľ nezruší
-            pred koncom, prechádza na platené predplatné.
+            Prípadná skúšobná doba (trial) je bezplatná; ak ju používateľ
+            nezruší pred koncom, prechádza na platené predplatné.
           </li>
         </ul>
       </section>
@@ -69,17 +72,18 @@ export default function TermsPage() {
           Nástroj pomáha s výpočtom DPH a náležitosťami dokladov, no konečnú
           zodpovednosť za správnosť daňových a účtovných dokladov nesie
           používateľ. Poskytovateľ nezodpovedá za škody spôsobené nesprávnymi
-          vstupnými údajmi ani za rozhodnutia urobené na základe AI výstupov, ktoré
-          majú informatívny charakter.
+          vstupnými údajmi ani za rozhodnutia urobené na základe AI výstupov,
+          ktoré majú informatívny charakter.
         </p>
       </section>
 
       <section>
         <h2>6. Dostupnosť a obmedzenie zodpovednosti</h2>
         <p>
-          Poskytovateľ sa snaží o vysokú dostupnosť, no negarantuje neprerušovanú
-          prevádzku. Zodpovednosť za škodu je obmedzená do výšky predplatného
-          zaplateného za posledných 12 mesiacov, v rozsahu povolenom právom.
+          Poskytovateľ sa snaží o vysokú dostupnosť, no negarantuje
+          neprerušovanú prevádzku. Zodpovednosť za škodu je obmedzená do výšky
+          predplatného zaplateného za posledných 12 mesiacov, v rozsahu
+          povolenom právom.
         </p>
       </section>
 
@@ -87,8 +91,8 @@ export default function TermsPage() {
         <h2>7. Ukončenie</h2>
         <p>
           Používateľ môže účet kedykoľvek zrušiť. Poskytovateľ môže ukončiť
-          poskytovanie pri porušení podmienok. Po zrušení sú údaje spracúvané podľa
-          zásad ochrany osobných údajov.
+          poskytovanie pri porušení podmienok. Po zrušení sú údaje spracúvané
+          podľa zásad ochrany osobných údajov.
         </p>
       </section>
 
@@ -96,7 +100,8 @@ export default function TermsPage() {
         <h2>8. Zmeny podmienok</h2>
         <p>
           Podmienky môžu byť aktualizované; o podstatných zmenách poskytovateľ
-          informuje vopred. Pokračovaním v používaní používateľ vyjadruje súhlas.
+          informuje vopred. Pokračovaním v používaní používateľ vyjadruje
+          súhlas.
         </p>
       </section>
 

@@ -163,7 +163,9 @@ export function toUblModel(input: {
       })
     }
   }
-  const taxSubtotals = Array.from(groups.values()).sort((a, b) => b.rate - a.rate)
+  const taxSubtotals = Array.from(groups.values()).sort(
+    (a, b) => b.rate - a.rate,
+  )
 
   const buyer: PeppolParty = contact
     ? contactParty(contact)
@@ -239,10 +241,7 @@ function postalAddress(party: PeppolParty): string {
   if (party.street) body += el("cbc:StreetName", party.street)
   if (party.city) body += el("cbc:CityName", party.city)
   if (party.postalCode) body += el("cbc:PostalZone", party.postalCode)
-  body += wrap(
-    "cac:Country",
-    el("cbc:IdentificationCode", party.country),
-  )
+  body += wrap("cac:Country", el("cbc:IdentificationCode", party.country))
   return wrap("cac:PostalAddress", body)
 }
 
@@ -302,10 +301,7 @@ function paymentMeansXml(model: UblInvoiceModel): string {
     el("cbc:PaymentID", model.paymentReference ?? model.number)
   let account = el("cbc:ID", model.iban)
   if (model.bic) {
-    account += wrap(
-      "cac:FinancialInstitutionBranch",
-      el("cbc:ID", model.bic),
-    )
+    account += wrap("cac:FinancialInstitutionBranch", el("cbc:ID", model.bic))
   }
   body += wrap("cac:PayeeFinancialAccount", account)
   return wrap("cac:PaymentMeans", body)
@@ -340,7 +336,11 @@ function invoiceLineXml(line: UblLine, currency: string): string {
   body += wrap(
     "cac:Item",
     el("cbc:Name", line.description) +
-      taxCategoryXml("cac:ClassifiedTaxCategory", line.taxCategory, line.vatRate),
+      taxCategoryXml(
+        "cac:ClassifiedTaxCategory",
+        line.taxCategory,
+        line.vatRate,
+      ),
   )
   body += wrap(
     "cac:Price",
@@ -365,14 +365,8 @@ export function serializeUbl(model: UblInvoiceModel): string {
   if (model.supplyDate) body += el("cbc:TaxPointDate", model.supplyDate)
   body += el("cbc:DocumentCurrencyCode", currency)
 
-  body += wrap(
-    "cac:AccountingSupplierParty",
-    partyXml(model.seller),
-  )
-  body += wrap(
-    "cac:AccountingCustomerParty",
-    partyXml(model.buyer),
-  )
+  body += wrap("cac:AccountingSupplierParty", partyXml(model.seller))
+  body += wrap("cac:AccountingCustomerParty", partyXml(model.buyer))
 
   body += paymentMeansXml(model)
   body += taxTotalXml(model)

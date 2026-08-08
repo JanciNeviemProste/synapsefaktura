@@ -357,13 +357,11 @@ export async function addTagging(
     return { ok: false, error: "Záznam sa nenašiel." }
   }
 
-  const { error } = await supabase
-    .from("taggings")
-    .insert({
-      tag_id: tagId,
-      taggable_type: taggableType,
-      taggable_id: taggableId,
-    })
+  const { error } = await supabase.from("taggings").insert({
+    tag_id: tagId,
+    taggable_type: taggableType,
+    taggable_id: taggableId,
+  })
   if (error && error.code !== UNIQUE_VIOLATION) {
     return { ok: false, error: "Štítok sa nepodarilo priradiť." }
   }

@@ -5,8 +5,20 @@ describe("computeExpenseItems", () => {
   it("zvladne dodavatelsku fakturu s viacerymi sadzbami DPH", () => {
     // Presne ten pripad, ktory sa doteraz nedal zadat spravne.
     const r = computeExpenseItems([
-      { description: "Materiál", quantity: 2, unit: "ks", unitPrice: 100, vatRate: 23 },
-      { description: "Kniha", quantity: 1, unit: "ks", unitPrice: 50, vatRate: 5 },
+      {
+        description: "Materiál",
+        quantity: 2,
+        unit: "ks",
+        unitPrice: 100,
+        vatRate: 23,
+      },
+      {
+        description: "Kniha",
+        quantity: 1,
+        unit: "ks",
+        unitPrice: 50,
+        vatRate: 5,
+      },
     ])
 
     expect(r.subtotal).toBe(250)
@@ -21,15 +33,33 @@ describe("computeExpenseItems", () => {
 
   it("rekapitulacia zluci riadky s rovnakou sadzbou", () => {
     const r = computeExpenseItems([
-      { description: "A", quantity: 1, unit: "ks", unitPrice: 100, vatRate: 23 },
-      { description: "B", quantity: 1, unit: "ks", unitPrice: 200, vatRate: 23 },
+      {
+        description: "A",
+        quantity: 1,
+        unit: "ks",
+        unitPrice: 100,
+        vatRate: 23,
+      },
+      {
+        description: "B",
+        quantity: 1,
+        unit: "ks",
+        unitPrice: 200,
+        vatRate: 23,
+      },
     ])
     expect(r.vat_rate_breakdown).toEqual([{ rate: 23, base: 300, vat: 69 }])
   })
 
   it("polozky dostanu poradie a dopocitane sumy", () => {
     const r = computeExpenseItems([
-      { description: "Prvá", quantity: 3, unit: "h", unitPrice: 10, vatRate: 23 },
+      {
+        description: "Prvá",
+        quantity: 3,
+        unit: "h",
+        unitPrice: 10,
+        vatRate: 23,
+      },
     ])
     expect(r.items).toEqual([
       {
@@ -52,7 +82,13 @@ describe("computeExpenseItems", () => {
 
   it("nulova sadzba prejde ako platna — dodavatel DPH neuctoval", () => {
     const r = computeExpenseItems([
-      { description: "Od neplatiteľa", quantity: 1, unit: "ks", unitPrice: 80, vatRate: 0 },
+      {
+        description: "Od neplatiteľa",
+        quantity: 1,
+        unit: "ks",
+        unitPrice: 80,
+        vatRate: 0,
+      },
     ])
     expect(r.subtotal).toBe(80)
     expect(r.vat_total).toBe(0)
@@ -99,7 +135,14 @@ describe("computeExpenseItems", () => {
   it("nevyplnene clenenie je null, nie prazdny retazec", () => {
     // Export by inak uctovnikovi poslal stlpec, ktory vyzera vyplneny.
     const r = computeExpenseItems([
-      { description: "A", quantity: 1, unit: "ks", unitPrice: 10, vatRate: 23, costCenter: "" },
+      {
+        description: "A",
+        quantity: 1,
+        unit: "ks",
+        unitPrice: 10,
+        vatRate: 23,
+        costCenter: "",
+      },
     ])
     expect(r.items[0].cost_center).toBeNull()
     expect(r.items[0].account_code).toBeNull()
@@ -115,9 +158,27 @@ describe("computeExpenseItems", () => {
   it("sucet sedi na cent aj pri zaokruhlovani po riadkoch", () => {
     // 3 x 33,33 pri 23 % — po riadkoch, nie z celku, aby DPH nedriftovala.
     const r = computeExpenseItems([
-      { description: "A", quantity: 1, unit: "ks", unitPrice: 33.33, vatRate: 23 },
-      { description: "B", quantity: 1, unit: "ks", unitPrice: 33.33, vatRate: 23 },
-      { description: "C", quantity: 1, unit: "ks", unitPrice: 33.33, vatRate: 23 },
+      {
+        description: "A",
+        quantity: 1,
+        unit: "ks",
+        unitPrice: 33.33,
+        vatRate: 23,
+      },
+      {
+        description: "B",
+        quantity: 1,
+        unit: "ks",
+        unitPrice: 33.33,
+        vatRate: 23,
+      },
+      {
+        description: "C",
+        quantity: 1,
+        unit: "ks",
+        unitPrice: 33.33,
+        vatRate: 23,
+      },
     ])
     expect(r.subtotal).toBe(99.99)
     expect(r.vat_total).toBe(23.01) // 7,67 x 3

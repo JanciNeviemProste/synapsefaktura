@@ -77,10 +77,15 @@ export function checkDocumentFormat(bytes: Uint8Array): FormatCheck {
         "Toto je zošit alebo archív, nie doklad. Nahraj fotku, sken alebo PDF.",
     }
   }
-  if (ascii(bytes, 0, "%!PS") || ascii(bytes, 0, "II*") || ascii(bytes, 0, "MM")) {
+  if (
+    ascii(bytes, 0, "%!PS") ||
+    ascii(bytes, 0, "II*") ||
+    ascii(bytes, 0, "MM")
+  ) {
     return {
       ok: false,
-      error: "Formát TIFF/PostScript nepodporujeme. Ulož doklad ako PDF alebo JPEG.",
+      error:
+        "Formát TIFF/PostScript nepodporujeme. Ulož doklad ako PDF alebo JPEG.",
     }
   }
 

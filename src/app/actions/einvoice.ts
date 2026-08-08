@@ -107,7 +107,9 @@ async function loadContext(
 /**
  * Build UBL + validate WITHOUT sending (for the preview / validate button).
  */
-export async function previewEInvoice(documentId: string): Promise<
+export async function previewEInvoice(
+  documentId: string,
+): Promise<
   | { ok: true; xml: string; validation: ValidationResult }
   | { ok: false; error: string }
 > {
@@ -134,7 +136,12 @@ export async function previewEInvoice(documentId: string): Promise<
  */
 export async function sendEInvoice(documentId: string): Promise<
   | { ok: true; einvoiceId: string; transportStatus: EinvoiceTransportStatus }
-  | { ok: false; error: string; validation?: ValidationResult; upgrade?: PlanTier }
+  | {
+      ok: false
+      error: string
+      validation?: ValidationResult
+      upgrade?: PlanTier
+    }
 > {
   const loaded = await loadContext(documentId)
   if (!loaded.ok) return { ok: false, error: loaded.error }

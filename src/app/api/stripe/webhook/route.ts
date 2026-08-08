@@ -63,7 +63,8 @@ async function applySubscription(
     .eq("id", orgId)
   // Surface the failure so the caller can return non-2xx → Stripe retries.
   // A swallowed error here would silently lose a paid plan upgrade.
-  if (error) throw new Error(`plan update failed for org ${orgId}: ${error.message}`)
+  if (error)
+    throw new Error(`plan update failed for org ${orgId}: ${error.message}`)
 }
 
 export async function POST(req: Request) {

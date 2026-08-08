@@ -23,6 +23,7 @@ Tento súbor je univerzálna báza. Tvoja prvá úloha v každom projekte:
 ## 1B. AUTONÓMNA EXEKÚCIA — TY ROBÍŠ, JA ROZHODUJEM
 
 Po mojom `GO` robíš prácu SÁM — nič mi nehádž na ručné dorobenie, ak to vieš spraviť ty. To zahŕňa:
+
 - `git` operácie: commit, branch, push
 - Deploy: Vercel (CLI/napojenie), preview aj production
 - GitHub: vytvorenie repa, PR, nastavenie
@@ -46,6 +47,7 @@ Spraviť? [A/N]
 ## 2. ANALÝZA PROJEKTU (vždy pred prácou)
 
 **A) ROZPRACOVANÝ projekt:**
+
 1. Prečítaj štruktúru repa, package.json, env príklady, docs, git log (posledných 20 commitov).
 2. **POCHOPENIE MYŠLIENKY (povinné, pred technickým auditom):**
    ⚠️ POVINNÉ: Najprv VYPÍŠ celý blok nižšie s konkrétnymi, vyplnenými odpoveďami odvodenými z kódu/docs. NIKDY nesmieš iba položiť otázku "sedí to?" bez toho, aby si predtým vypísal svoje pochopenie. Otázka bez vypísaného pochopenia = chyba.
@@ -69,6 +71,7 @@ Spraviť? [A/N]
    Toto je NÁVRH na diskusiu, nie príkaz na exekúciu — čakáš na moje `GO`.
 
 **B) GREENFIELD projekt:**
+
 1. **SKEN PRIEČINKA (povinné, prvé):** Vypíš obsah pracovného priečinka (súbory + adresáre). Ak tam SÚ nejaké súbory, NEIGNORUJ ich:
    - **Dokumenty (.md, .txt, .pdf, .docx, poznámky, brief, zadanie):** OTVOR a PREČÍTAJ celý obsah, naštuduj ho a zhrň mi vlastnými slovami, čo z neho chápeš:
      ```
@@ -78,7 +81,7 @@ Spraviť? [A/N]
      Nejasné:    (čo mi z dokumentu nie je jasné)
      ```
    - **Ostatné (logo, obrázky, staré skripty, konfig):** vypíš do tabuľky `Súbor | Čo si myslím že to je | Otázka pre teba`.
-   Opýtaj sa: **"Rozumiem dokumentu správne? Chceš tieto súbory zapojiť, alebo niečo ignorovať?"** Čakaj na odpoveď. Ak je priečinok prázdny, napíš "priečinok prázdny, staviam od nuly" a pokračuj.
+     Opýtaj sa: **"Rozumiem dokumentu správne? Chceš tieto súbory zapojiť, alebo niečo ignorovať?"** Čakaj na odpoveď. Ak je priečinok prázdny, napíš "priečinok prázdny, staviam od nuly" a pokračuj.
 2. **POCHOPENIE MYŠLIENKY (povinné):**
    ⚠️ POVINNÉ: VYPÍŠ vyplnený blok 💡 (formát ako v sekcii 2A) s konkrétnymi odpoveďami odvodenými z môjho zadania + nájdených súborov. Nikdy iba otázku bez vypísaného pochopenia.
    AŽ POTOM sa opýtaj: **"Sedí toto pochopenie? Ak nie, oprav ma, nech nestaviam zle."** Čakaj na potvrdenie PRED návrhom architektúry.
@@ -118,13 +121,13 @@ Pravidlo: ak nevieš % podložiť, napíš "neviem, treba overiť X" namiesto č
 
 Subagentov (Task tool) spúšťaš podľa tejto matice:
 
-| Situácia | Agent | Prompt agenta obsahuje |
-|---|---|---|
-| Štart na existujúcom kóde | **Audit agent** | "Prečítaj [oblasť], spusti build+testy, vráť: čo funguje (dôkaz), čo je rozbité (error output), root cause hypotézy. NIČ neopravuj." |
-| Bug/fix požiadavka | **Root-cause agent** | "Reprodukuj chybu, trasuj dátový tok, vráť presný súbor+riadok+príčinu. NIČ neopravuj." |
-| Po implementácii fázy | **Review agent** | "Sprav code review diffu: security (sekcia 6), typy, edge cases, konzistencia. Vráť zoznam nálezov so severitou P0–P3." |
-| Pred deployom na main | **Pentest agent** | "Vykonaj postup zo sekcie 6B. Vráť tabuľku endpoint × test × výsledok." |
-| Veľká feature (3+ súbory) | **Plán agent** | "Navrhni implementačný plán: súbory, poradie, riziká, rollback. Neimplementuj." |
+| Situácia                  | Agent                | Prompt agenta obsahuje                                                                                                               |
+| ------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Štart na existujúcom kóde | **Audit agent**      | "Prečítaj [oblasť], spusti build+testy, vráť: čo funguje (dôkaz), čo je rozbité (error output), root cause hypotézy. NIČ neopravuj." |
+| Bug/fix požiadavka        | **Root-cause agent** | "Reprodukuj chybu, trasuj dátový tok, vráť presný súbor+riadok+príčinu. NIČ neopravuj."                                              |
+| Po implementácii fázy     | **Review agent**     | "Sprav code review diffu: security (sekcia 6), typy, edge cases, konzistencia. Vráť zoznam nálezov so severitou P0–P3."              |
+| Pred deployom na main     | **Pentest agent**    | "Vykonaj postup zo sekcie 6B. Vráť tabuľku endpoint × test × výsledok."                                                              |
+| Veľká feature (3+ súbory) | **Plán agent**       | "Navrhni implementačný plán: súbory, poradie, riziká, rollback. Neimplementuj."                                                      |
 
 - Nezávislé agenty púšťaj PARALELNE (napr. audit frontend + audit backend).
 - Výstup agenta nikdy neber ako fakt bez dôkazu — agent musí vrátiť výstupy príkazov.
@@ -133,14 +136,17 @@ Subagentov (Task tool) spúšťaš podľa tejto matice:
 ## 6. SECURITY & QA
 
 ### 6A. Checklist (kontroluj pri každej fáze)
+
 - **Auth & RLS:** RLS policy na KAŽDEJ Supabase tabuľke; žiadny public read na user dáta; server-side auth check na každom API route/server action.
 - **API:** input validácia (zod) na každom vstupe; rate limiting na public endpointoch; žiadne secrets v client bundle (over: `grep -r "SUPABASE_SERVICE\|sk_live\|api_key" .next/static` po builde).
-- **Env:** .env* v .gitignore; secrets len vo Vercel env vars; over git históriu: `git log -p --all -S "sk_live" --oneline | head`.
+- **Env:** .env\* v .gitignore; secrets len vo Vercel env vars; over git históriu: `git log -p --all -S "sk_live" --oneline | head`.
 - **OWASP:** XSS (dangerouslySetInnerHTML audit), injection, IDOR (ID manipulácia), CSRF na mutáciách.
 - **Dependencies:** `npm audit --audit-level=high` — critical/high riešiť pred merge.
 
 ### 6B. Mini-pentest pred production deployom (konkrétny postup)
+
 Spusti a vlož výstupy:
+
 ```bash
 # 1. Každý API endpoint bez auth tokenu — očakávaj 401/403
 curl -s -o /dev/null -w "%{http_code}" https://PREVIEW_URL/api/ENDPOINT
@@ -156,9 +162,11 @@ curl -s "https://PROJECT.supabase.co/rest/v1/TABULKA?select=*" \
 curl -s -o /dev/null -w "%{http_code}" https://PREVIEW_URL/.env
 curl -s -o /dev/null -w "%{http_code}" https://PREVIEW_URL/.git/config
 ```
+
 Výsledky zapíš do `docs/SECURITY.md` ako tabuľku test × očakávanie × výsledok × PASS/FAIL. Akýkoľvek FAIL = deploy blokovaný.
 
 ### 6C. Testy
+
 - Kritická biznis logika = unit testy (vitest). API routes = integračné. Kľúčové user flows = smoke test.
 - Fáza je hotová AŽ keď testy BEŽIA a PREJDÚ (vlož výstup).
 - Brána pred commitom na main: `build + lint + typecheck + testy` — všetko PASS.
@@ -188,6 +196,7 @@ Výsledky zapíš do `docs/SECURITY.md` ako tabuľku test × očakávanie × vý
 Udržuj v repe (aktualizuj PO KAŽDEJ FÁZE, nie na konci):
 
 **`CLAUDE.md`** (projektový — šablóna pri generovaní):
+
 ```
 # PROJEKT — CLAUDE.md
 ## Stack & príkazy (presné: dev, build, test, deploy)

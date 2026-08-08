@@ -67,7 +67,10 @@ export function TagFilter({
                   backgroundColor: tag.color ?? "var(--muted-foreground)",
                   // Aktivny farebny stitok dostane aj kontrastny okraj, aby
                   // sa svetla farba nestratila na svetlom pozadi.
-                  outline: active && tag.color ? `1px solid ${contrastText(tag.color)}` : undefined,
+                  outline:
+                    active && tag.color
+                      ? `1px solid ${contrastText(tag.color)}`
+                      : undefined,
                 }}
                 aria-hidden
               />

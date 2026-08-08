@@ -110,9 +110,9 @@ describe("isDuplicateTransaction", () => {
   })
 
   it("lets a different date through", () => {
-    expect(isDuplicateTransaction({ ...tx, bookedAt: "2026-07-09" }, seen)).toBe(
-      false,
-    )
+    expect(
+      isDuplicateTransaction({ ...tx, bookedAt: "2026-07-09" }, seen),
+    ).toBe(false)
   })
 
   it("returns false against an empty set", () => {

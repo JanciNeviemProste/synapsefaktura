@@ -86,9 +86,8 @@ export function ContactsImport() {
             <DialogTitle>Import klientov z tabuľky</DialogTitle>
             <DialogDescription>
               Zošit Excelu (.xlsx) aj CSV. Povinný je jediný stĺpec —{" "}
-              <strong>Názov</strong>. Ostatné sú
-              voliteľné a poradie stĺpcov nerozhoduje, hľadajú sa podľa názvu
-              hlavičky.
+              <strong>Názov</strong>. Ostatné sú voliteľné a poradie stĺpcov
+              nerozhoduje, hľadajú sa podľa názvu hlavičky.
             </DialogDescription>
           </DialogHeader>
 

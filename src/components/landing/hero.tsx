@@ -36,7 +36,14 @@ function CopyIcon() {
       aria-hidden="true"
       className="shrink-0"
     >
-      <rect x="3.5" y="3.5" width="7" height="7" rx="1.2" stroke="currentColor" />
+      <rect
+        x="3.5"
+        y="3.5"
+        width="7"
+        height="7"
+        rx="1.2"
+        stroke="currentColor"
+      />
       <path d="M8.5 1.5H2.2A1.2 1.2 0 0 0 1 2.7V9" stroke="currentColor" />
     </svg>
   )
@@ -146,7 +153,9 @@ export function Hero() {
           >
             <span>
               Napíš nám:{" "}
-              <span className="underline underline-offset-1">{SITE.supportEmail}</span>
+              <span className="underline underline-offset-1">
+                {SITE.supportEmail}
+              </span>
             </span>
             <CopyIcon />
           </button>

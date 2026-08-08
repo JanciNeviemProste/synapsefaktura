@@ -35,7 +35,7 @@ export function LegalShell({
         <p className="text-muted-foreground mt-1 text-sm">
           Účinné od {LEGAL_EFFECTIVE_DATE}
         </p>
-        <div className="mt-8 space-y-6 text-sm leading-relaxed [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:tracking-tight [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1 [&_a]:text-primary [&_a]:underline">
+        <div className="[&_a]:text-primary mt-8 space-y-6 text-sm leading-relaxed [&_a]:underline [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:tracking-tight [&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:pl-5">
           {children}
         </div>
       </main>

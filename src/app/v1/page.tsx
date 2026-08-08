@@ -91,7 +91,7 @@ export default function V1Page() {
           Synapse Faktúra
         </Link>
         <nav className="flex items-center gap-6 text-sm">
-          <Link href="/login" className="hover:underline underline-offset-4">
+          <Link href="/login" className="underline-offset-4 hover:underline">
             Prihlásiť sa
           </Link>
           <Link
@@ -121,7 +121,10 @@ export default function V1Page() {
             <br />
             <span style={{ color: RED }}>Nech podľa toho vyzerá.</span>
           </h1>
-          <p className="max-w-md text-lg leading-relaxed" style={{ color: GRAY }}>
+          <p
+            className="max-w-md text-lg leading-relaxed"
+            style={{ color: GRAY }}
+          >
             Presné náležitosti, správna DPH a doklady pripravené na povinnú
             e-faktúru 2027. Vystavíte ju jednou vetou — o zvyšok sa postará AI.
           </p>
@@ -170,18 +173,28 @@ export default function V1Page() {
             style={{ borderBottom: `1px solid ${RULE}` }}
           >
             <div>
-              <p className="mb-1 tracking-[0.15em] uppercase" style={{ color: GRAY }}>
+              <p
+                className="mb-1 tracking-[0.15em] uppercase"
+                style={{ color: GRAY }}
+              >
                 Dodávateľ
               </p>
               <p className="font-medium">Martin Kováč — KOVEX</p>
-              <p style={{ color: GRAY }}>IČO 51 234 567 · IČ DPH SK1078563412</p>
+              <p style={{ color: GRAY }}>
+                IČO 51 234 567 · IČ DPH SK1078563412
+              </p>
             </div>
             <div>
-              <p className="mb-1 tracking-[0.15em] uppercase" style={{ color: GRAY }}>
+              <p
+                className="mb-1 tracking-[0.15em] uppercase"
+                style={{ color: GRAY }}
+              >
                 Odberateľ
               </p>
               <p className="font-medium">Novastav s. r. o.</p>
-              <p style={{ color: GRAY }}>IČO 44 891 023 · IČ DPH SK2023456789</p>
+              <p style={{ color: GRAY }}>
+                IČO 44 891 023 · IČ DPH SK2023456789
+              </p>
             </div>
           </div>
 
@@ -222,7 +235,10 @@ export default function V1Page() {
               <p>DPH 23 % — 174,80 €</p>
             </div>
             <div className="text-right">
-              <p className="text-xs tracking-[0.15em] uppercase" style={{ color: GRAY }}>
+              <p
+                className="text-xs tracking-[0.15em] uppercase"
+                style={{ color: GRAY }}
+              >
                 K úhrade
               </p>
               <p className="font-mono text-2xl font-medium">934,80 €</p>
@@ -251,7 +267,10 @@ export default function V1Page() {
               </p>
               <h2
                 className="mb-3 text-xl leading-snug"
-                style={{ fontFamily: "var(--font-v1-display)", fontWeight: 560 }}
+                style={{
+                  fontFamily: "var(--font-v1-display)",
+                  fontWeight: 560,
+                }}
               >
                 {p.title}
               </h2>
@@ -273,7 +292,8 @@ export default function V1Page() {
             Cenník
           </h2>
           <p className="mb-10 text-sm" style={{ color: GRAY }}>
-            Jedna cena, žiadne hviezdičky. Pro na 14 dní zdarma, zrušenie kedykoľvek.
+            Jedna cena, žiadne hviezdičky. Pro na 14 dní zdarma, zrušenie
+            kedykoľvek.
           </p>
 
           <div className="flex flex-col">
@@ -297,7 +317,10 @@ export default function V1Page() {
                       </span>
                     )}
                   </h3>
-                  <p className="text-sm leading-relaxed" style={{ color: GRAY }}>
+                  <p
+                    className="text-sm leading-relaxed"
+                    style={{ color: GRAY }}
+                  >
                     {plan.blurb}{" "}
                     {plan.docsPerMonth
                       ? `Limit ${plan.docsPerMonth} dokladov mesačne.`
@@ -317,7 +340,9 @@ export default function V1Page() {
                       color: featured ? RED : INK,
                     }}
                   >
-                    {tier === "free" ? "Začať zadarmo" : `Vyskúšať ${plan.label}`}
+                    {tier === "free"
+                      ? "Začať zadarmo"
+                      : `Vyskúšať ${plan.label}`}
                   </Link>
                 </div>
               )
@@ -347,7 +372,11 @@ export default function V1Page() {
           </h2>
           <div className="flex flex-col">
             {FAQ.map((item) => (
-              <details key={item.q} className="group py-4" style={{ borderTop: `1px solid ${RULE}` }}>
+              <details
+                key={item.q}
+                className="group py-4"
+                style={{ borderTop: `1px solid ${RULE}` }}
+              >
                 <summary className="flex cursor-pointer list-none items-baseline justify-between gap-4 font-medium">
                   {item.q}
                   <span
@@ -358,7 +387,10 @@ export default function V1Page() {
                     +
                   </span>
                 </summary>
-                <p className="mt-2 max-w-2xl text-sm leading-relaxed" style={{ color: GRAY }}>
+                <p
+                  className="mt-2 max-w-2xl text-sm leading-relaxed"
+                  style={{ color: GRAY }}
+                >
                   {item.a}
                 </p>
               </details>

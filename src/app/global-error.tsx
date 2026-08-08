@@ -29,11 +29,25 @@ export default function GlobalError({
           color: "#0a0a0a",
         }}
       >
-        <div style={{ textAlign: "center", padding: "2rem", maxWidth: 28 + "rem" }}>
-          <h1 style={{ fontSize: "1.25rem", fontWeight: 600, margin: "0 0 0.5rem" }}>
+        <div
+          style={{ textAlign: "center", padding: "2rem", maxWidth: 28 + "rem" }}
+        >
+          <h1
+            style={{
+              fontSize: "1.25rem",
+              fontWeight: 600,
+              margin: "0 0 0.5rem",
+            }}
+          >
             Niečo sa pokazilo
           </h1>
-          <p style={{ fontSize: "0.875rem", color: "#71717a", margin: "0 0 1.5rem" }}>
+          <p
+            style={{
+              fontSize: "0.875rem",
+              color: "#71717a",
+              margin: "0 0 1.5rem",
+            }}
+          >
             Vyskytla sa neočakávaná chyba. Skús to prosím znova.
           </p>
           <button

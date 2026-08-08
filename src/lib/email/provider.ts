@@ -63,12 +63,18 @@ export async function sendEmail(
 
     if (!res.ok) {
       const detail = await res.text().catch(() => "")
-      return { ok: false, error: `Resend ${res.status}: ${detail.slice(0, 200)}` }
+      return {
+        ok: false,
+        error: `Resend ${res.status}: ${detail.slice(0, 200)}`,
+      }
     }
 
     const data = (await res.json().catch(() => ({}))) as { id?: string }
     return { ok: true, id: data.id }
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) }
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    }
   }
 }

@@ -52,7 +52,8 @@ export default function EFaktura2027Page() {
         </h1>
         <p className="text-muted-foreground mt-3 text-lg">
           Od 1. januára 2027 sa elektronická fakturácia stáva povinnou pre
-          platiteľov DPH. Tu je prehľad, čo vás čaká a ako to zvládnuť bez stresu.
+          platiteľov DPH. Tu je prehľad, čo vás čaká a ako to zvládnuť bez
+          stresu.
         </p>
 
         <div className="mt-10 grid gap-8 text-sm leading-relaxed">
@@ -93,9 +94,9 @@ export default function EFaktura2027Page() {
 
           <Section title="Ako to bude fungovať">
             <p>
-              Slovensko zvolilo tzv. <strong>5-corner model</strong> nad štandardným
-              Peppol modelom — pridáva Finančnú správu SR ako piaty prvok do výmeny.
-              Faktúry sa posielajú v štruktúrovanom formáte{" "}
+              Slovensko zvolilo tzv. <strong>5-corner model</strong> nad
+              štandardným Peppol modelom — pridáva Finančnú správu SR ako piaty
+              prvok do výmeny. Faktúry sa posielajú v štruktúrovanom formáte{" "}
               <strong>UBL 2.1</strong> podľa európskej normy{" "}
               <strong>EN 16931</strong> (Peppol BIS Billing 3.0). Účastníci sa
               identifikujú Peppol ID; pre SK subjekty má tvar{" "}
@@ -105,9 +106,9 @@ export default function EFaktura2027Page() {
 
           <Section title="Sankcie">
             <p>
-              Za nevystavenie e-faktúry hrozia pokuty — podľa doterajších návrhov
-              až do 10 000 €, pri opakovanom porušení výrazne viac. Presné sumy
-              potvrdí finálne znenie predpisu.
+              Za nevystavenie e-faktúry hrozia pokuty — podľa doterajších
+              návrhov až do 10 000 €, pri opakovanom porušení výrazne viac.
+              Presné sumy potvrdí finálne znenie predpisu.
             </p>
           </Section>
 
@@ -149,8 +150,8 @@ export default function EFaktura2027Page() {
 
           <p className="text-muted-foreground text-xs">
             Informácie majú všeobecný charakter a nie sú daňovým poradenstvom.
-            Konkrétne povinnosti si over v aktuálnom znení zákona č. 222/2004 Z. z.
-            a na stránkach Finančnej správy SR.
+            Konkrétne povinnosti si over v aktuálnom znení zákona č. 222/2004 Z.
+            z. a na stránkach Finančnej správy SR.
           </p>
         </div>
       </main>

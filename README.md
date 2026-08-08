@@ -56,24 +56,24 @@ Skopíruj `.env.example` do `.env.local` a doplň. Všetky tajné kľúče sú
 server-side; do klienta idú len `NEXT_PUBLIC_*`. Externé služby degradujú
 graceful — bez kľúča appka beží, len daná funkcia je vypnutá.
 
-| Premenná | Povinné | Účel |
-| --- | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | áno | Supabase API URL (z `pnpm db:start`) |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | áno | Supabase publishable/anon kľúč |
-| `SUPABASE_SERVICE_ROLE_KEY` | áno | Supabase service-role (server-only; systémové joby) |
-| `NEXT_PUBLIC_APP_URL` | odporúčané | Verejná URL appky (Stripe redirecty, pozvánkové odkazy) |
-| `CRON_SECRET` | pre cron | Chráni `/api/cron/*` (Vercel Cron `Authorization: Bearer`) |
-| `GOOGLE_GENERATIVE_AI_API_KEY` | pre AI | Gemini kľúč pre AI vrstvu (capture, asistent, …) |
-| `AI_MODEL` | nie | Override AI modelu (default `gemini-2.5-flash`) |
-| `STRIPE_SECRET_KEY` | pre billing | Stripe secret (server-only) |
-| `STRIPE_WEBHOOK_SECRET` | pre billing | Overenie podpisu webhooku `/api/stripe/webhook` |
-| `STRIPE_PRICE_PRO` | pre billing | Stripe Price ID pre plán Pro |
-| `STRIPE_PRICE_BUSINESS` | pre billing | Stripe Price ID pre plán Business |
-| `RESEND_API_KEY` | pre e-mail | Resend API kľúč (odosielanie faktúr a upomienok; bez neho sa len prepne status) |
-| `EMAIL_FROM` | pre e-mail | Overený odosielateľ, napr. `Faktúry <faktury@tvoja-domena.sk>` |
-| `UPSTASH_REDIS_REST_URL` | pre rate-limit | Upstash Redis REST URL (zdieľaný rate-limit naprieč inštanciami; bez neho in-memory fallback) |
-| `UPSTASH_REDIS_REST_TOKEN` | pre rate-limit | Upstash Redis REST token |
-| `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` | pre analytiku | Doména v Plausible (napr. `synapsefaktura.sk`); bez nej sa analytika nenačíta |
+| Premenná                        | Povinné        | Účel                                                                                          |
+| ------------------------------- | -------------- | --------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`      | áno            | Supabase API URL (z `pnpm db:start`)                                                          |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | áno            | Supabase publishable/anon kľúč                                                                |
+| `SUPABASE_SERVICE_ROLE_KEY`     | áno            | Supabase service-role (server-only; systémové joby)                                           |
+| `NEXT_PUBLIC_APP_URL`           | odporúčané     | Verejná URL appky (Stripe redirecty, pozvánkové odkazy)                                       |
+| `CRON_SECRET`                   | pre cron       | Chráni `/api/cron/*` (Vercel Cron `Authorization: Bearer`)                                    |
+| `GOOGLE_GENERATIVE_AI_API_KEY`  | pre AI         | Gemini kľúč pre AI vrstvu (capture, asistent, …)                                              |
+| `AI_MODEL`                      | nie            | Override AI modelu (default `gemini-2.5-flash`)                                               |
+| `STRIPE_SECRET_KEY`             | pre billing    | Stripe secret (server-only)                                                                   |
+| `STRIPE_WEBHOOK_SECRET`         | pre billing    | Overenie podpisu webhooku `/api/stripe/webhook`                                               |
+| `STRIPE_PRICE_PRO`              | pre billing    | Stripe Price ID pre plán Pro                                                                  |
+| `STRIPE_PRICE_BUSINESS`         | pre billing    | Stripe Price ID pre plán Business                                                             |
+| `RESEND_API_KEY`                | pre e-mail     | Resend API kľúč (odosielanie faktúr a upomienok; bez neho sa len prepne status)               |
+| `EMAIL_FROM`                    | pre e-mail     | Overený odosielateľ, napr. `Faktúry <faktury@tvoja-domena.sk>`                                |
+| `UPSTASH_REDIS_REST_URL`        | pre rate-limit | Upstash Redis REST URL (zdieľaný rate-limit naprieč inštanciami; bez neho in-memory fallback) |
+| `UPSTASH_REDIS_REST_TOKEN`      | pre rate-limit | Upstash Redis REST token                                                                      |
+| `NEXT_PUBLIC_PLAUSIBLE_DOMAIN`  | pre analytiku  | Doména v Plausible (napr. `synapsefaktura.sk`); bez nej sa analytika nenačíta                 |
 
 > **Stripe DPH:** checkout má zapnuté `automatic_tax` + zber adresy/IČ DPH a
 > 14-dňový trial. Aby DPH reálne počítalo, zapni **Stripe Tax** v Stripe dashboarde.
