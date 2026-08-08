@@ -4,6 +4,7 @@ Jedna relácia = jeden súbor. **Nikdy nedopisuj do cudzieho súboru** — nový
 sa nedá dostať do konfliktu, spoločný súbor áno. Názov:
 `YYYY-MM-DD-<kratky-slug>.md`.
 
+- [2026-08-08: Auth config do repa, registrácia v produkcii funguje](2026-08-08-auth-config-do-repa-registracia-funguje.md)
 - [2026-08-05: Biely text na bielom + teplá šedá paleta pre celý produkt](2026-08-05-biely-text-na-bielom-tepla.md)
 - [2026-08-05: Nová úvodná stránka s postavou + jednotný dizajn appky](2026-08-05-nova-uvodna-stranka-s-postavou-jednotny.md)
 - [2026-08-05: Prihlásenie — tri príčiny, dve mimo kódu](2026-08-05-prihlasenie-tri-priciny-dve-mimo-kodu.md)
